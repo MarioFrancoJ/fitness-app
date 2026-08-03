@@ -1,0 +1,98 @@
+{
+  "common": {
+    "appName": "FitnessApp",
+    "login": "Login",
+    "getStarted": "Get Started",
+    "startFree": "Start Free",
+    "learnMore": "Learn More"
+  },
+  "nav": {
+    "features": "Features",
+    "pricing": "Pricing",
+    "faq": "FAQ"
+  },
+  "hero": {
+    "headline": "Transform Your Fitness Journey",
+    "subtitle": "Personalized workouts, nutrition plans and progress tracking in one modern platform.",
+    "badge": "Now in public beta",
+    "stats": {
+      "activeUsers": "Active Users",
+      "workoutsLogged": "Workouts Logged",
+      "goalCompletion": "Avg. Goal Completion"
+    }
+  },
+  "features": {
+    "eyebrow": "Everything you need",
+    "headline": "Built for serious results",
+    "subtitle": "Every feature is designed around one goal — helping you and your coach work better together.",
+    "items": {
+      "workoutPrograms": {
+        "title": "Workout Programs",
+        "description": "Structured multi-week training plans built by certified coaches. Adapt intensity, volume, and rest to your schedule."
+      },
+      "nutritionPlans": {
+        "title": "Nutrition Plans",
+        "description": "Macro-balanced meal plans aligned with your goal — cut, bulk, or maintain. Automatically adjusts as your weight changes."
+      },
+      "progressTracking": {
+        "title": "Progress Tracking",
+        "description": "Log body measurements, upload progress photos, and visualise trends across weeks and months with clear charts."
+      },
+      "aiCoach": {
+        "title": "AI Coach",
+        "description": "Chat with an AI fitness assistant that knows your program, your recent metrics, and your goals to give contextual advice."
+      },
+      "mealPlanning": {
+        "title": "Meal Planning",
+        "description": "Build weekly meal plans from a library of 500,000+ foods. Auto-generate shopping lists for any date range."
+      },
+      "analytics": {
+        "title": "Analytics",
+        "description": "Coaches get compliance dashboards. Clients get volume, streak, and body-composition trend reports — all in one view."
+      }
+    }
+  },
+  "pricing": {
+    "eyebrow": "Pricing",
+    "headline": "Simple, transparent pricing",
+    "subtitle": "Start for free. Upgrade when you're ready. No hidden fees.",
+    "mostPopular": "Most Popular",
+    "plans": {
+      "basic": {
+        "name": "Basic",
+        "price": "$0",
+        "period": "Free forever",
+        "description": "Get started with the essentials.",
+        "cta": "Start Free"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$19",
+        "period": "per month",
+        "description": "Everything you need to reach your goals.",
+        "cta": "Get Pro"
+      },
+      "elite": {
+        "name": "Elite",
+        "price": "$49",
+        "period": "per month",
+        "description": "For coaches managing multiple clients.",
+        "cta": "Go Elite"
+      }
+    }
+  },
+  "faq": {
+    "eyebrow": "FAQ",
+    "headline": "Common questions"
+  },
+  "footer": {
+    "tagline": "The modern platform for coaches and athletes who are serious about results.",
+    "copyright": "All rights reserved.",
+    "builtWith": "Built with Next.js and Tailwind CSS.",
+    "columns": {
+      "product": "Product",
+      "company": "Company",
+      "legal": "Legal"
+    }
+  }
+}

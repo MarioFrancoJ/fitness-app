@@ -1,0 +1,98 @@
+{
+  "common": {
+    "appName": "FitnessApp",
+    "login": "Iniciar sesión",
+    "getStarted": "Comenzar",
+    "startFree": "Empezar gratis",
+    "learnMore": "Más información"
+  },
+  "nav": {
+    "features": "Funciones",
+    "pricing": "Precios",
+    "faq": "Preguntas frecuentes"
+  },
+  "hero": {
+    "headline": "Transforma Tu Camino Fitness",
+    "subtitle": "Entrenamientos personalizados, planes de nutrición y seguimiento del progreso en una plataforma moderna.",
+    "badge": "Ahora en beta pública",
+    "stats": {
+      "activeUsers": "Usuarios activos",
+      "workoutsLogged": "Entrenamientos registrados",
+      "goalCompletion": "Cumplimiento promedio de metas"
+    }
+  },
+  "features": {
+    "eyebrow": "Todo lo que necesitas",
+    "headline": "Diseñado para resultados serios",
+    "subtitle": "Cada función está pensada con un objetivo: ayudarte a ti y a tu entrenador a trabajar mejor juntos.",
+    "items": {
+      "workoutPrograms": {
+        "title": "Programas de entrenamiento",
+        "description": "Planes de entrenamiento estructurados de varias semanas creados por entrenadores certificados. Adapta la intensidad, el volumen y el descanso a tu agenda."
+      },
+      "nutritionPlans": {
+        "title": "Planes de nutrición",
+        "description": "Planes de comidas equilibrados en macros alineados con tu objetivo. Se ajusta automáticamente a medida que cambia tu peso."
+      },
+      "progressTracking": {
+        "title": "Seguimiento del progreso",
+        "description": "Registra medidas corporales, sube fotos de progreso y visualiza tendencias a lo largo de semanas y meses con gráficos claros."
+      },
+      "aiCoach": {
+        "title": "Entrenador IA",
+        "description": "Habla con un asistente de fitness con inteligencia artificial que conoce tu programa, tus métricas recientes y tus objetivos para darte consejos contextuales."
+      },
+      "mealPlanning": {
+        "title": "Planificación de comidas",
+        "description": "Crea planes de comidas semanales con una biblioteca de más de 500.000 alimentos. Genera listas de compra automáticamente para cualquier rango de fechas."
+      },
+      "analytics": {
+        "title": "Analíticas",
+        "description": "Los entrenadores obtienen paneles de cumplimiento. Los clientes ven informes de volumen, racha y composición corporal, todo en una sola vista."
+      }
+    }
+  },
+  "pricing": {
+    "eyebrow": "Precios",
+    "headline": "Precios simples y transparentes",
+    "subtitle": "Empieza gratis. Mejora tu plan cuando estés listo. Sin costes ocultos.",
+    "mostPopular": "Más popular",
+    "plans": {
+      "basic": {
+        "name": "Básico",
+        "price": "$0",
+        "period": "Gratis para siempre",
+        "description": "Comienza con lo esencial.",
+        "cta": "Empezar gratis"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$19",
+        "period": "por mes",
+        "description": "Todo lo que necesitas para alcanzar tus objetivos.",
+        "cta": "Obtener Pro"
+      },
+      "elite": {
+        "name": "Elite",
+        "price": "$49",
+        "period": "por mes",
+        "description": "Para entrenadores que gestionan múltiples clientes.",
+        "cta": "Ir a Elite"
+      }
+    }
+  },
+  "faq": {
+    "eyebrow": "Preguntas frecuentes",
+    "headline": "Preguntas comunes"
+  },
+  "footer": {
+    "tagline": "La plataforma moderna para entrenadores y deportistas que se toman en serio los resultados.",
+    "copyright": "Todos los derechos reservados.",
+    "builtWith": "Desarrollado con Next.js y Tailwind CSS.",
+    "columns": {
+      "product": "Producto",
+      "company": "Empresa",
+      "legal": "Legal"
+    }
+  }
+}
