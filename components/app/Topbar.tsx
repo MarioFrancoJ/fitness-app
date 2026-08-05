@@ -1,5 +1,8 @@
 "use client";
 
+import type { Locale } from "@/lib/i18n/config";
+import LanguageSwitcher from "./LanguageSwitcher";
+
 // ── Inline SVG icons ──────────────────────────────────────────────────────────
 
 function IconSearch() {
@@ -20,7 +23,11 @@ function IconBell() {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function Topbar() {
+interface TopbarProps {
+  locale: Locale;
+}
+
+export default function Topbar({ locale }: TopbarProps) {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-zinc-100 bg-white px-6">
       {/* Search */}
@@ -38,6 +45,9 @@ export default function Topbar() {
 
       {/* Right actions */}
       <div className="flex items-center gap-3">
+        {/* Language switcher */}
+        <LanguageSwitcher currentLocale={locale} />
+
         {/* Notifications — UI only */}
         <button
           type="button"

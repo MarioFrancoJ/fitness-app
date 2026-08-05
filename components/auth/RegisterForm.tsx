@@ -1,10 +1,114 @@
 "use client";
 
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface FormFields {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  terms: boolean;
+}
+
+interface FormErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  terms?: string;
+}
+
+// ── Validation ───────────────────────────────────────────────────────────────
+
+function validate(fields: FormFields): FormErrors {
+  const errors: FormErrors = {};
+
+  if (!fields.name.trim()) {
+    errors.name = "Full name is required.";
+  }
+
+  if (!fields.email.trim()) {
+    errors.email = "Email is required.";
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)) {
+    errors.email = "Enter a valid email address.";
+  }
+
+  if (!fields.password) {
+    errors.password = "Password is required.";
+  } else if (fields.password.length < 8) {
+    errors.password = "Password must be at least 8 characters.";
+  }
+
+  if (!fields.confirmPassword) {
+    errors.confirmPassword = "Please confirm your password.";
+  } else if (fields.password !== fields.confirmPassword) {
+    errors.confirmPassword = "Passwords do not match.";
+  }
+
+  if (!fields.terms) {
+    errors.terms = "You must accept the terms to continue.";
+  }
+
+  return errors;
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
+
 export default function RegisterForm() {
+  const router = useRouter();
+
+  const [fields, setFields] = useState<FormFields>({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    terms: false,
+  });
+
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const { id, value, type, checked } = e.target;
+    setFields((prev) => ({
+      ...prev,
+      [id]: type === "checkbox" ? checked : value,
+    }));
+    // Clear the field's error on change
+    if (errors[id as keyof FormErrors]) {
+      setErrors((prev) => ({ ...prev, [id]: undefined }));
+    }
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+
+    const validationErrors = validate(fields);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    // Persist to localStorage (no backend — frontend only)
+    const userData = {
+      name: fields.name.trim(),
+      email: fields.email.trim().toLowerCase(),
+      createdAt: new Date().toISOString(),
+    };
+    localStorage.setItem("fitnessapp_user", JSON.stringify(userData));
+
+    // Navigate to onboarding
+    router.push("/onboarding");
+  }
+
   return (
     <div className="w-full max-w-md">
       <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
@@ -18,8 +122,7 @@ export default function RegisterForm() {
           </p>
         </div>
 
-        {/* Form — UI only */}
-        <form className="flex flex-col gap-5" onSubmit={(e) => e.preventDefault()}>
+        <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
           {/* Full Name */}
           <Input
             id="name"
@@ -27,7 +130,9 @@ export default function RegisterForm() {
             label="Full Name"
             placeholder="Alex Johnson"
             autoComplete="name"
-            required
+            value={fields.name}
+            onChange={handleChange}
+            error={errors.name}
           />
 
           {/* Email */}
@@ -37,7 +142,9 @@ export default function RegisterForm() {
             label="Email"
             placeholder="you@example.com"
             autoComplete="email"
-            required
+            value={fields.email}
+            onChange={handleChange}
+            error={errors.email}
           />
 
           {/* Password */}
@@ -47,7 +154,9 @@ export default function RegisterForm() {
             label="Password"
             placeholder="Min. 8 characters"
             autoComplete="new-password"
-            required
+            value={fields.password}
+            onChange={handleChange}
+            error={errors.password}
           />
 
           {/* Confirm Password */}
@@ -57,37 +166,48 @@ export default function RegisterForm() {
             label="Confirm Password"
             placeholder="Repeat your password"
             autoComplete="new-password"
-            required
+            value={fields.confirmPassword}
+            onChange={handleChange}
+            error={errors.confirmPassword}
           />
 
           {/* Accept Terms */}
-          <label className="flex cursor-pointer items-start gap-2.5">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 accent-zinc-900"
-              required
-            />
-            <span className="text-sm text-zinc-600">
-              I agree to the{" "}
-              <Link
-                href="/terms"
-                className="font-medium text-zinc-900 underline underline-offset-2 hover:text-zinc-600"
-              >
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link
-                href="/privacy"
-                className="font-medium text-zinc-900 underline underline-offset-2 hover:text-zinc-600"
-              >
-                Privacy Policy
-              </Link>
-            </span>
-          </label>
+          <div className="flex flex-col gap-1.5">
+            <label className="flex cursor-pointer items-start gap-2.5">
+              <input
+                id="terms"
+                type="checkbox"
+                checked={fields.terms}
+                onChange={handleChange}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 accent-zinc-900"
+              />
+              <span className="text-sm text-zinc-600">
+                I agree to the{" "}
+                <Link
+                  href="/terms"
+                  className="font-medium text-zinc-900 underline underline-offset-2 hover:text-zinc-600"
+                >
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link
+                  href="/privacy"
+                  className="font-medium text-zinc-900 underline underline-offset-2 hover:text-zinc-600"
+                >
+                  Privacy Policy
+                </Link>
+              </span>
+            </label>
+            {errors.terms && (
+              <p className="text-xs text-red-500" role="alert">
+                {errors.terms}
+              </p>
+            )}
+          </div>
 
           {/* Submit */}
-          <Button type="submit" fullWidth>
-            Create Account
+          <Button type="submit" fullWidth disabled={isSubmitting}>
+            {isSubmitting ? "Creating account…" : "Create Account"}
           </Button>
         </form>
 
