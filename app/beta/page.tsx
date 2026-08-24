@@ -1,0 +1,117 @@
+"use client";
+
+import { useState, useEffect, type FormEvent } from "react";
+import Link from "next/link";
+
+interface BetaRegistration {
+  id: string;
+  name: string;
+  email: string;
+  fitnessGoal: string;
+  experienceLevel: string;
+  submittedAt: string;
+}
+
+const BETA_KEY = "fitnessapp_beta_registrations";
+const GOALS = ["Lose Fat", "Build Muscle", "Maintain Weight", "Improve Performance", "General Fitness"];
+const LEVELS = ["Beginner", "Intermediate", "Advanced", "Athlete"];
+
+function loadRegistrations(): BetaRegistration[] {
+  try { return JSON.parse(localStorage.getItem(BETA_KEY) || "[]"); } catch { return []; }
+}
+
+function saveRegistration(reg: BetaRegistration) {
+  const all = loadRegistrations();
+  all.push(reg);
+  localStorage.setItem(BETA_KEY, JSON.stringify(all));
+}
+
+export default function BetaPage() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [goal, setGoal] = useState("General Fitness");
+  const [level, setLevel] = useState("Beginner");
+  const [submitted, setSubmitted] = useState(false);
+  const [waitlistCount, setWaitlistCount] = useState(0);
+
+  useEffect(() => {
+    setWaitlistCount(loadRegistrations().length + 247); // simulated base count
+  }, []);
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || !email.trim()) return;
+    saveRegistration({ id: crypto.randomUUID(), name: name.trim(), email: email.trim(), fitnessGoal: goal, experienceLevel: level, submittedAt: new Date().toISOString() });
+    setSubmitted(true);
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-6 py-16">
+      <div className="w-full max-w-lg">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <span className="mb-3 inline-block rounded-full bg-zinc-900 px-4 py-1 text-xs font-bold text-white">BETA</span>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Join the FitnessApp Beta</h1>
+          <p className="mt-2 text-sm text-zinc-500">Be among the first to experience the complete fitness platform. Free early access for beta testers.</p>
+        </div>
+
+        {/* Waitlist count */}
+        <div className="mb-6 flex justify-center">
+          <div className="rounded-full border border-zinc-200 bg-white px-4 py-2 shadow-sm">
+            <p className="text-xs text-zinc-500"><strong className="text-zinc-900">{waitlistCount}</strong> people on the waitlist</p>
+          </div>
+        </div>
+
+        {submitted ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center">
+            <div className="mb-4 flex justify-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-7 w-7 text-emerald-600" aria-hidden="true">
+                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+                </svg>
+              </span>
+            </div>
+            <h2 className="text-lg font-bold text-emerald-900">You&apos;re on the list!</h2>
+            <p className="mt-2 text-sm text-emerald-700">We&apos;ll notify you when beta access is available. Thank you for your interest!</p>
+            <Link href="/" className="mt-6 inline-block rounded-lg border border-emerald-300 px-5 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100">
+              Back to Home
+            </Link>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="beta-name" className="text-sm font-medium text-zinc-700">Full Name *</label>
+                <input id="beta-name" type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Your name"
+                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="beta-email" className="text-sm font-medium text-zinc-700">Email *</label>
+                <input id="beta-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com"
+                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="beta-goal" className="text-sm font-medium text-zinc-700">Fitness Goal</label>
+                <select id="beta-goal" value={goal} onChange={(e) => setGoal(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
+                  {GOALS.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="beta-level" className="text-sm font-medium text-zinc-700">Experience Level</label>
+                <select id="beta-level" value={level} onChange={(e) => setLevel(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
+                  {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+                </select>
+              </div>
+              <button type="submit" className="mt-2 h-11 w-full rounded-lg bg-zinc-900 text-sm font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2">
+                Request Beta Access
+              </button>
+            </div>
+            <p className="mt-4 text-center text-xs text-zinc-400">By joining, you agree to provide feedback and help us improve the platform.</p>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
