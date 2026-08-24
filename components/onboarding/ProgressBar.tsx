@@ -4,14 +4,15 @@ interface ProgressBarProps {
 }
 
 export default function ProgressBar({ currentStep, totalSteps }: ProgressBarProps) {
-  const pct = Math.round((currentStep / totalSteps) * 100);
+  const clampedStep = Math.min(currentStep, totalSteps);
+  const pct = Math.round((clampedStep / totalSteps) * 100);
 
   return (
     <div className="w-full">
       {/* Step counter */}
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-medium text-zinc-500">
-          Step {currentStep} of {totalSteps}
+          Step {clampedStep} of {totalSteps}
         </span>
         <span className="text-xs font-medium text-zinc-400">{pct}%</span>
       </div>
@@ -19,7 +20,7 @@ export default function ProgressBar({ currentStep, totalSteps }: ProgressBarProp
       {/* Track */}
       <div
         role="progressbar"
-        aria-valuenow={currentStep}
+        aria-valuenow={clampedStep}
         aria-valuemin={1}
         aria-valuemax={totalSteps}
         aria-label="Onboarding progress"

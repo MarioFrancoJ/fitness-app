@@ -23,11 +23,20 @@ function IconBell() {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+import { useRouter } from "next/navigation";
+
 interface TopbarProps {
   locale: Locale;
 }
 
 export default function Topbar({ locale }: TopbarProps) {
+  const router = useRouter();
+
+  function handleLogout() {
+    localStorage.removeItem("fitnessapp_session");
+    router.replace("/login");
+  }
+
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-zinc-100 bg-white px-6">
       {/* Search */}
@@ -69,6 +78,16 @@ export default function Topbar({ locale }: TopbarProps) {
           className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2"
         >
           AJ
+        </button>
+
+        {/* Logout */}
+        <button
+          type="button"
+          onClick={handleLogout}
+          aria-label="Sign out"
+          className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+        >
+          Sign out
         </button>
       </div>
     </header>

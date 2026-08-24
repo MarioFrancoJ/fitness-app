@@ -57,14 +57,33 @@ function IconSettings() {
   );
 }
 
+function IconRuler() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+      <path fillRule="evenodd" d="M2 4.75A2.75 2.75 0 0 1 4.75 2h10.5A2.75 2.75 0 0 1 18 4.75v10.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25V4.75Zm4 0a.75.75 0 0 0-1.5 0v2a.75.75 0 0 0 1.5 0v-2Zm3 0a.75.75 0 0 0-1.5 0v3.5a.75.75 0 0 0 1.5 0v-3.5Zm3 0a.75.75 0 0 0-1.5 0v2a.75.75 0 0 0 1.5 0v-2Zm3 0a.75.75 0 0 0-1.5 0v3.5a.75.75 0 0 0 1.5 0v-3.5Z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
 // ── Nav items config ──────────────────────────────────────────────────────────
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: <IconDashboard /> },
-  { label: "Workouts",  href: "/workouts",  icon: <IconDumbbell /> },
-  { label: "Nutrition", href: "/nutrition", icon: <IconLeaf /> },
-  { label: "Progress",  href: "/progress",  icon: <IconTrendUp /> },
-  { label: "Calendar",  href: "/calendar",  icon: <IconCalendar /> },
+  { label: "Dashboard",       href: "/dashboard",              icon: <IconDashboard /> },
+  { label: "Workouts",        href: "/workouts",               icon: <IconDumbbell /> },
+  { label: "Exercises",       href: "/training/exercises",       icon: <IconDumbbell /> },
+  { label: "Workout Builder",href: "/training/workout-builder", icon: <IconDumbbell /> },
+  { label: "Templates",     href: "/training/templates",       icon: <IconDumbbell /> },
+  { label: "Nutrition",       href: "/nutrition",              icon: <IconLeaf /> },
+  { label: "Food Log",        href: "/nutrition/log",          icon: <IconLeaf /> },
+  { label: "Foods",           href: "/nutrition/foods",        icon: <IconLeaf /> },
+  { label: "Recipes",         href: "/nutrition/recipes",      icon: <IconLeaf /> },
+  { label: "Shopping List",   href: "/nutrition/shopping-list", icon: <IconLeaf /> },
+  { label: "Nutrition Goals", href: "/nutrition/goals",         icon: <IconLeaf /> },
+  { label: "Meal Planner",   href: "/nutrition/meal-planner",  icon: <IconLeaf /> },
+  { label: "Progress",        href: "/progress",               icon: <IconTrendUp /> },
+  { label: "Measurements",    href: "/progress/measurements",  icon: <IconRuler /> },
+  { label: "Weight Tracker",  href: "/progress/weight",        icon: <IconTrendUp /> },
+  { label: "Calendar",        href: "/calendar",               icon: <IconCalendar /> },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────

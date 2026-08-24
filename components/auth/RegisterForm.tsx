@@ -101,6 +101,8 @@ export default function RegisterForm() {
     const userData = {
       name: fields.name.trim(),
       email: fields.email.trim().toLowerCase(),
+      password: fields.password,
+      role: "USER",
       createdAt: new Date().toISOString(),
     };
     localStorage.setItem("fitnessapp_user", JSON.stringify(userData));
