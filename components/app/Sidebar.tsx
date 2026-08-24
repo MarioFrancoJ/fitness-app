@@ -79,11 +79,14 @@ const navItems = [
   { label: "Recipes",         href: "/nutrition/recipes",      icon: <IconLeaf /> },
   { label: "Shopping List",   href: "/nutrition/shopping-list", icon: <IconLeaf /> },
   { label: "Nutrition Goals", href: "/nutrition/goals",         icon: <IconLeaf /> },
-  { label: "Meal Planner",   href: "/nutrition/meal-planner",  icon: <IconLeaf /> },
+  { label: "Meal Planner",   href: "/meal-planner",             icon: <IconLeaf /> },
+  { label: "Shopping List",  href: "/shopping-list",           icon: <IconLeaf /> },
   { label: "Progress",        href: "/progress",               icon: <IconTrendUp /> },
   { label: "Measurements",    href: "/progress/measurements",  icon: <IconRuler /> },
   { label: "Weight Tracker",  href: "/progress/weight",        icon: <IconTrendUp /> },
   { label: "Calendar",        href: "/calendar",               icon: <IconCalendar /> },
+  { label: "AI Coach",        href: "/ai-coach",              icon: <IconDashboard /> },
+  { label: "Profile",         href: "/profile",              icon: <IconSettings /> },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────

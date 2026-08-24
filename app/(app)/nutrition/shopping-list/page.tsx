@@ -57,7 +57,7 @@ function generateFromMealPlan(): ShoppingItem[] {
     }
 
     // Aggregate ingredients across all recipes
-    const ingredientMap: Record<string, number> = {};
+    const ingredientMap: Record<string, { qty: number; unit: string }> = {};
 
     for (const id of recipeIds) {
       const recipe = recipes.find((r) => r.id === id);
@@ -65,20 +65,21 @@ function generateFromMealPlan(): ShoppingItem[] {
 
       const count = recipeCounts[id] || 1;
 
-      for (const ingredient of recipe.ingredients) {
-        if (ingredientMap[ingredient]) {
-          ingredientMap[ingredient] += count;
+      for (const ing of recipe.ingredients) {
+        const key = ing.name;
+        if (ingredientMap[key]) {
+          ingredientMap[key].qty += ing.quantity * count;
         } else {
-          ingredientMap[ingredient] = count;
+          ingredientMap[key] = { qty: ing.quantity * count, unit: ing.unit };
         }
       }
     }
 
     // Convert to ShoppingItem format
-    return Object.entries(ingredientMap).map(([name, count]) => ({
+    return Object.entries(ingredientMap).map(([name, { qty, unit }]) => ({
       id: `gen-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      name,
-      quantity: count > 1 ? `×${count}` : "×1",
+      name: `${name} (${qty} ${unit})`,
+      quantity: `${qty} ${unit}`,
     }));
   } catch {
     return [];

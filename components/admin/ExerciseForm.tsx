@@ -4,14 +4,15 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import type { MuscleGroup, Difficulty } from "@/data/exercises";
+import type { MuscleGroup, Difficulty, Equipment } from "@/data/exercises";
+import { MUSCLE_GROUPS as MG_OPTIONS, DIFFICULTIES as DIFF_OPTIONS, EQUIPMENT_OPTIONS as EQ_OPTIONS } from "@/data/exercises";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface ExerciseFormData {
   name: string;
   muscleGroup: MuscleGroup | "";
-  equipment: string;
+  equipment: Equipment | string;
   difficulty: Difficulty | "";
   instructions: string;
   commonMistakes: string;
@@ -24,9 +25,9 @@ interface ExerciseFormProps {
   exerciseId?: string;
 }
 
-const MUSCLE_GROUPS: MuscleGroup[] = ["Chest", "Back", "Legs", "Shoulders", "Arms", "Core"];
-const DIFFICULTIES: Difficulty[] = ["Beginner", "Intermediate", "Advanced"];
-const EQUIPMENT_OPTIONS = ["Barbell", "Dumbbell", "Bodyweight", "Cable", "Machine", "Kettlebell", "Resistance Band"];
+const MUSCLE_GROUPS = MG_OPTIONS;
+const DIFFICULTIES = DIFF_OPTIONS;
+const EQUIPMENT_OPTIONS = EQ_OPTIONS;
 
 const EMPTY_FORM: ExerciseFormData = {
   name: "",

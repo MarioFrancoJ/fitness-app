@@ -38,20 +38,25 @@ export default async function RecipeDetailPage({
         href="/nutrition/recipes"
         className="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900"
       >
-        ← Back to Recipes
+        &larr; Back to Recipes
       </Link>
 
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-            {recipe.name}
-          </h1>
-          <span
-            className={`mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold ${goalColor(recipe.goal)}`}
-          >
-            {recipe.goal}
-          </span>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{recipe.name}</h1>
+          {recipe.description && (
+            <p className="mt-1 text-sm text-zinc-500">{recipe.description}</p>
+          )}
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${goalColor(recipe.goal)}`}>
+              {recipe.goal}
+            </span>
+            {recipe.prepTime > 0 && (
+              <span className="text-xs text-zinc-400">{recipe.prepTime} min prep</span>
+            )}
+            <span className="text-xs text-zinc-400">{recipe.servings} serving{recipe.servings > 1 ? "s" : ""}</span>
+          </div>
         </div>
       </div>
 
@@ -67,7 +72,7 @@ export default async function RecipeDetailPage({
         </div>
       </div>
 
-      {/* Macro cards */}
+      {/* Nutrition Facts */}
       <div className="grid gap-4 sm:grid-cols-4">
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="text-2xl font-bold text-zinc-900">{recipe.calories}</p>
@@ -96,9 +101,14 @@ export default async function RecipeDetailPage({
           </h2>
           <ul className="flex flex-col gap-2.5">
             {recipe.ingredients.map((item, i) => (
-              <li key={i} className="flex items-start gap-2.5 text-sm text-zinc-700">
-                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300" />
-                {item}
+              <li key={i} className="flex items-center justify-between text-sm text-zinc-700">
+                <span className="flex items-center gap-2.5">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300" />
+                  {item.name}
+                </span>
+                <span className="shrink-0 text-xs text-zinc-400">
+                  {item.quantity} {item.unit}
+                </span>
               </li>
             ))}
           </ul>
@@ -124,13 +134,12 @@ export default async function RecipeDetailPage({
 
       {/* Add to Meal Plan */}
       <div>
-        <button
-          type="button"
+        <Link
+          href="/meal-planner"
           className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
         >
           + Add to Meal Plan
-        </button>
-        <p className="mt-2 text-xs text-zinc-400">Meal plan functionality coming soon.</p>
+        </Link>
       </div>
     </div>
   );

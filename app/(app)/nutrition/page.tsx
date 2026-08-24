@@ -1,130 +1,715 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { loadIngredients } from "@/lib/ingredients-store";
-import { INGREDIENT_CATEGORIES, type Ingredient, type IngredientCategory } from "@/data/ingredients-seed";
+import { useState, useEffect, useCallback, useMemo, type FormEvent } from "react";
 
-export default function NutritionPage() {
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<"All" | IngredientCategory>("All");
+// ── Types ─────────────────────────────────────────────────────────────────────
 
+type MealType = "Breakfast" | "Lunch" | "Dinner" | "Snack";
+
+interface Meal {
+  id: string;
+  name: string;
+  description: string;
+  mealType: MealType;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
+  photoUrl: string | null;
+}
+
+interface NutritionEntry {
+  date: string;
+  meals: Meal[];
+}
+
+interface DailyNutritionSummary {
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  mealCount: number;
+}
+
+interface NutritionTargets {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const MEALS_KEY = "fitnessapp_nutrition_meals";
+const PROFILE_KEY = "fitnessapp_user";
+const MEAL_TYPES: MealType[] = ["Breakfast", "Lunch", "Dinner", "Snack"];
+
+const DEFAULT_TARGETS: NutritionTargets = { calories: 2200, protein: 150, carbs: 250, fat: 70 };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function nowTime(): string {
+  return new Date().toTimeString().slice(0, 5);
+}
+
+function loadMeals(): Meal[] {
+  try {
+    const raw = localStorage.getItem(MEALS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMeals(meals: Meal[]) {
+  localStorage.setItem(MEALS_KEY, JSON.stringify(meals));
+}
+
+function loadTargets(): NutritionTargets {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    if (!raw) return DEFAULT_TARGETS;
+    const data = JSON.parse(raw);
+    const weight = data.currentWeight || data.weight || 70;
+    const goal = data.fitnessGoal || data.goal || "";
+
+    // Estimate targets based on goal
+    let multiplier = 30; // maintenance
+    if (goal.toLowerCase().includes("lose") || goal.toLowerCase().includes("fat")) multiplier = 25;
+    if (goal.toLowerCase().includes("muscle") || goal.toLowerCase().includes("build")) multiplier = 35;
+
+    const calories = Math.round(weight * multiplier);
+    const protein = Math.round(weight * 2);
+    const fat = Math.round((calories * 0.25) / 9);
+    const carbs = Math.round((calories - protein * 4 - fat * 9) / 4);
+
+    return { calories, protein: Math.max(protein, 80), carbs: Math.max(carbs, 100), fat: Math.max(fat, 40) };
+  } catch {
+    return DEFAULT_TARGETS;
+  }
+}
+
+function getDailySummary(meals: Meal[], date: string): DailyNutritionSummary {
+  const dayMeals = meals.filter((m) => m.date === date);
+  return {
+    totalCalories: dayMeals.reduce((s, m) => s + m.calories, 0),
+    totalProtein: dayMeals.reduce((s, m) => s + m.protein, 0),
+    totalCarbs: dayMeals.reduce((s, m) => s + m.carbs, 0),
+    totalFat: dayMeals.reduce((s, m) => s + m.fat, 0),
+    mealCount: dayMeals.length,
+  };
+}
+
+function getDateRange(filter: "today" | "week" | "month"): string[] {
+  const dates: string[] = [];
+  const now = new Date();
+  const days = filter === "today" ? 1 : filter === "week" ? 7 : 30;
+  for (let i = 0; i < days; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    dates.push(d.toISOString().slice(0, 10));
+  }
+  return dates;
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+
+function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   useEffect(() => {
-    setIngredients(loadIngredients());
-  }, []);
-
-  const filtered = ingredients.filter((i) => {
-    const matchesSearch = i.name.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = categoryFilter === "All" || i.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
-
-  // Category summary
-  const categorySummary = INGREDIENT_CATEGORIES.map((cat) => ({
-    category: cat,
-    count: ingredients.filter((i) => i.category === cat).length,
-  })).filter((c) => c.count > 0);
+    const t = setTimeout(onClose, 3000);
+    return () => clearTimeout(t);
+  }, [onClose]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Nutrition Database</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          {ingredients.length} ingredients available
-        </p>
-      </div>
-
-      {/* Summary cards */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-medium text-zinc-400">Total Ingredients</p>
-          <p className="text-2xl font-bold text-zinc-900">{ingredients.length}</p>
-        </div>
-        {categorySummary.slice(0, 3).map((c) => (
-          <div key={c.category} className="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-medium text-zinc-400">{c.category}</p>
-            <p className="text-2xl font-bold text-zinc-900">{c.count}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Category summary pills */}
-      <div className="flex flex-wrap gap-2">
-        {categorySummary.map((c) => (
-          <button
-            key={c.category}
-            type="button"
-            onClick={() => setCategoryFilter(c.category)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              categoryFilter === c.category
-                ? "border-zinc-900 bg-zinc-900 text-white"
-                : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400"
-            }`}
-          >
-            {c.category} ({c.count})
-          </button>
-        ))}
-        {categoryFilter !== "All" && (
-          <button
-            type="button"
-            onClick={() => setCategoryFilter("All")}
-            className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-500 hover:border-zinc-400"
-          >
-            Clear filter
-          </button>
-        )}
-      </div>
-
-      {/* Search */}
-      <div className="relative w-64">
-        <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" aria-hidden="true">
-          <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
+    <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100">
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true">
+          <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
         </svg>
-        <input
-          type="search"
-          placeholder="Search ingredients..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label="Search ingredients"
-          className="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+      </span>
+      <p className="text-sm font-medium text-zinc-800">{message}</p>
+      <button type="button" onClick={onClose} aria-label="Dismiss" className="ml-1 text-zinc-400 hover:text-zinc-600 focus-visible:outline-none">
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+          <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+// ── Progress Bar ──────────────────────────────────────────────────────────────
+
+function MacroBar({ label, current, target, color }: { label: string; current: number; target: number; color: string }) {
+  const pct = Math.min((current / target) * 100, 100);
+  const over = current > target;
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-xs font-medium text-zinc-600">{label}</span>
+        <span className={`text-xs font-semibold ${over ? "text-red-500" : "text-zinc-700"}`}>
+          {current} / {target}{label === "Calories" ? " kcal" : "g"}
+        </span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+        <div
+          className={`h-full rounded-full transition-all ${over ? "bg-red-400" : ""}`}
+          style={{ width: `${pct}%`, backgroundColor: over ? undefined : color }}
         />
       </div>
+    </div>
+  );
+}
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-        {filtered.length === 0 ? (
-          <div className="flex h-40 items-center justify-center">
-            <p className="text-sm text-zinc-400">No ingredients found.</p>
+// ── Empty State ───────────────────────────────────────────────────────────────
+
+function EmptyState({ onAdd }: { onAdd: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white py-20">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100">
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-7 w-7 text-zinc-400" aria-hidden="true">
+          <path fillRule="evenodd" d="M9.965 3.038C7.67 3.28 5.64 4.533 4.25 6.492a8.014 8.014 0 0 0-1.223 6.584c.194.8.96 1.284 1.746 1.07A7.95 7.95 0 0 0 7 13.5c1.18 0 2.3.256 3.31.713C10.86 15.48 12.15 16 13.5 16c1.657 0 3-.828 3-2.5C16.5 7.649 13.576 2.664 9.965 3.038Z" clipRule="evenodd" />
+        </svg>
+      </div>
+      <p className="mb-1 text-base font-semibold text-zinc-900">No meals logged yet</p>
+      <p className="mb-6 text-sm text-zinc-500">Start tracking your nutrition by adding your first meal.</p>
+      <button
+        type="button"
+        onClick={onAdd}
+        className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+      >
+        Add First Meal
+      </button>
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export default function NutritionPage() {
+  const [meals, setMeals] = useState<Meal[]>([]);
+  const [targets, setTargets] = useState<NutritionTargets>(DEFAULT_TARGETS);
+  const [hydrated, setHydrated] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [historyFilter, setHistoryFilter] = useState<"today" | "week" | "month">("today");
+
+  // Form state
+  const [formName, setFormName] = useState("");
+  const [formDesc, setFormDesc] = useState("");
+  const [formType, setFormType] = useState<MealType>("Breakfast");
+  const [formCalories, setFormCalories] = useState("");
+  const [formProtein, setFormProtein] = useState("");
+  const [formCarbs, setFormCarbs] = useState("");
+  const [formFat, setFormFat] = useState("");
+  const [formDate, setFormDate] = useState(todayISO());
+  const [formTime, setFormTime] = useState(nowTime());
+  const [formPhoto, setFormPhoto] = useState<string | null>(null);
+
+  const dismissToast = useCallback(() => setToast(null), []);
+
+  useEffect(() => {
+    setMeals(loadMeals());
+    setTargets(loadTargets());
+    setHydrated(true);
+  }, []);
+
+  // ── Form handlers ──────────────────────────────────────────────────────────
+
+  function resetForm() {
+    setFormName("");
+    setFormDesc("");
+    setFormType("Breakfast");
+    setFormCalories("");
+    setFormProtein("");
+    setFormCarbs("");
+    setFormFat("");
+    setFormDate(todayISO());
+    setFormTime(nowTime());
+    setFormPhoto(null);
+    setEditingId(null);
+  }
+
+  function openAddForm() {
+    resetForm();
+    setShowForm(true);
+  }
+
+  function openEditForm(meal: Meal) {
+    setFormName(meal.name);
+    setFormDesc(meal.description);
+    setFormType(meal.mealType);
+    setFormCalories(meal.calories.toString());
+    setFormProtein(meal.protein.toString());
+    setFormCarbs(meal.carbs.toString());
+    setFormFat(meal.fat.toString());
+    setFormDate(meal.date);
+    setFormTime(meal.time);
+    setFormPhoto(meal.photoUrl);
+    setEditingId(meal.id);
+    setShowForm(true);
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!formName.trim()) return;
+
+    const meal: Meal = {
+      id: editingId || crypto.randomUUID(),
+      name: formName.trim(),
+      description: formDesc.trim(),
+      mealType: formType,
+      calories: parseInt(formCalories) || 0,
+      protein: parseInt(formProtein) || 0,
+      carbs: parseInt(formCarbs) || 0,
+      fat: parseInt(formFat) || 0,
+      date: formDate,
+      time: formTime,
+      photoUrl: formPhoto,
+    };
+
+    let updated: Meal[];
+    if (editingId) {
+      updated = meals.map((m) => (m.id === editingId ? meal : m));
+      setToast("Meal updated successfully!");
+    } else {
+      updated = [meal, ...meals];
+      setToast("Meal added successfully!");
+    }
+
+    setMeals(updated);
+    saveMeals(updated);
+    setShowForm(false);
+    resetForm();
+  }
+
+  function handleDelete(id: string) {
+    const updated = meals.filter((m) => m.id !== id);
+    setMeals(updated);
+    saveMeals(updated);
+    setToast("Meal deleted");
+  }
+
+  function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFormPhoto(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── Derived data ───────────────────────────────────────────────────────────
+
+  const today = todayISO();
+  const todaySummary = useMemo(() => getDailySummary(meals, today), [meals, today]);
+  const todayMeals = useMemo(() => meals.filter((m) => m.date === today).sort((a, b) => a.time.localeCompare(b.time)), [meals, today]);
+
+  // History
+  const historyDates = useMemo(() => getDateRange(historyFilter), [historyFilter]);
+  const historyStats = useMemo(() => {
+    const historyMeals = meals.filter((m) => historyDates.includes(m.date));
+    const daysWithMeals = new Set(historyMeals.map((m) => m.date)).size || 1;
+    const totalCal = historyMeals.reduce((s, m) => s + m.calories, 0);
+    const totalPro = historyMeals.reduce((s, m) => s + m.protein, 0);
+    const totalCarbs = historyMeals.reduce((s, m) => s + m.carbs, 0);
+    const totalFat = historyMeals.reduce((s, m) => s + m.fat, 0);
+    return {
+      totalCalories: totalCal,
+      avgCalories: Math.round(totalCal / daysWithMeals),
+      avgProtein: Math.round(totalPro / daysWithMeals),
+      avgCarbs: Math.round(totalCarbs / daysWithMeals),
+      avgFat: Math.round(totalFat / daysWithMeals),
+    };
+  }, [meals, historyDates]);
+
+  // Insights
+  const insights = useMemo(() => {
+    const msgs: string[] = [];
+    if (todaySummary.totalProtein >= targets.protein) msgs.push("You reached your protein goal today.");
+    else if (todaySummary.totalProtein > 0 && todaySummary.totalProtein < targets.protein * 0.5) msgs.push("Your protein intake is low today. Try adding a high-protein meal.");
+    if (todaySummary.totalCalories > 0 && todaySummary.totalCalories < targets.calories * 0.8) msgs.push("You are below your calorie target.");
+    if (todaySummary.totalCalories > targets.calories) msgs.push("You exceeded your calorie target today.");
+    if (todaySummary.totalFat > targets.fat) msgs.push("You exceeded your fat target.");
+    if (todaySummary.totalCarbs >= targets.carbs) msgs.push("You reached your carbs goal.");
+
+    // Weekly consistency
+    const weekDates = getDateRange("week");
+    const daysLogged = new Set(meals.filter((m) => weekDates.includes(m.date)).map((m) => m.date)).size;
+    if (daysLogged >= 5) msgs.push("Great consistency this week! You've logged meals on " + daysLogged + " days.");
+
+    if (msgs.length === 0 && todaySummary.mealCount === 0) msgs.push("No meals logged today. Start tracking to see insights.");
+    return msgs;
+  }, [todaySummary, targets, meals]);
+
+  if (!hydrated) return null;
+
+  const hasMeals = meals.length > 0;
+
+  return (
+    <>
+      <div className="flex flex-col gap-6">
+        {/* ── Header ── */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Nutrition</h1>
+            <p className="mt-1 text-sm text-zinc-500">Track your daily food intake, calories, and macros.</p>
           </div>
+          <button
+            type="button"
+            onClick={openAddForm}
+            className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+          >
+            + Add Meal
+          </button>
+        </div>
+
+        {!hasMeals && !showForm ? (
+          <EmptyState onAdd={openAddForm} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-zinc-100 bg-zinc-50">
-                <tr>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Name</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Category</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Calories</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Protein</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Carbs</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Fat</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
-                {filtered.map((i) => (
-                  <tr key={i.id} className="hover:bg-zinc-50">
-                    <td className="px-5 py-3 font-medium text-zinc-900">{i.name}</td>
-                    <td className="px-5 py-3"><span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">{i.category}</span></td>
-                    <td className="px-5 py-3 text-zinc-600">{i.caloriesPer100g}</td>
-                    <td className="px-5 py-3 text-zinc-600">{i.proteinPer100g}g</td>
-                    <td className="px-5 py-3 text-zinc-600">{i.carbsPer100g}g</td>
-                    <td className="px-5 py-3 text-zinc-600">{i.fatPer100g}g</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {/* ═══════════════════════════════════════════════════════════════════
+                1. DAILY NUTRITION DASHBOARD
+            ═══════════════════════════════════════════════════════════════════ */}
+            <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-sm font-semibold text-zinc-900">Today&apos;s Nutrition</p>
+                <span className="text-xs text-zinc-400">{today}</span>
+              </div>
+
+              {/* Summary cards */}
+              <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                <div className="rounded-lg bg-zinc-50 p-3 text-center">
+                  <p className="text-lg font-bold text-zinc-900">{todaySummary.totalCalories}</p>
+                  <p className="text-[10px] text-zinc-400">Consumed</p>
+                </div>
+                <div className="rounded-lg bg-zinc-50 p-3 text-center">
+                  <p className="text-lg font-bold text-emerald-600">{Math.max(0, targets.calories - todaySummary.totalCalories)}</p>
+                  <p className="text-[10px] text-zinc-400">Remaining</p>
+                </div>
+                <div className="rounded-lg bg-blue-50 p-3 text-center">
+                  <p className="text-lg font-bold text-blue-600">{todaySummary.totalProtein}g</p>
+                  <p className="text-[10px] text-zinc-400">Protein</p>
+                </div>
+                <div className="rounded-lg bg-amber-50 p-3 text-center">
+                  <p className="text-lg font-bold text-amber-600">{todaySummary.totalCarbs}g</p>
+                  <p className="text-[10px] text-zinc-400">Carbs</p>
+                </div>
+                <div className="rounded-lg bg-emerald-50 p-3 text-center">
+                  <p className="text-lg font-bold text-emerald-600">{todaySummary.totalFat}g</p>
+                  <p className="text-[10px] text-zinc-400">Fat</p>
+                </div>
+              </div>
+
+              {/* Progress bars */}
+              <div className="flex flex-col gap-3">
+                <MacroBar label="Calories" current={todaySummary.totalCalories} target={targets.calories} color="#18181b" />
+                <MacroBar label="Protein" current={todaySummary.totalProtein} target={targets.protein} color="#2563eb" />
+                <MacroBar label="Carbs" current={todaySummary.totalCarbs} target={targets.carbs} color="#d97706" />
+                <MacroBar label="Fat" current={todaySummary.totalFat} target={targets.fat} color="#059669" />
+              </div>
+            </div>
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                4. DAILY MEAL TIMELINE
+            ═══════════════════════════════════════════════════════════════════ */}
+            <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+              <p className="mb-4 text-sm font-semibold text-zinc-900">Today&apos;s Meals</p>
+              {todayMeals.length === 0 ? (
+                <p className="text-sm text-zinc-400">No meals logged today.</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {MEAL_TYPES.map((type) => {
+                    const typeMeals = todayMeals.filter((m) => m.mealType === type);
+                    if (typeMeals.length === 0) return null;
+                    return (
+                      <div key={type}>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">{type}</p>
+                        <div className="flex flex-col gap-2">
+                          {typeMeals.map((meal) => (
+                            <div key={meal.id} className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+                              {/* Photo thumbnail */}
+                              {meal.photoUrl ? (
+                                <img src={meal.photoUrl} alt={meal.name} className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                              ) : (
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-200">
+                                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-zinc-400" aria-hidden="true">
+                                    <path fillRule="evenodd" d="M1 5.25A2.25 2.25 0 0 1 3.25 3h13.5A2.25 2.25 0 0 1 19 5.25v9.5A2.25 2.25 0 0 1 16.75 17H3.25A2.25 2.25 0 0 1 1 14.75v-9.5Zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 0 0 .75-.75v-2.69l-2.22-2.219a.75.75 0 0 0-1.06 0l-1.91 1.909-4.97-4.969a.75.75 0 0 0-1.06 0L2.5 11.06Zm12.22-4.81a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                              )}
+                              {/* Info */}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-zinc-900 truncate">{meal.name}</p>
+                                <p className="text-xs text-zinc-400">
+                                  {meal.calories} kcal &middot; P {meal.protein}g &middot; C {meal.carbs}g &middot; F {meal.fat}g
+                                </p>
+                              </div>
+                              {/* Time */}
+                              <span className="shrink-0 text-xs text-zinc-400">{meal.time}</span>
+                              {/* Actions */}
+                              <div className="flex shrink-0 gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditForm(meal)}
+                                  aria-label={`Edit ${meal.name}`}
+                                  className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-zinc-200 hover:text-zinc-700 focus-visible:outline-none"
+                                >
+                                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
+                                    <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+                                    <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(meal.id)}
+                                  aria-label={`Delete ${meal.name}`}
+                                  className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none"
+                                >
+                                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
+                                    <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                6. NUTRITION INSIGHTS
+            ═══════════════════════════════════════════════════════════════════ */}
+            {insights.length > 0 && (
+              <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+                <p className="mb-3 text-sm font-semibold text-zinc-900">Insights</p>
+                <div className="flex flex-col gap-2">
+                  {insights.map((msg, i) => (
+                    <div key={i} className="flex items-start gap-2 rounded-lg bg-zinc-50 p-3">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100">
+                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 text-blue-600" aria-hidden="true">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clipRule="evenodd" />
+                        </svg>
+                      </span>
+                      <p className="text-sm text-zinc-700">{msg}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                5. NUTRITION HISTORY
+            ═══════════════════════════════════════════════════════════════════ */}
+            <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-sm font-semibold text-zinc-900">Nutrition History</p>
+                <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-0.5">
+                  {([["today", "Today"], ["week", "This Week"], ["month", "This Month"]] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setHistoryFilter(key)}
+                      className={[
+                        "rounded-md px-3 py-1 text-xs font-semibold transition-colors",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
+                        historyFilter === key ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900",
+                      ].join(" ")}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                <div className="rounded-lg bg-zinc-50 p-3 text-center">
+                  <p className="text-lg font-bold text-zinc-900">{historyStats.totalCalories}</p>
+                  <p className="text-[10px] text-zinc-400">Total Calories</p>
+                </div>
+                <div className="rounded-lg bg-zinc-50 p-3 text-center">
+                  <p className="text-lg font-bold text-zinc-900">{historyStats.avgCalories}</p>
+                  <p className="text-[10px] text-zinc-400">Avg Calories/Day</p>
+                </div>
+                <div className="rounded-lg bg-blue-50 p-3 text-center">
+                  <p className="text-lg font-bold text-blue-600">{historyStats.avgProtein}g</p>
+                  <p className="text-[10px] text-zinc-400">Avg Protein</p>
+                </div>
+                <div className="rounded-lg bg-amber-50 p-3 text-center">
+                  <p className="text-lg font-bold text-amber-600">{historyStats.avgCarbs}g</p>
+                  <p className="text-[10px] text-zinc-400">Avg Carbs</p>
+                </div>
+                <div className="rounded-lg bg-emerald-50 p-3 text-center">
+                  <p className="text-lg font-bold text-emerald-600">{historyStats.avgFat}g</p>
+                  <p className="text-[10px] text-zinc-400">Avg Fat</p>
+                </div>
+              </div>
+            </div>
+          </>
         )}
       </div>
-    </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          2 & 3. ADD/EDIT MEAL MODAL
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {showForm && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowForm(false)}>
+          <div
+            className="w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+            style={{ maxHeight: "90vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-zinc-900">{editingId ? "Edit Meal" : "Add Meal"}</h2>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                aria-label="Close"
+                className="rounded-lg p-1 text-zinc-400 hover:text-zinc-700 focus-visible:outline-none"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
+                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              {/* Meal Type */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="mealType" className="text-sm font-medium text-zinc-700">Meal Type</label>
+                <select
+                  id="mealType"
+                  value={formType}
+                  onChange={(e) => setFormType(e.target.value as MealType)}
+                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                >
+                  {MEAL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+
+              {/* Name */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="mealName" className="text-sm font-medium text-zinc-700">Meal Name *</label>
+                <input
+                  id="mealName"
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="e.g. Grilled Chicken Salad"
+                  required
+                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                />
+              </div>
+
+              {/* Description */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="mealDesc" className="text-sm font-medium text-zinc-700">Description</label>
+                <input
+                  id="mealDesc"
+                  type="text"
+                  value={formDesc}
+                  onChange={(e) => setFormDesc(e.target.value)}
+                  placeholder="Optional notes about the meal"
+                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                />
+              </div>
+
+              {/* Macros grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="mealCal" className="text-sm font-medium text-zinc-700">Calories</label>
+                  <input id="mealCal" type="number" min={0} max={5000} value={formCalories} onChange={(e) => setFormCalories(e.target.value)} placeholder="0" className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="mealPro" className="text-sm font-medium text-zinc-700">Protein (g)</label>
+                  <input id="mealPro" type="number" min={0} max={500} value={formProtein} onChange={(e) => setFormProtein(e.target.value)} placeholder="0" className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="mealCarbs" className="text-sm font-medium text-zinc-700">Carbs (g)</label>
+                  <input id="mealCarbs" type="number" min={0} max={500} value={formCarbs} onChange={(e) => setFormCarbs(e.target.value)} placeholder="0" className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="mealFat" className="text-sm font-medium text-zinc-700">Fat (g)</label>
+                  <input id="mealFat" type="number" min={0} max={500} value={formFat} onChange={(e) => setFormFat(e.target.value)} placeholder="0" className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+                </div>
+              </div>
+
+              {/* Date & Time */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="mealDate" className="text-sm font-medium text-zinc-700">Date</label>
+                  <input id="mealDate" type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="mealTime" className="text-sm font-medium text-zinc-700">Time</label>
+                  <input id="mealTime" type="time" value={formTime} onChange={(e) => setFormTime(e.target.value)} className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+                </div>
+              </div>
+
+              {/* Photo upload */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="mealPhoto" className="text-sm font-medium text-zinc-700">Meal Photo</label>
+                <div className="flex items-center gap-3">
+                  {formPhoto ? (
+                    <img src={formPhoto} alt="Meal preview" className="h-16 w-16 rounded-lg object-cover" />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50">
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-zinc-300" aria-hidden="true">
+                        <path fillRule="evenodd" d="M1 5.25A2.25 2.25 0 0 1 3.25 3h13.5A2.25 2.25 0 0 1 19 5.25v9.5A2.25 2.25 0 0 1 16.75 17H3.25A2.25 2.25 0 0 1 1 14.75v-9.5Zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 0 0 .75-.75v-2.69l-2.22-2.219a.75.75 0 0 0-1.06 0l-1.91 1.909-4.97-4.969a.75.75 0 0 0-1.06 0L2.5 11.06Zm12.22-4.81a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-1">
+                    <label
+                      htmlFor="mealPhoto"
+                      className="cursor-pointer rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
+                    >
+                      {formPhoto ? "Change Photo" : "Upload Photo"}
+                    </label>
+                    <input id="mealPhoto" type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                    {formPhoto && (
+                      <button type="button" onClick={() => setFormPhoto(null)} className="text-left text-xs text-red-500 hover:text-red-700">
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-zinc-400">Will connect to AI Food Recognition in a future update.</p>
+              </div>
+
+              {/* Submit */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="flex-1 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 focus-visible:ring-offset-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+                >
+                  {editingId ? "Update Meal" : "Add Meal"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && <Toast message={toast} onClose={dismissToast} />}
+    </>
   );
 }

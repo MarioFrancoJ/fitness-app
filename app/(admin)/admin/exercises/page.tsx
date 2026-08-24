@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
-import { exercises, type MuscleGroup, type Difficulty } from "@/data/exercises";
+import Input from "@/components/ui/Input";
+import { loadExercises, addExercise, updateExercise, deleteExercise } from "@/lib/exercises-store";
+import {
+  EXERCISE_CATEGORIES, MUSCLE_GROUPS, EQUIPMENT_OPTIONS, DIFFICULTIES,
+  type Exercise, type ExerciseCategory, type MuscleGroup, type Equipment, type Difficulty,
+} from "@/data/exercises";
 
-const MUSCLE_GROUPS: ("All" | MuscleGroup)[] = ["All", "Chest", "Back", "Legs", "Shoulders", "Arms", "Core"];
-const DIFFICULTIES: ("All" | Difficulty)[] = ["All", "Beginner", "Intermediate", "Advanced"];
-const EQUIPMENT = ["All", "Barbell", "Dumbbell", "Bodyweight", "Cable", "Machine"] as const;
-
-function difficultyColor(d: Difficulty) {
+function difficultyColor(d: Difficulty): string {
   switch (d) {
     case "Beginner":     return "bg-emerald-50 text-emerald-700";
     case "Intermediate": return "bg-amber-50 text-amber-700";
@@ -18,19 +18,92 @@ function difficultyColor(d: Difficulty) {
 }
 
 export default function AdminExercisesPage() {
-  const router = useRouter();
+  const [exercises, setExercises] = useState<Exercise[]>([]);
   const [search, setSearch] = useState("");
-  const [muscleFilter, setMuscleFilter] = useState<string>("All");
-  const [difficultyFilter, setDifficultyFilter] = useState<string>("All");
-  const [equipmentFilter, setEquipmentFilter] = useState<string>("All");
+  const [categoryFilter, setCategoryFilter] = useState<"All" | ExerciseCategory>("All");
+  const [muscleFilter, setMuscleFilter] = useState<"All" | MuscleGroup>("All");
+  const [difficultyFilter, setDifficultyFilter] = useState<"All" | Difficulty>("All");
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+
+  // Form state
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<ExerciseCategory>("Strength");
+  const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>("Chest");
+  const [equipment, setEquipment] = useState<Equipment>("None");
+  const [difficulty, setDifficulty] = useState<Difficulty>("Beginner");
+  const [instructionsText, setInstructionsText] = useState("");
+  const [tipsText, setTipsText] = useState("");
+  const [mistakesText, setMistakesText] = useState("");
+  const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    setExercises(loadExercises());
+  }, []);
+
+  function refresh() { setExercises(loadExercises()); }
 
   const filtered = exercises.filter((ex) => {
     const matchesSearch = ex.name.toLowerCase().includes(search.toLowerCase());
+    const matchesCat = categoryFilter === "All" || ex.category === categoryFilter;
     const matchesMuscle = muscleFilter === "All" || ex.muscleGroup === muscleFilter;
-    const matchesDifficulty = difficultyFilter === "All" || ex.difficulty === difficultyFilter;
-    const matchesEquipment = equipmentFilter === "All" || ex.equipment === equipmentFilter;
-    return matchesSearch && matchesMuscle && matchesDifficulty && matchesEquipment;
+    const matchesDiff = difficultyFilter === "All" || ex.difficulty === difficultyFilter;
+    return matchesSearch && matchesCat && matchesMuscle && matchesDiff;
   });
+
+  function resetForm() {
+    setName(""); setDescription(""); setCategory("Strength"); setMuscleGroup("Chest");
+    setEquipment("None"); setDifficulty("Beginner"); setInstructionsText(""); setTipsText("");
+    setMistakesText(""); setFormError(""); setEditId(null); setShowForm(false);
+  }
+
+  function handleEdit(ex: Exercise) {
+    setName(ex.name);
+    setDescription(ex.description);
+    setCategory(ex.category);
+    setMuscleGroup(ex.muscleGroup);
+    setEquipment(ex.equipment);
+    setDifficulty(ex.difficulty);
+    setInstructionsText(ex.instructions.join("\n"));
+    setTipsText(ex.tips.join("\n"));
+    setMistakesText(ex.commonMistakes.join("\n"));
+    setEditId(ex.id);
+    setShowForm(true);
+  }
+
+  function handleDelete(id: string) {
+    deleteExercise(id);
+    refresh();
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) { setFormError("Name is required."); return; }
+
+    const data: Omit<Exercise, "id"> = {
+      name: name.trim(),
+      description: description.trim(),
+      category,
+      muscleGroup,
+      equipment,
+      difficulty,
+      instructions: instructionsText.split("\n").filter((l) => l.trim()),
+      tips: tipsText.split("\n").filter((l) => l.trim()),
+      commonMistakes: mistakesText.split("\n").filter((l) => l.trim()),
+      imageUrl: null,
+      videoUrl: null,
+    };
+
+    if (editId) {
+      updateExercise(editId, { ...data, id: editId });
+    } else {
+      addExercise(data);
+    }
+
+    resetForm();
+    refresh();
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -38,114 +111,146 @@ export default function AdminExercisesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Exercises</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            {filtered.length} exercise{filtered.length !== 1 ? "s" : ""} in catalogue
-          </p>
+          <p className="mt-1 text-sm text-zinc-500">{filtered.length} exercise{filtered.length !== 1 ? "s" : ""} in catalogue</p>
         </div>
-        <Button type="button" onClick={() => router.push("/admin/exercises/new")}>+ New Exercise</Button>
+        <Button type="button" onClick={() => { resetForm(); setShowForm(true); }}>+ New Exercise</Button>
       </div>
+
+      {/* Form */}
+      {showForm && (
+        <form onSubmit={handleSubmit} className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <p className="mb-4 text-sm font-semibold text-zinc-700">{editId ? "Edit Exercise" : "New Exercise"}</p>
+          {formError && <p className="mb-3 text-xs text-red-500" role="alert">{formError}</p>}
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Input id="ex-name" type="text" label="Name" value={name} onChange={(e) => { setName(e.target.value); setFormError(""); }} placeholder="e.g. Barbell Squat" />
+            <div className="sm:col-span-2">
+              <Input id="ex-desc" type="text" label="Description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="ex-cat" className="text-sm font-medium text-zinc-700">Category</label>
+              <select id="ex-cat" value={category} onChange={(e) => setCategory(e.target.value as ExerciseCategory)}
+                className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
+                {EXERCISE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="ex-muscle" className="text-sm font-medium text-zinc-700">Muscle Group</label>
+              <select id="ex-muscle" value={muscleGroup} onChange={(e) => setMuscleGroup(e.target.value as MuscleGroup)}
+                className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
+                {MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="ex-equip" className="text-sm font-medium text-zinc-700">Equipment</label>
+              <select id="ex-equip" value={equipment} onChange={(e) => setEquipment(e.target.value as Equipment)}
+                className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
+                {EQUIPMENT_OPTIONS.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="ex-diff" className="text-sm font-medium text-zinc-700">Difficulty</label>
+              <select id="ex-diff" value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)}
+                className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
+                {DIFFICULTIES.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Text areas */}
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="ex-instr" className="text-sm font-medium text-zinc-700">Instructions (one per line)</label>
+              <textarea id="ex-instr" value={instructionsText} onChange={(e) => setInstructionsText(e.target.value)} rows={4}
+                placeholder="Step 1&#10;Step 2&#10;Step 3"
+                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="ex-tips" className="text-sm font-medium text-zinc-700">Tips (one per line)</label>
+              <textarea id="ex-tips" value={tipsText} onChange={(e) => setTipsText(e.target.value)} rows={4}
+                placeholder="Tip 1&#10;Tip 2"
+                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="ex-mistakes" className="text-sm font-medium text-zinc-700">Common Mistakes (one per line)</label>
+              <textarea id="ex-mistakes" value={mistakesText} onChange={(e) => setMistakesText(e.target.value)} rows={4}
+                placeholder="Mistake 1&#10;Mistake 2"
+                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+            </div>
+          </div>
+
+          <div className="mt-5 flex gap-3">
+            <Button type="submit">{editId ? "Save Changes" : "Create Exercise"}</Button>
+            <button type="button" onClick={resetForm} className="text-sm font-medium text-zinc-500 hover:text-zinc-900">Cancel</button>
+          </div>
+        </form>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Search */}
         <div className="relative w-64">
-          <svg
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
-            aria-hidden="true"
-          >
-            <path
-              fillRule="evenodd"
-              d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z"
-              clipRule="evenodd"
-            />
+          <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" aria-hidden="true">
+            <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
           </svg>
-          <input
-            type="search"
-            placeholder="Search exercises..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search exercises"
-            className="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-          />
+          <input type="search" placeholder="Search exercises..." value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search exercises"
+            className="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
         </div>
-
-        {/* Muscle group */}
-        <select
-          value={muscleFilter}
-          onChange={(e) => setMuscleFilter(e.target.value)}
-          aria-label="Filter by muscle group"
-          className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-        >
-          {MUSCLE_GROUPS.map((m) => (
-            <option key={m} value={m}>{m === "All" ? "All Muscles" : m}</option>
-          ))}
+        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as "All" | ExerciseCategory)} aria-label="Filter by category"
+          className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
+          <option value="All">All Categories</option>
+          {EXERCISE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-
-        {/* Difficulty */}
-        <select
-          value={difficultyFilter}
-          onChange={(e) => setDifficultyFilter(e.target.value)}
-          aria-label="Filter by difficulty"
-          className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-        >
-          {DIFFICULTIES.map((d) => (
-            <option key={d} value={d}>{d === "All" ? "All Levels" : d}</option>
-          ))}
+        <select value={muscleFilter} onChange={(e) => setMuscleFilter(e.target.value as "All" | MuscleGroup)} aria-label="Filter by muscle group"
+          className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
+          <option value="All">All Muscles</option>
+          {MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
-
-        {/* Equipment */}
-        <select
-          value={equipmentFilter}
-          onChange={(e) => setEquipmentFilter(e.target.value)}
-          aria-label="Filter by equipment"
-          className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-        >
-          {EQUIPMENT.map((eq) => (
-            <option key={eq} value={eq}>{eq === "All" ? "All Equipment" : eq}</option>
-          ))}
+        <select value={difficultyFilter} onChange={(e) => setDifficultyFilter(e.target.value as "All" | Difficulty)} aria-label="Filter by difficulty"
+          className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
+          <option value="All">All Levels</option>
+          {DIFFICULTIES.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
       </div>
 
       {/* Table */}
       <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-zinc-100 bg-zinc-50">
-            <tr>
-              <th className="px-5 py-3 font-semibold text-zinc-700">Name</th>
-              <th className="px-5 py-3 font-semibold text-zinc-700">Muscle Group</th>
-              <th className="px-5 py-3 font-semibold text-zinc-700">Equipment</th>
-              <th className="px-5 py-3 font-semibold text-zinc-700">Difficulty</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-100">
-            {filtered.length === 0 ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-zinc-100 bg-zinc-50">
               <tr>
-                <td colSpan={4} className="px-5 py-12 text-center text-zinc-400">
-                  No exercises found.
-                </td>
+                <th className="px-5 py-3 font-semibold text-zinc-700">Name</th>
+                <th className="px-5 py-3 font-semibold text-zinc-700">Category</th>
+                <th className="px-5 py-3 font-semibold text-zinc-700">Muscle</th>
+                <th className="px-5 py-3 font-semibold text-zinc-700">Equipment</th>
+                <th className="px-5 py-3 font-semibold text-zinc-700">Difficulty</th>
+                <th className="px-5 py-3 font-semibold text-zinc-700">Actions</th>
               </tr>
-            ) : (
-              filtered.map((ex) => (
-                <tr
-                  key={ex.id}
-                  onClick={() => router.push(`/admin/exercises/${ex.id}`)}
-                  className="cursor-pointer transition-colors hover:bg-zinc-50"
-                >
-                  <td className="px-5 py-3 font-medium text-zinc-900">{ex.name}</td>
-                  <td className="px-5 py-3 text-zinc-600">{ex.muscleGroup}</td>
-                  <td className="px-5 py-3 text-zinc-600">{ex.equipment}</td>
-                  <td className="px-5 py-3">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${difficultyColor(ex.difficulty)}`}>
-                      {ex.difficulty}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-zinc-100">
+              {filtered.length === 0 ? (
+                <tr><td colSpan={6} className="px-5 py-12 text-center text-zinc-400">No exercises found.</td></tr>
+              ) : (
+                filtered.map((ex) => (
+                  <tr key={ex.id} className="hover:bg-zinc-50">
+                    <td className="px-5 py-3 font-medium text-zinc-900">{ex.name}</td>
+                    <td className="px-5 py-3 text-zinc-600">{ex.category}</td>
+                    <td className="px-5 py-3 text-zinc-600">{ex.muscleGroup}</td>
+                    <td className="px-5 py-3 text-zinc-600">{ex.equipment}</td>
+                    <td className="px-5 py-3">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${difficultyColor(ex.difficulty)}`}>{ex.difficulty}</span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => handleEdit(ex)} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">Edit</button>
+                        <button type="button" onClick={() => handleDelete(ex.id)} className="text-xs font-medium text-zinc-500 hover:text-red-600">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

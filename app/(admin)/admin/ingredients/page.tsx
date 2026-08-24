@@ -20,6 +20,7 @@ export default function AdminIngredientsPage() {
   const [protein, setProtein] = useState("");
   const [carbs, setCarbs] = useState("");
   const [fat, setFat] = useState("");
+  const [unit, setUnit] = useState("g");
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export default function AdminIngredientsPage() {
   });
 
   function resetForm() {
-    setName(""); setCategory("Protein"); setCalories(""); setProtein(""); setCarbs(""); setFat("");
+    setName(""); setCategory("Protein"); setCalories(""); setProtein(""); setCarbs(""); setFat(""); setUnit("g");
     setFormError(""); setEditId(null); setShowForm(false);
   }
 
@@ -48,6 +49,7 @@ export default function AdminIngredientsPage() {
     setProtein(ingredient.proteinPer100g.toString());
     setCarbs(ingredient.carbsPer100g.toString());
     setFat(ingredient.fatPer100g.toString());
+    setUnit(ingredient.unit || "g");
     setEditId(ingredient.id);
     setShowForm(true);
   }
@@ -69,6 +71,7 @@ export default function AdminIngredientsPage() {
       proteinPer100g: parseFloat(protein) || 0,
       carbsPer100g: parseFloat(carbs) || 0,
       fatPer100g: parseFloat(fat) || 0,
+      unit,
     };
 
     if (editId) {
@@ -114,6 +117,16 @@ export default function AdminIngredientsPage() {
             <Input id="ing-pro" type="number" label="Protein /100g" value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="31" min={0} step={0.1} />
             <Input id="ing-carb" type="number" label="Carbs /100g" value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="0" min={0} step={0.1} />
             <Input id="ing-fat" type="number" label="Fat /100g" value={fat} onChange={(e) => setFat(e.target.value)} placeholder="3.6" min={0} step={0.1} />
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="ing-unit" className="text-sm font-medium text-zinc-700">Unit</label>
+              <select id="ing-unit" value={unit} onChange={(e) => setUnit(e.target.value)}
+                className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
+                <option value="g">g</option>
+                <option value="ml">ml</option>
+                <option value="unit">unit</option>
+                <option value="slice">slice</option>
+              </select>
+            </div>
           </div>
           <div className="mt-5 flex gap-3">
             <Button type="submit">{editId ? "Save Changes" : "Create"}</Button>
@@ -155,6 +168,7 @@ export default function AdminIngredientsPage() {
                   <th className="px-5 py-3 font-semibold text-zinc-700">Protein</th>
                   <th className="px-5 py-3 font-semibold text-zinc-700">Carbs</th>
                   <th className="px-5 py-3 font-semibold text-zinc-700">Fat</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-700">Unit</th>
                   <th className="px-5 py-3 font-semibold text-zinc-700">Actions</th>
                 </tr>
               </thead>
@@ -167,6 +181,7 @@ export default function AdminIngredientsPage() {
                     <td className="px-5 py-3 text-zinc-600">{i.proteinPer100g}g</td>
                     <td className="px-5 py-3 text-zinc-600">{i.carbsPer100g}g</td>
                     <td className="px-5 py-3 text-zinc-600">{i.fatPer100g}g</td>
+                    <td className="px-5 py-3 text-zinc-600">{i.unit || "g"}</td>
                     <td className="px-5 py-3">
                       <div className="flex gap-2">
                         <button type="button" onClick={() => handleEdit(i)} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">Edit</button>
