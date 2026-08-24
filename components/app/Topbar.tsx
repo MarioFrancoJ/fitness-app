@@ -1,7 +1,11 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Locale } from "@/lib/i18n/config";
 import LanguageSwitcher from "./LanguageSwitcher";
+import { getUnreadCount, generateReminders } from "@/lib/notifications";
 
 // ── Inline SVG icons ──────────────────────────────────────────────────────────
 
@@ -23,14 +27,18 @@ function IconBell() {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-import { useRouter } from "next/navigation";
-
 interface TopbarProps {
   locale: Locale;
 }
 
 export default function Topbar({ locale }: TopbarProps) {
   const router = useRouter();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    generateReminders();
+    setUnread(getUnreadCount());
+  }, []);
 
   function handleLogout() {
     localStorage.removeItem("fitnessapp_session");
@@ -57,19 +65,22 @@ export default function Topbar({ locale }: TopbarProps) {
         {/* Language switcher */}
         <LanguageSwitcher currentLocale={locale} />
 
-        {/* Notifications — UI only */}
-        <button
-          type="button"
+        {/* Notifications */}
+        <Link
+          href="/notifications"
           aria-label="Notifications"
           className="relative rounded-lg p-2 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
         >
           <IconBell />
-          {/* Unread dot */}
-          <span
-            aria-hidden="true"
-            className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500"
-          />
-        </button>
+          {unread > 0 && (
+            <span
+              aria-label={`${unread} unread`}
+              className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white"
+            >
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </Link>
 
         {/* User avatar */}
         <button
