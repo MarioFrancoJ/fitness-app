@@ -3,6 +3,10 @@
 import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import {
+  loadAIConfig, saveAIConfig, loadFeatureFlags, saveFeatureFlags, resetAIService, getUsageStats,
+  type AIProviderType, type AIProviderConfig, type AIFeatureFlags, type AIUsageStats,
+} from "@/lib/ai";
+import {
   loadRules,
   saveRules,
   toggleRule,
@@ -35,6 +39,11 @@ export default function AdminRecommendationRulesPage() {
   const [hydrated, setHydrated] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
+  // AI Provider config state
+  const [aiConfig, setAiConfig] = useState<AIProviderConfig>({ provider: "rule_based", apiKey: "", model: "gpt-4o-mini", temperature: 0.7, maxTokens: 1024, baseUrl: null, enabled: true });
+  const [aiFlags, setAiFlags] = useState<AIFeatureFlags>({ aiCoach: true, aiMealPlanner: false, aiWorkoutGenerator: false, aiInsights: false });
+  const [aiUsage, setAiUsage] = useState<AIUsageStats>({ dailyRequests: 0, monthlyRequests: 0, dailyTokens: 0, monthlyTokens: 0, estimatedMonthlyCost: 0 });
+
   // Form
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState<RecommendationCategory>("Nutrition");
@@ -44,6 +53,9 @@ export default function AdminRecommendationRulesPage() {
 
   useEffect(() => {
     setRules(loadRules());
+    setAiConfig(loadAIConfig());
+    setAiFlags(loadFeatureFlags());
+    setAiUsage(getUsageStats());
     setHydrated(true);
   }, []);
 
@@ -112,9 +124,90 @@ export default function AdminRecommendationRulesPage() {
     <>
       <div className="flex flex-col gap-6">
         {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">AI & Recommendation Management</h1>
+          <p className="mt-1 text-sm text-zinc-500">Configure AI providers, feature flags, and recommendation rules.</p>
+        </div>
+
+        {/* ── AI Provider Configuration ── */}
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <p className="mb-4 text-sm font-semibold text-zinc-900">AI Provider Configuration</p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-600">Provider</label>
+              <select value={aiConfig.provider} onChange={(e) => { const c = { ...aiConfig, provider: e.target.value as AIProviderType }; setAiConfig(c); saveAIConfig(c); resetAIService(); }}
+                className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
+                <option value="rule_based">Rule-Based (Fallback)</option>
+                <option value="openai">OpenAI</option>
+                <option value="claude">Claude (Anthropic)</option>
+                <option value="gemini">Gemini (Google)</option>
+                <option value="ollama">Ollama (Local)</option>
+                <option value="openrouter">OpenRouter</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-600">Model</label>
+              <input type="text" value={aiConfig.model} onChange={(e) => { const c = { ...aiConfig, model: e.target.value }; setAiConfig(c); saveAIConfig(c); }}
+                placeholder="gpt-4o-mini" className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-600">API Key</label>
+              <input type="password" value={aiConfig.apiKey} onChange={(e) => { const c = { ...aiConfig, apiKey: e.target.value }; setAiConfig(c); saveAIConfig(c); resetAIService(); }}
+                placeholder="sk-..." className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-600">Temperature ({aiConfig.temperature})</label>
+              <input type="range" min={0} max={1} step={0.1} value={aiConfig.temperature} onChange={(e) => { const c = { ...aiConfig, temperature: parseFloat(e.target.value) }; setAiConfig(c); saveAIConfig(c); }}
+                className="h-2 w-full cursor-pointer appearance-none rounded-full bg-zinc-200 accent-zinc-900" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-600">Max Tokens</label>
+              <input type="number" value={aiConfig.maxTokens} onChange={(e) => { const c = { ...aiConfig, maxTokens: parseInt(e.target.value) || 1024 }; setAiConfig(c); saveAIConfig(c); }}
+                min={100} max={8000} className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Feature Flags ── */}
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <p className="mb-4 text-sm font-semibold text-zinc-900">AI Feature Flags</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {([["aiCoach", "AI Coach"], ["aiMealPlanner", "AI Meal Planner"], ["aiWorkoutGenerator", "AI Workout Generator"], ["aiInsights", "AI Insights"]] as [keyof AIFeatureFlags, string][]).map(([key, label]) => (
+              <div key={key} className="flex items-center justify-between rounded-lg bg-zinc-50 p-3">
+                <span className="text-sm text-zinc-700">{label}</span>
+                <button type="button" onClick={() => { const f = { ...aiFlags, [key]: !aiFlags[key] }; setAiFlags(f); saveFeatureFlags(f); }}
+                  className={["relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors", aiFlags[key] ? "bg-zinc-900" : "bg-zinc-200"].join(" ")}>
+                  <span className={["inline-block h-4 w-4 rounded-full bg-white shadow transition-transform", aiFlags[key] ? "translate-x-4" : "translate-x-0"].join(" ")} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Usage Stats ── */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
+            <p className="text-lg font-bold text-zinc-900">{aiUsage.monthlyRequests}</p>
+            <p className="text-[10px] text-zinc-400">Monthly Requests</p>
+          </div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
+            <p className="text-lg font-bold text-zinc-900">{aiUsage.monthlyTokens.toLocaleString()}</p>
+            <p className="text-[10px] text-zinc-400">Monthly Tokens</p>
+          </div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
+            <p className="text-lg font-bold text-zinc-900">{aiUsage.dailyRequests}</p>
+            <p className="text-[10px] text-zinc-400">Today</p>
+          </div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
+            <p className="text-lg font-bold text-emerald-600">${aiUsage.estimatedMonthlyCost.toFixed(4)}</p>
+            <p className="text-[10px] text-zinc-400">Est. Cost</p>
+          </div>
+        </div>
+
+        {/* ── Recommendation Rules ── */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Recommendation Rules</h1>
+            <h2 className="text-lg font-bold tracking-tight text-zinc-900">Recommendation Rules</h2>
             <p className="mt-1 text-sm text-zinc-500">
               {enabledCount} enabled · {disabledCount} disabled · {rules.length} total rules
             </p>
