@@ -3,8 +3,26 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { loadExercises } from "@/lib/exercises-store";
-import type { Exercise, Difficulty } from "@/data/exercises";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type Difficulty = "Beginner" | "Intermediate" | "Advanced";
+
+interface Exercise {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  muscleGroup: string;
+  equipment: string;
+  difficulty: Difficulty;
+  instructions: string[];
+  tips: string[];
+  commonMistakes: string[];
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function difficultyColor(d: Difficulty): string {
   switch (d) {
@@ -14,19 +32,51 @@ function difficultyColor(d: Difficulty): string {
   }
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function ExerciseDetailPage() {
   const params = useParams<{ id: string }>();
   const [exercise, setExercise] = useState<Exercise | null>(null);
-  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const all = loadExercises();
-    const found = all.find((e) => e.id === params.id) ?? null;
-    setExercise(found);
-    setHydrated(true);
+    async function loadExercise() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("exercises")
+        .select("id, name, description, category, muscle_group, equipment, difficulty, instructions, tips, common_mistakes")
+        .eq("id", params.id)
+        .single();
+
+      if (data) {
+        setExercise({
+          id: data.id,
+          name: data.name,
+          description: data.description || "",
+          category: data.category,
+          muscleGroup: data.muscle_group,
+          equipment: data.equipment,
+          difficulty: data.difficulty as Difficulty,
+          instructions: Array.isArray(data.instructions) ? data.instructions as string[] : [],
+          tips: Array.isArray(data.tips) ? data.tips as string[] : [],
+          commonMistakes: Array.isArray(data.common_mistakes) ? data.common_mistakes as string[] : [],
+        });
+      }
+      setLoading(false);
+    }
+    loadExercise();
   }, [params.id]);
 
-  if (!hydrated) return null;
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading exercise...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!exercise) {
     return (

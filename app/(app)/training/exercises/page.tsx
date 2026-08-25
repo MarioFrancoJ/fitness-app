@@ -2,8 +2,29 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { loadExercises } from "@/lib/exercises-store";
-import { EXERCISE_CATEGORIES, MUSCLE_GROUPS, DIFFICULTIES, type Exercise, type ExerciseCategory, type MuscleGroup, type Difficulty } from "@/data/exercises";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type ExerciseCategory = "Strength" | "Calisthenics" | "Cardio" | "Mobility" | "Flexibility";
+type MuscleGroup = "Chest" | "Back" | "Shoulders" | "Biceps" | "Triceps" | "Forearms" | "Core" | "Glutes" | "Quadriceps" | "Hamstrings" | "Calves" | "Full Body";
+type Difficulty = "Beginner" | "Intermediate" | "Advanced";
+
+interface Exercise {
+  id: string;
+  name: string;
+  description: string;
+  category: ExerciseCategory;
+  muscleGroup: MuscleGroup;
+  equipment: string;
+  difficulty: Difficulty;
+}
+
+const EXERCISE_CATEGORIES: ExerciseCategory[] = ["Strength", "Calisthenics", "Cardio", "Mobility", "Flexibility"];
+const MUSCLE_GROUPS: MuscleGroup[] = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Forearms", "Core", "Glutes", "Quadriceps", "Hamstrings", "Calves", "Full Body"];
+const DIFFICULTIES: Difficulty[] = ["Beginner", "Intermediate", "Advanced"];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function difficultyColor(d: Difficulty): string {
   switch (d) {
@@ -23,17 +44,40 @@ function categoryColor(c: ExerciseCategory): string {
   }
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function ExercisesPage() {
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"All" | ExerciseCategory>("All");
   const [muscleFilter, setMuscleFilter] = useState<"All" | MuscleGroup>("All");
   const [difficultyFilter, setDifficultyFilter] = useState<"All" | Difficulty>("All");
-  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setAllExercises(loadExercises());
-    setHydrated(true);
+    async function loadExercises() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("exercises")
+        .select("id, name, description, category, muscle_group, equipment, difficulty")
+        .order("name");
+
+      if (data) {
+        setAllExercises(
+          data.map((row) => ({
+            id: row.id,
+            name: row.name,
+            description: row.description || "",
+            category: row.category as ExerciseCategory,
+            muscleGroup: row.muscle_group as MuscleGroup,
+            equipment: row.equipment,
+            difficulty: row.difficulty as Difficulty,
+          }))
+        );
+      }
+      setLoading(false);
+    }
+    loadExercises();
   }, []);
 
   const filtered = useMemo(() => {
@@ -49,7 +93,16 @@ export default function ExercisesPage() {
   const featured = useMemo(() => allExercises.slice(0, 6), [allExercises]);
   const showFeatured = !search && categoryFilter === "All" && muscleFilter === "All" && difficultyFilter === "All";
 
-  if (!hydrated) return null;
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading exercises...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,7 +116,6 @@ export default function ExercisesPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Search */}
         <div className="relative w-64">
           <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" aria-hidden="true">
             <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
@@ -72,21 +124,18 @@ export default function ExercisesPage() {
             className="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
         </div>
 
-        {/* Category */}
         <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as "All" | ExerciseCategory)} aria-label="Filter by category"
           className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
           <option value="All">All Categories</option>
           {EXERCISE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
 
-        {/* Muscle group */}
         <select value={muscleFilter} onChange={(e) => setMuscleFilter(e.target.value as "All" | MuscleGroup)} aria-label="Filter by muscle group"
           className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
           <option value="All">All Muscles</option>
           {MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
 
-        {/* Difficulty */}
         <select value={difficultyFilter} onChange={(e) => setDifficultyFilter(e.target.value as "All" | Difficulty)} aria-label="Filter by difficulty"
           className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
           <option value="All">All Levels</option>
@@ -94,7 +143,7 @@ export default function ExercisesPage() {
         </select>
       </div>
 
-      {/* Featured (only when no filters active) */}
+      {/* Featured */}
       {showFeatured && (
         <div>
           <h2 className="mb-3 text-sm font-semibold text-zinc-900">Featured Exercises</h2>
