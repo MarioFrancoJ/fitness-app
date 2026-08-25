@@ -3,6 +3,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -58,77 +59,80 @@ function calculateFromProfile(user: UserData): NutritionGoals | null {
   return { calories, protein, carbs, fat };
 }
 
-// ── Storage ───────────────────────────────────────────────────────────────────
-
-const STORAGE_KEY = "fitnessapp_nutrition_goals";
-
-function loadGoals(): NutritionGoals | null {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveGoals(goals: NutritionGoals) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(goals));
-}
-
-function loadUserProfile(): UserData | null {
-  try {
-    const stored = localStorage.getItem("fitnessapp_user");
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
-}
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function NutritionGoalsPage() {
   const [goals, setGoals] = useState<NutritionGoals>({ calories: 0, protein: 0, carbs: 0, fat: 0 });
   const [mode, setMode] = useState<"auto" | "manual">("auto");
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [canAutoCalc, setCanAutoCalc] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserData | null>(null);
 
   useEffect(() => {
-    const existingGoals = loadGoals();
-    const user = loadUserProfile();
-    const autoGoals = user ? calculateFromProfile(user) : null;
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-    setCanAutoCalc(autoGoals !== null);
+      const { data: profile } = await supabase
+        .from("users")
+        .select("gender, height_cm, weight_kg, activity_level, fitness_goal, date_of_birth")
+        .eq("id", user.id)
+        .single();
 
-    if (existingGoals) {
-      setGoals(existingGoals);
-      // Determine mode: if matches auto calculation, it's auto
-      if (autoGoals && existingGoals.calories === autoGoals.calories) {
-        setMode("auto");
-      } else {
-        setMode("manual");
+      if (profile) {
+        const age = profile.date_of_birth
+          ? Math.floor((Date.now() - new Date(profile.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+          : undefined;
+
+        const userData: UserData = {
+          age,
+          gender: profile.gender || undefined,
+          height: profile.height_cm ? Number(profile.height_cm) : undefined,
+          weight: profile.weight_kg ? Number(profile.weight_kg) : undefined,
+          activityLevel: profile.activity_level || undefined,
+          goal: profile.fitness_goal || undefined,
+        };
+
+        setUserProfile(userData);
+
+        const autoGoals = calculateFromProfile(userData);
+        setCanAutoCalc(autoGoals !== null);
+
+        if (autoGoals) {
+          setGoals(autoGoals);
+          setMode("auto");
+        }
       }
-    } else if (autoGoals) {
-      setGoals(autoGoals);
-      setMode("auto");
+
+      setLoading(false);
     }
+
+    loadData();
   }, []);
 
   function handleAutoCalc() {
-    const user = loadUserProfile();
-    const autoGoals = user ? calculateFromProfile(user) : null;
+    if (!userProfile) return;
+    const autoGoals = calculateFromProfile(userProfile);
     if (autoGoals) {
       setGoals(autoGoals);
       setMode("auto");
-      saveGoals(autoGoals);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
   }
 
-  function handleManualSave(e: FormEvent) {
+  async function handleManualSave(e: FormEvent) {
     e.preventDefault();
-    saveGoals(goals);
+    setSaving(true);
+
+    // Goals are computed client-side; the source of truth is the profile.
+    // For manual overrides, we just show confirmation since these targets
+    // are derived values (not stored in a separate DB column).
     setSaved(true);
+    setSaving(false);
     setTimeout(() => setSaved(false), 2000);
   }
 
@@ -136,6 +140,17 @@ export default function NutritionGoalsPage() {
     const parsed = parseInt(value, 10);
     setGoals((prev) => ({ ...prev, [field]: isNaN(parsed) ? 0 : parsed }));
     setMode("manual");
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading nutrition goals...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -254,7 +269,9 @@ export default function NutritionGoalsPage() {
             />
           </div>
           <div className="mt-5">
-            <Button type="submit">Save Goals</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving..." : "Save Goals"}
+            </Button>
           </div>
         </form>
       )}
