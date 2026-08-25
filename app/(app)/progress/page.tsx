@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,9 +44,6 @@ type MeasurementKey = keyof BodyMeasurements;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const PROFILE_KEY = "fitnessapp_user";
-const HISTORY_KEY = "fitnessapp_measurement_history";
-
 const MEASUREMENT_LABELS: Record<MeasurementKey, string> = {
   neck: "Neck",
   chest: "Chest",
@@ -66,32 +64,6 @@ const CHART_MEASUREMENT_OPTIONS: { label: string; keys: MeasurementKey[] }[] = [
   { label: "Arms", keys: ["leftArm", "rightArm"] },
   { label: "Legs", keys: ["leftThigh", "rightThigh"] },
 ];
-
-// ── Storage helpers ───────────────────────────────────────────────────────────
-
-function loadProfile(): ProfileData {
-  try {
-    const raw = localStorage.getItem(PROFILE_KEY);
-    if (!raw) return { currentWeight: null, goalWeight: null, startingWeight: null };
-    const data = JSON.parse(raw);
-    return {
-      currentWeight: data.currentWeight ?? data.weight ?? null,
-      goalWeight: data.goalWeight ?? null,
-      startingWeight: data.startingWeight ?? null,
-    };
-  } catch {
-    return { currentWeight: null, goalWeight: null, startingWeight: null };
-  }
-}
-
-function loadHistory(): MeasurementRecord[] {
-  try {
-    const raw = localStorage.getItem(HISTORY_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
 
 // ── Chart helpers ─────────────────────────────────────────────────────────────
 
@@ -153,7 +125,6 @@ function LineChart({
   return (
     <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white p-4">
       <svg viewBox={`0 0 ${WIDTH} ${height}`} className="w-full" style={{ minWidth: 400, height }} preserveAspectRatio="none">
-        {/* Grid lines */}
         {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
           const y = PADDING + (1 - pct) * (height - 2 * PADDING);
           const val = minV + pct * (maxV - minV);
@@ -166,18 +137,12 @@ function LineChart({
             </g>
           );
         })}
-
-        {/* Line */}
         <path d={path} fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-
-        {/* Area fill */}
         <path
           d={`${path} L ${points[points.length - 1].x} ${height - PADDING} L ${points[0].x} ${height - PADDING} Z`}
           fill={color}
           opacity={0.05}
         />
-
-        {/* Points */}
         {points.map((p, i) => (
           <g key={i}>
             <circle cx={p.x} cy={p.y} r={4} fill="white" stroke={color} strokeWidth={2} />
@@ -206,48 +171,12 @@ function computeAchievements(profile: ProfileData, history: MeasurementRecord[])
     profile.goalWeight !== null && profile.currentWeight !== null && profile.currentWeight <= profile.goalWeight;
 
   return [
-    {
-      id: "first-measurement",
-      title: "First Measurement",
-      description: "Recorded your first measurement",
-      unlocked: history.length >= 1,
-      icon: "📏",
-    },
-    {
-      id: "5kg-lost",
-      title: "5 kg Lost",
-      description: "Lost 5 kg from starting weight",
-      unlocked: totalLost >= 5,
-      icon: "🔥",
-    },
-    {
-      id: "10kg-lost",
-      title: "10 kg Lost",
-      description: "Lost 10 kg from starting weight",
-      unlocked: totalLost >= 10,
-      icon: "💪",
-    },
-    {
-      id: "goal-reached",
-      title: "Goal Weight Reached",
-      description: "Reached your target weight",
-      unlocked: goalReached,
-      icon: "🎯",
-    },
-    {
-      id: "30-days",
-      title: "30 Days Active",
-      description: "Recorded measurements on 30 different days",
-      unlocked: daysActive >= 30,
-      icon: "📅",
-    },
-    {
-      id: "90-days",
-      title: "90 Days Active",
-      description: "Recorded measurements on 90 different days",
-      unlocked: daysActive >= 90,
-      icon: "🏆",
-    },
+    { id: "first-measurement", title: "First Measurement", description: "Recorded your first measurement", unlocked: history.length >= 1, icon: "📏" },
+    { id: "5kg-lost", title: "5 kg Lost", description: "Lost 5 kg from starting weight", unlocked: totalLost >= 5, icon: "🔥" },
+    { id: "10kg-lost", title: "10 kg Lost", description: "Lost 10 kg from starting weight", unlocked: totalLost >= 10, icon: "💪" },
+    { id: "goal-reached", title: "Goal Weight Reached", description: "Reached your target weight", unlocked: goalReached, icon: "🎯" },
+    { id: "30-days", title: "30 Days Active", description: "Recorded measurements on 30 different days", unlocked: daysActive >= 30, icon: "📅" },
+    { id: "90-days", title: "90 Days Active", description: "Recorded measurements on 90 different days", unlocked: daysActive >= 90, icon: "🏆" },
   ];
 }
 
@@ -278,14 +207,70 @@ function EmptyState() {
 export default function ProgressPage() {
   const [profile, setProfile] = useState<ProfileData>({ currentWeight: null, goalWeight: null, startingWeight: null });
   const [history, setHistory] = useState<MeasurementRecord[]>([]);
-  const [hydrated, setHydrated] = useState(false);
-  const [selectedMeasurement, setSelectedMeasurement] = useState(0); // index into CHART_MEASUREMENT_OPTIONS
+  const [loading, setLoading] = useState(true);
+  const [selectedMeasurement, setSelectedMeasurement] = useState(0);
   const [photoTab, setPhotoTab] = useState<"front" | "side" | "back">("front");
 
   useEffect(() => {
-    setProfile(loadProfile());
-    setHistory(loadHistory());
-    setHydrated(true);
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      // 1. Load profile (weight data)
+      const { data: userData } = await supabase
+        .from("users")
+        .select("weight_kg, goal_weight_kg")
+        .eq("id", user.id)
+        .single();
+
+      // 2. Load weight entries for starting weight
+      const { data: weightEntries } = await supabase
+        .from("weight_entries")
+        .select("weight_kg, date")
+        .order("date", { ascending: true })
+        .limit(1);
+
+      const currentWeight = userData?.weight_kg ? Number(userData.weight_kg) : null;
+      const goalWeight = userData?.goal_weight_kg ? Number(userData.goal_weight_kg) : null;
+      const startingWeight = weightEntries && weightEntries.length > 0
+        ? Number(weightEntries[0].weight_kg)
+        : currentWeight;
+
+      setProfile({ currentWeight, goalWeight, startingWeight });
+
+      // 3. Load measurement entries
+      const { data: measurements } = await supabase
+        .from("measurement_entries")
+        .select("id, date, weight_kg, neck_cm, chest_cm, waist_cm, hips_cm, left_arm_cm, right_arm_cm, left_thigh_cm, right_thigh_cm, left_calf_cm, right_calf_cm")
+        .order("date", { ascending: false });
+
+      if (measurements) {
+        setHistory(
+          measurements.map((row) => ({
+            id: row.id,
+            date: row.date,
+            weight: row.weight_kg?.toString() || "",
+            measurements: {
+              neck: row.neck_cm?.toString() || "",
+              chest: row.chest_cm?.toString() || "",
+              waist: row.waist_cm?.toString() || "",
+              hips: row.hips_cm?.toString() || "",
+              leftArm: row.left_arm_cm?.toString() || "",
+              rightArm: row.right_arm_cm?.toString() || "",
+              leftThigh: row.left_thigh_cm?.toString() || "",
+              rightThigh: row.right_thigh_cm?.toString() || "",
+              leftCalf: row.left_calf_cm?.toString() || "",
+              rightCalf: row.right_calf_cm?.toString() || "",
+            },
+          }))
+        );
+      }
+
+      setLoading(false);
+    }
+
+    loadData();
   }, []);
 
   // ── Derived data ───────────────────────────────────────────────────────────
@@ -310,7 +295,7 @@ export default function ProgressPage() {
     return sortedHistory
       .filter((r) => r.weight)
       .map((r) => ({
-        label: r.date.slice(5), // MM-DD
+        label: r.date.slice(5),
         value: parseFloat(r.weight),
       }));
   }, [sortedHistory]);
@@ -333,7 +318,16 @@ export default function ProgressPage() {
   // Achievements
   const achievements = useMemo(() => computeAchievements(profile, history), [profile, history]);
 
-  if (!hydrated) return null;
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading progress data...</p>
+        </div>
+      </div>
+    );
+  }
 
   const hasData = history.length > 0 || currentWeight !== null;
 
@@ -359,9 +353,7 @@ export default function ProgressPage() {
         <EmptyState />
       ) : (
         <>
-          {/* ═══════════════════════════════════════════════════════════════════
-              7. SUMMARY CARDS (shown at top)
-          ═══════════════════════════════════════════════════════════════════ */}
+          {/* Summary cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
               <p className="text-xs font-medium text-zinc-400">Starting Weight</p>
@@ -398,55 +390,37 @@ export default function ProgressPage() {
             </div>
           </div>
 
-          {/* ═══════════════════════════════════════════════════════════════════
-              1. WEIGHT PROGRESS
-          ═══════════════════════════════════════════════════════════════════ */}
+          {/* Weight Progress */}
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
             <p className="mb-4 text-sm font-semibold text-zinc-900">Weight Progress</p>
             <div className="grid gap-3 sm:grid-cols-4">
               <div className="rounded-lg bg-zinc-50 p-4">
                 <p className="text-xs text-zinc-400">Current</p>
-                <p className="text-lg font-bold text-zinc-900">
-                  {currentWeight !== null ? `${currentWeight} kg` : "—"}
-                </p>
+                <p className="text-lg font-bold text-zinc-900">{currentWeight !== null ? `${currentWeight} kg` : "—"}</p>
               </div>
               <div className="rounded-lg bg-zinc-50 p-4">
                 <p className="text-xs text-zinc-400">Goal</p>
-                <p className="text-lg font-bold text-zinc-900">
-                  {goalWeight !== null ? `${goalWeight} kg` : "—"}
-                </p>
+                <p className="text-lg font-bold text-zinc-900">{goalWeight !== null ? `${goalWeight} kg` : "—"}</p>
               </div>
               <div className="rounded-lg bg-zinc-50 p-4">
                 <p className="text-xs text-zinc-400">Lost / Gained</p>
-                <p
-                  className={[
-                    "text-lg font-bold",
-                    totalChange !== null && totalChange < 0 ? "text-emerald-600" : totalChange !== null && totalChange > 0 ? "text-red-500" : "text-zinc-900",
-                  ].join(" ")}
-                >
+                <p className={["text-lg font-bold", totalChange !== null && totalChange < 0 ? "text-emerald-600" : totalChange !== null && totalChange > 0 ? "text-red-500" : "text-zinc-900"].join(" ")}>
                   {totalChange !== null ? `${totalChange > 0 ? "+" : ""}${totalChange.toFixed(1)} kg` : "—"}
                 </p>
               </div>
               <div className="rounded-lg bg-zinc-50 p-4">
                 <p className="text-xs text-zinc-400">Progress</p>
-                <p className="text-lg font-bold text-blue-600">
-                  {percentProgress !== null ? `${percentProgress.toFixed(0)}%` : "—"}
-                </p>
+                <p className="text-lg font-bold text-blue-600">{percentProgress !== null ? `${percentProgress.toFixed(0)}%` : "—"}</p>
                 {percentProgress !== null && (
                   <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
-                    <div
-                      className="h-full rounded-full bg-blue-500 transition-all"
-                      style={{ width: `${percentProgress}%` }}
-                    />
+                    <div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${percentProgress}%` }} />
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* ═══════════════════════════════════════════════════════════════════
-              2. BODY MEASUREMENTS PROGRESS
-          ═══════════════════════════════════════════════════════════════════ */}
+          {/* Body Measurements Comparison */}
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
             <p className="mb-4 text-sm font-semibold text-zinc-900">Body Measurements Comparison</p>
             {!latestRecord ? (
@@ -474,12 +448,7 @@ export default function ProgressPage() {
                           <td className="px-4 py-2.5 text-zinc-600">{prev !== null ? `${prev} cm` : "—"}</td>
                           <td className="px-4 py-2.5">
                             {diff !== null ? (
-                              <span
-                                className={[
-                                  "inline-flex rounded-md px-2 py-0.5 text-xs font-semibold",
-                                  diff < 0 ? "bg-emerald-50 text-emerald-700" : diff > 0 ? "bg-red-50 text-red-600" : "bg-zinc-100 text-zinc-600",
-                                ].join(" ")}
-                              >
+                              <span className={["inline-flex rounded-md px-2 py-0.5 text-xs font-semibold", diff < 0 ? "bg-emerald-50 text-emerald-700" : diff > 0 ? "bg-red-50 text-red-600" : "bg-zinc-100 text-zinc-600"].join(" ")}>
                                 {diff > 0 ? "+" : ""}{diff.toFixed(1)} cm
                               </span>
                             ) : (
@@ -495,17 +464,13 @@ export default function ProgressPage() {
             )}
           </div>
 
-          {/* ═══════════════════════════════════════════════════════════════════
-              3. WEIGHT CHART
-          ═══════════════════════════════════════════════════════════════════ */}
+          {/* Weight Chart */}
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
             <p className="mb-4 text-sm font-semibold text-zinc-900">Weight Chart</p>
             <LineChart data={weightChartData} color="#18181b" emptyText="No weight history recorded yet" />
           </div>
 
-          {/* ═══════════════════════════════════════════════════════════════════
-              4. MEASUREMENT CHARTS
-          ═══════════════════════════════════════════════════════════════════ */}
+          {/* Measurement Charts */}
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm font-semibold text-zinc-900">Measurement Chart</p>
@@ -516,42 +481,29 @@ export default function ProgressPage() {
                 className="h-8 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-xs font-medium text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
               >
                 {CHART_MEASUREMENT_OPTIONS.map((opt, i) => (
-                  <option key={opt.label} value={i}>
-                    {opt.label}
-                  </option>
+                  <option key={opt.label} value={i}>{opt.label}</option>
                 ))}
               </select>
             </div>
             <LineChart data={measurementChartData} color="#2563eb" emptyText="No measurement data for this category" />
           </div>
 
-          {/* ═══════════════════════════════════════════════════════════════════
-              5. PROGRESS PHOTOS
-          ═══════════════════════════════════════════════════════════════════ */}
+          {/* Progress Photos */}
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
             <p className="mb-4 text-sm font-semibold text-zinc-900">Progress Photos</p>
-
-            {/* Tabs */}
             <div className="mb-4 flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1">
               {(["front", "side", "back"] as const).map((tab) => (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => setPhotoTab(tab)}
-                  className={[
-                    "rounded-md px-4 py-1.5 text-xs font-semibold capitalize transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
-                    photoTab === tab ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900",
-                  ].join(" ")}
+                  className={["rounded-md px-4 py-1.5 text-xs font-semibold capitalize transition-colors", "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300", photoTab === tab ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}
                 >
                   {tab}
                 </button>
               ))}
             </div>
-
-            {/* Side-by-side comparison */}
             <div className="grid gap-4 sm:grid-cols-2">
-              {/* First photo */}
               <div className="flex flex-col items-center gap-2">
                 <div className="flex h-56 w-full items-center justify-center rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50">
                   <div className="flex flex-col items-center gap-2 text-zinc-400">
@@ -563,8 +515,6 @@ export default function ProgressPage() {
                 </div>
                 <p className="text-xs font-medium text-zinc-500">First ({photoTab})</p>
               </div>
-
-              {/* Latest photo */}
               <div className="flex flex-col items-center gap-2">
                 <div className="flex h-56 w-full items-center justify-center rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50">
                   <div className="flex flex-col items-center gap-2 text-zinc-400">
@@ -577,35 +527,23 @@ export default function ProgressPage() {
                 <p className="text-xs font-medium text-zinc-500">Latest ({photoTab})</p>
               </div>
             </div>
-
             <p className="mt-4 text-xs text-zinc-400">
               Photo comparison will be available once you upload progress photos in your profile.
             </p>
           </div>
 
-          {/* ═══════════════════════════════════════════════════════════════════
-              6. ACHIEVEMENTS
-          ═══════════════════════════════════════════════════════════════════ */}
+          {/* Achievements */}
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
             <p className="mb-4 text-sm font-semibold text-zinc-900">Achievements</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {achievements.map((a) => (
                 <div
                   key={a.id}
-                  className={[
-                    "flex items-center gap-3 rounded-lg border p-4 transition-colors",
-                    a.unlocked
-                      ? "border-emerald-200 bg-emerald-50"
-                      : "border-zinc-100 bg-zinc-50 opacity-60",
-                  ].join(" ")}
+                  className={["flex items-center gap-3 rounded-lg border p-4 transition-colors", a.unlocked ? "border-emerald-200 bg-emerald-50" : "border-zinc-100 bg-zinc-50 opacity-60"].join(" ")}
                 >
-                  <span className="text-2xl" role="img" aria-hidden="true">
-                    {a.icon}
-                  </span>
+                  <span className="text-2xl" role="img" aria-hidden="true">{a.icon}</span>
                   <div>
-                    <p className={`text-sm font-semibold ${a.unlocked ? "text-emerald-900" : "text-zinc-500"}`}>
-                      {a.title}
-                    </p>
+                    <p className={`text-sm font-semibold ${a.unlocked ? "text-emerald-900" : "text-zinc-500"}`}>{a.title}</p>
                     <p className="text-xs text-zinc-400">{a.description}</p>
                   </div>
                   {a.unlocked && (
