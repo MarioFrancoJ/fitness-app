@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -50,7 +51,6 @@ interface ProfileData {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const PROFILE_KEY = "fitnessapp_user";
 const HISTORY_KEY = "fitnessapp_measurement_history";
 
 const GENDERS = ["Male", "Female", "Other"];
@@ -88,69 +88,56 @@ const EMPTY_MEASUREMENTS: BodyMeasurements = {
 
 // ── Storage helpers ───────────────────────────────────────────────────────────
 
-function loadProfile(): ProfileData {
-  try {
-    const raw = localStorage.getItem(PROFILE_KEY);
-    if (raw) {
-      const data = JSON.parse(raw);
-      return {
-        personalInfo: {
-          fullName: data.fullName || data.name || "",
-          email: data.email || "",
-          gender: data.gender || "",
-          dateOfBirth: data.dateOfBirth || "",
-          height: data.height?.toString() || "",
-          activityLevel: data.activityLevel || "",
-          fitnessGoal: data.fitnessGoal || data.goal || "",
-        },
-        weight: {
-          currentWeight: data.currentWeight?.toString() || data.weight?.toString() || "",
-          goalWeight: data.goalWeight?.toString() || "",
-          startingWeight: data.startingWeight?.toString() || "",
-        },
-        measurements: {
-          neck: data.measurements?.neck?.toString() || "",
-          chest: data.measurements?.chest?.toString() || "",
-          waist: data.measurements?.waist?.toString() || "",
-          hips: data.measurements?.hips?.toString() || "",
-          leftArm: data.measurements?.leftArm?.toString() || "",
-          rightArm: data.measurements?.rightArm?.toString() || "",
-          leftThigh: data.measurements?.leftThigh?.toString() || "",
-          rightThigh: data.measurements?.rightThigh?.toString() || "",
-          leftCalf: data.measurements?.leftCalf?.toString() || "",
-          rightCalf: data.measurements?.rightCalf?.toString() || "",
-        },
-      };
-    }
-  } catch {}
-  return { personalInfo: EMPTY_PERSONAL, weight: EMPTY_WEIGHT, measurements: EMPTY_MEASUREMENTS };
+async function loadProfileFromSupabase(): Promise<ProfileData> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { personalInfo: EMPTY_PERSONAL, weight: EMPTY_WEIGHT, measurements: EMPTY_MEASUREMENTS };
+
+  const { data } = await supabase
+    .from("users")
+    .select("name, email, gender, date_of_birth, height_cm, weight_kg, goal_weight_kg, activity_level, fitness_goal")
+    .eq("id", user.id)
+    .single();
+
+  if (!data) return { personalInfo: EMPTY_PERSONAL, weight: EMPTY_WEIGHT, measurements: EMPTY_MEASUREMENTS };
+
+  return {
+    personalInfo: {
+      fullName: data.name || "",
+      email: data.email || "",
+      gender: data.gender || "",
+      dateOfBirth: data.date_of_birth || "",
+      height: data.height_cm?.toString() || "",
+      activityLevel: data.activity_level || "",
+      fitnessGoal: data.fitness_goal || "",
+    },
+    weight: {
+      currentWeight: data.weight_kg?.toString() || "",
+      goalWeight: data.goal_weight_kg?.toString() || "",
+      startingWeight: "",
+    },
+    measurements: EMPTY_MEASUREMENTS,
+  };
 }
 
-function saveProfileData(data: ProfileData) {
-  try {
-    const raw = localStorage.getItem(PROFILE_KEY);
-    const existing = raw ? JSON.parse(raw) : {};
-    localStorage.setItem(
-      PROFILE_KEY,
-      JSON.stringify({
-        ...existing,
-        fullName: data.personalInfo.fullName,
-        name: data.personalInfo.fullName,
-        email: data.personalInfo.email,
-        gender: data.personalInfo.gender,
-        dateOfBirth: data.personalInfo.dateOfBirth,
-        height: data.personalInfo.height ? parseFloat(data.personalInfo.height) : null,
-        activityLevel: data.personalInfo.activityLevel,
-        fitnessGoal: data.personalInfo.fitnessGoal,
-        goal: data.personalInfo.fitnessGoal,
-        currentWeight: data.weight.currentWeight ? parseFloat(data.weight.currentWeight) : null,
-        weight: data.weight.currentWeight ? parseFloat(data.weight.currentWeight) : null,
-        goalWeight: data.weight.goalWeight ? parseFloat(data.weight.goalWeight) : null,
-        startingWeight: data.weight.startingWeight ? parseFloat(data.weight.startingWeight) : null,
-        measurements: data.measurements,
-      })
-    );
-  } catch {}
+async function saveProfileToSupabase(data: ProfileData) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase
+    .from("users")
+    .update({
+      name: data.personalInfo.fullName || undefined,
+      gender: data.personalInfo.gender || undefined,
+      date_of_birth: data.personalInfo.dateOfBirth || undefined,
+      height_cm: data.personalInfo.height ? parseFloat(data.personalInfo.height) : undefined,
+      activity_level: data.personalInfo.activityLevel || undefined,
+      fitness_goal: data.personalInfo.fitnessGoal || undefined,
+      weight_kg: data.weight.currentWeight ? parseFloat(data.weight.currentWeight) : undefined,
+      goal_weight_kg: data.weight.goalWeight ? parseFloat(data.weight.goalWeight) : undefined,
+    })
+    .eq("id", user.id);
 }
 
 function loadHistory(): MeasurementRecord[] {
@@ -249,12 +236,13 @@ export default function ProfilePage() {
 
   // Hydrate
   useEffect(() => {
-    const profile = loadProfile();
-    setPersonalInfo(profile.personalInfo);
-    setWeight(profile.weight);
-    setMeasurements(profile.measurements);
-    setHistory(loadHistory());
-    setHydrated(true);
+    loadProfileFromSupabase().then((profile) => {
+      setPersonalInfo(profile.personalInfo);
+      setWeight(profile.weight);
+      setMeasurements(profile.measurements);
+      setHistory(loadHistory());
+      setHydrated(true);
+    });
   }, []);
 
   // ── Validation ─────────────────────────────────────────────────────────────
@@ -286,7 +274,7 @@ export default function ProfilePage() {
     if (!validate()) return;
 
     const data: ProfileData = { personalInfo, weight, measurements };
-    saveProfileData(data);
+    saveProfileToSupabase(data);
 
     // Add measurement record to history
     const hasAnyMeasurement = Object.values(measurements).some((v) => v !== "");
@@ -307,12 +295,13 @@ export default function ProfilePage() {
   }
 
   function handleCancel() {
-    const profile = loadProfile();
-    setPersonalInfo(profile.personalInfo);
-    setWeight(profile.weight);
-    setMeasurements(profile.measurements);
-    setErrors({});
-    setEditMode(false);
+    loadProfileFromSupabase().then((profile) => {
+      setPersonalInfo(profile.personalInfo);
+      setWeight(profile.weight);
+      setMeasurements(profile.measurements);
+      setErrors({});
+      setEditMode(false);
+    });
   }
 
   // ── Weight change indicator ────────────────────────────────────────────────

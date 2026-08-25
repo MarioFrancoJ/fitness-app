@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import ProgressBar from "./ProgressBar";
 import StepCard from "./StepCard";
 import StepButtons from "./StepButtons";
 import Input from "@/components/ui/Input";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Shared profile state ──────────────────────────────────────────────────────
 
@@ -31,16 +33,28 @@ const INITIAL_PROFILE: UserProfile = {
 
 const TOTAL_STEPS = 4;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Save profile to Supabase ──────────────────────────────────────────────────
 
-function mergeToLocalStorage(partial: Record<string, unknown>) {
-  try {
-    const stored = localStorage.getItem("fitnessapp_user");
-    const existing = stored ? JSON.parse(stored) : {};
-    localStorage.setItem("fitnessapp_user", JSON.stringify({ ...existing, ...partial }));
-  } catch {
-    // localStorage unavailable — continue
-  }
+async function saveProfileToSupabase(profile: UserProfile) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const dateOfBirth = profile.age
+    ? new Date(new Date().getFullYear() - parseInt(profile.age, 10), 0, 1).toISOString().split("T")[0]
+    : null;
+
+  await supabase
+    .from("users")
+    .update({
+      fitness_goal: profile.goal || null,
+      gender: profile.gender || null,
+      height_cm: profile.height ? parseFloat(profile.height) : null,
+      weight_kg: profile.weight ? parseFloat(profile.weight) : null,
+      activity_level: profile.activityLevel || null,
+      date_of_birth: dateOfBirth,
+    })
+    .eq("id", user.id);
 }
 
 // ── Step 1 ────────────────────────────────────────────────────────────────────
@@ -114,7 +128,6 @@ function Step2({
       return;
     }
     setError("");
-    mergeToLocalStorage({ goal: profile.goal });
     onNext();
   }
 
@@ -207,12 +220,6 @@ function Step3({
     const errs = validateStep3(profile);
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setErrors({});
-    mergeToLocalStorage({
-      age: parseInt(profile.age, 10),
-      gender: profile.gender,
-      height: parseFloat(profile.height),
-      weight: parseFloat(profile.weight),
-    });
     onNext();
   }
 
@@ -307,10 +314,7 @@ function Step4({
       return;
     }
     setError("");
-    mergeToLocalStorage({
-      activityLevel: profile.activityLevel,
-      onboardingComplete: true,
-    });
+    saveProfileToSupabase(profile);
     onFinish();
   }
 
@@ -370,6 +374,7 @@ function Step4({
 // ── Wizard ────────────────────────────────────────────────────────────────────
 
 export default function Wizard() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState<UserProfile>(INITIAL_PROFILE);
 
@@ -385,7 +390,7 @@ export default function Wizard() {
   }
 
   function handleFinish() {
-    window.location.href = "/dashboard";
+    router.push("/dashboard");
   }
 
   return (
