@@ -1,10 +1,19 @@
 "use client";
 
+/**
+ * RegisterForm — Supabase Auth (replaces localStorage-based registration)
+ *
+ * Creates user via supabase.auth.signUp().
+ * Auth trigger creates public.users row.
+ * App creates subscription (FREE) + notification_preferences (D3).
+ */
+
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -73,6 +82,7 @@ export default function RegisterForm() {
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [generalError, setGeneralError] = useState("");
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { id, value, type, checked } = e.target;
@@ -80,14 +90,15 @@ export default function RegisterForm() {
       ...prev,
       [id]: type === "checkbox" ? checked : value,
     }));
-    // Clear the field's error on change
     if (errors[id as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [id]: undefined }));
     }
+    if (generalError) setGeneralError("");
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    setGeneralError("");
 
     const validationErrors = validate(fields);
     if (Object.keys(validationErrors).length > 0) {
@@ -97,18 +108,46 @@ export default function RegisterForm() {
 
     setIsSubmitting(true);
 
-    // Persist to localStorage (no backend — frontend only)
-    const userData = {
-      name: fields.name.trim(),
+    const supabase = createClient();
+
+    // 1. Create auth user
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: fields.email.trim().toLowerCase(),
       password: fields.password,
-      role: "USER",
-      createdAt: new Date().toISOString(),
-    };
-    localStorage.setItem("fitnessapp_user", JSON.stringify(userData));
+      options: {
+        data: { name: fields.name.trim() },
+      },
+    });
+
+    if (authError) {
+      setGeneralError(
+        authError.message.includes("already registered")
+          ? "This email is already registered."
+          : authError.message
+      );
+      setIsSubmitting(false);
+      return;
+    }
+
+    // 2. Create subscription + notification preferences (D3: app-level)
+    if (authData.user) {
+      const today = new Date().toISOString().split("T")[0];
+
+      await supabase.from("subscriptions").insert({
+        user_id: authData.user.id,
+        plan: "FREE",
+        status: "Active",
+        start_date: today,
+      });
+
+      await supabase.from("notification_preferences").insert({
+        user_id: authData.user.id,
+      });
+    }
 
     // Navigate to onboarding
     router.push("/onboarding");
+    router.refresh();
   }
 
   return (
@@ -125,6 +164,13 @@ export default function RegisterForm() {
         </div>
 
         <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
+          {/* General error */}
+          {generalError && (
+            <div className="rounded-lg bg-red-50 px-4 py-3" role="alert">
+              <p className="text-sm font-medium text-red-700">{generalError}</p>
+            </div>
+          )}
+
           {/* Full Name */}
           <Input
             id="name"

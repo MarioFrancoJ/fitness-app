@@ -1,11 +1,19 @@
 "use client";
 
-import { useState, useEffect, type FormEvent } from "react";
+/**
+ * LoginForm — Supabase Auth (replaces localStorage-based auth)
+ *
+ * Authenticates via supabase.auth.signInWithPassword().
+ * No localStorage session management.
+ * No seed-admin dependency.
+ */
+
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { seedSuperAdmin, getSuperAdmin } from "@/lib/auth/seed-admin";
+import { createClient } from "@/lib/supabase/client";
 
 // Simple inline Google icon
 function GoogleIcon() {
@@ -26,12 +34,7 @@ export default function LoginForm() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Seed super admin on component mount
-  useEffect(() => {
-    seedSuperAdmin();
-  }, []);
-
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
 
@@ -46,74 +49,25 @@ export default function LoginForm() {
 
     setIsSubmitting(true);
 
-    try {
-      const normalizedEmail = email.trim().toLowerCase();
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
 
-      // Check super admin account first
-      const admin = getSuperAdmin();
-      if (admin && admin.email === normalizedEmail) {
-        if (admin.password !== password) {
-          setError("Invalid email or password.");
-          setIsSubmitting(false);
-          return;
-        }
-        // Create admin session
-        const session = {
-          isAuthenticated: true,
-          loginAt: Date.now(),
-          userId: admin.email,
-          name: admin.name,
-          email: admin.email,
-          role: admin.role,
-        };
-        localStorage.setItem("fitnessapp_session", JSON.stringify(session));
-        router.push("/admin");
-        return;
-      }
-
-      // Check regular user
-      const stored = localStorage.getItem("fitnessapp_user");
-      if (!stored) {
-        setError("Invalid email or password.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      const user = JSON.parse(stored);
-
-      if (user.email !== normalizedEmail) {
-        setError("Invalid email or password.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (user.password !== password) {
-        setError("Invalid email or password.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Create session with role
-      const session = {
-        isAuthenticated: true,
-        loginAt: Date.now(),
-        userId: user.email,
-        name: user.name,
-        email: user.email,
-        role: user.role || "USER",
-      };
-      localStorage.setItem("fitnessapp_session", JSON.stringify(session));
-
-      // Redirect based on role
-      if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
-      }
-    } catch {
-      setError("Something went wrong. Please try again.");
+    if (authError) {
+      setError(
+        authError.message === "Invalid login credentials"
+          ? "Invalid email or password."
+          : authError.message
+      );
       setIsSubmitting(false);
+      return;
     }
+
+    // Success — middleware handles role-based redirect
+    router.push("/dashboard");
+    router.refresh();
   }
 
   return (
@@ -171,15 +125,6 @@ export default function LoginForm() {
             />
           </div>
 
-          {/* Remember me */}
-          <label className="flex cursor-pointer items-center gap-2.5">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-zinc-300 accent-zinc-900"
-            />
-            <span className="text-sm text-zinc-600">Remember me</span>
-          </label>
-
           {/* Sign in button */}
           <Button type="submit" fullWidth disabled={isSubmitting}>
             {isSubmitting ? "Signing in…" : "Sign In"}
@@ -192,10 +137,10 @@ export default function LoginForm() {
             <div className="h-px flex-1 bg-zinc-200" />
           </div>
 
-          {/* Google button — UI only */}
-          <Button type="button" variant="outline" fullWidth>
+          {/* Google button — Coming soon */}
+          <Button type="button" variant="outline" fullWidth disabled>
             <GoogleIcon />
-            Continue with Google
+            Continue with Google (Coming soon)
           </Button>
         </form>
 

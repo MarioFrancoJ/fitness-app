@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { Locale } from "@/lib/i18n/config";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { getUnreadCount, generateReminders } from "@/lib/notifications";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Inline SVG icons ──────────────────────────────────────────────────────────
 
@@ -34,14 +35,25 @@ interface TopbarProps {
 export default function Topbar({ locale }: TopbarProps) {
   const router = useRouter();
   const [unread, setUnread] = useState(0);
+  const [userInitial, setUserInitial] = useState("U");
 
   useEffect(() => {
     generateReminders();
     setUnread(getUnreadCount());
+
+    // Get user name from Supabase session
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        const name = user.user_metadata?.name || user.email || "";
+        setUserInitial(name.charAt(0).toUpperCase() || "U");
+      }
+    });
   }, []);
 
-  function handleLogout() {
-    localStorage.removeItem("fitnessapp_session");
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
     router.replace("/login");
   }
 
@@ -88,7 +100,7 @@ export default function Topbar({ locale }: TopbarProps) {
           aria-label="User menu"
           className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2"
         >
-          AJ
+          {userInitial}
         </button>
 
         {/* Logout */}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 function IconSearch() {
   return (
@@ -26,18 +27,31 @@ export default function AdminTopbar() {
   const [name, setName] = useState<string>("AD");
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("fitnessapp_session");
-      if (stored) {
-        const session = JSON.parse(stored);
-        setRole(session.role || "");
-        setName(session.name?.charAt(0)?.toUpperCase() || "AD");
+    const supabase = createClient();
+
+    async function loadProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get role from public.users
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role, name")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
+        setRole(profile.role || "");
+        setName(profile.name?.charAt(0)?.toUpperCase() || "AD");
       }
-    } catch {}
+    }
+
+    loadProfile();
   }, []);
 
-  function handleLogout() {
-    localStorage.removeItem("fitnessapp_session");
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
     router.replace("/login");
   }
 

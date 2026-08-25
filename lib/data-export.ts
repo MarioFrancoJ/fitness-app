@@ -347,13 +347,12 @@ export function deleteAllUserData() {
 }
 
 export function resetAccountData() {
-  // Keep session/auth, remove everything else
-  const session = localStorage.getItem("fitnessapp_session");
-  const allKeys = Object.keys(localStorage).filter((k) => k.startsWith("fitnessapp_") && k !== "fitnessapp_session");
+  // Remove all fitnessapp localStorage data
+  // Session is now managed by Supabase Auth cookies (not localStorage)
+  const allKeys = Object.keys(localStorage).filter((k) => k.startsWith("fitnessapp_"));
   for (const key of allKeys) {
     localStorage.removeItem(key);
   }
-  if (session) localStorage.setItem("fitnessapp_session", session);
 }
 
 // ── Storage Stats ─────────────────────────────────────────────────────────────

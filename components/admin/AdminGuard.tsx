@@ -2,46 +2,51 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 const ADMIN_ROLES = ["SUPER_ADMIN", "ADMIN"];
 
 /**
- * Frontend-only admin role protection.
- * Checks fitnessapp_session for SUPER_ADMIN or ADMIN role.
- * Redirects USER role to /dashboard.
+ * Admin role protection (UI-level fallback).
+ * Primary protection is handled by middleware.ts.
+ * Verifies role from public.users table via Supabase client.
  */
 export default function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("fitnessapp_session");
-      if (!stored) {
-        // No session — AuthGuard should have caught this, but just in case
+    const supabase = createClient();
+
+    async function checkAdmin() {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
         router.replace("/login");
         return;
       }
 
-      const session = JSON.parse(stored);
-      const role = session.role || "";
+      // Fetch role from public.users
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single();
 
-      if (ADMIN_ROLES.includes(role)) {
+      if (profile && ADMIN_ROLES.includes(profile.role)) {
         setAuthorized(true);
       } else {
-        // USER role — redirect to dashboard
         router.replace("/dashboard");
       }
-    } catch {
-      router.replace("/login");
     }
+
+    checkAdmin();
   }, [router]);
 
-  // Loading state
   if (authorized === null) {
     return (
       <div className="flex h-screen items-center justify-center bg-zinc-50">
-        <p className="text-sm text-zinc-400">Checking permissions...</p>
+        <p className="text-sm text-zinc-400">Verificando permisos...</p>
       </div>
     );
   }

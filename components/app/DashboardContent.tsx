@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -121,14 +122,36 @@ export default function DashboardContent() {
   const [user, setUser] = useState<UserData | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("fitnessapp_user");
-      if (stored) {
-        setUser(JSON.parse(stored));
+    const supabase = createClient();
+
+    async function loadProfile() {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
+      const { data: profile } = await supabase
+        .from("users")
+        .select("name, fitness_goal, gender, height_cm, weight_kg, activity_level, date_of_birth")
+        .eq("id", authUser.id)
+        .single();
+
+      if (profile) {
+        const age = profile.date_of_birth
+          ? Math.floor((Date.now() - new Date(profile.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+          : undefined;
+
+        setUser({
+          name: profile.name || undefined,
+          goal: profile.fitness_goal || undefined,
+          age,
+          gender: profile.gender || undefined,
+          height: profile.height_cm ? Number(profile.height_cm) : undefined,
+          weight: profile.weight_kg ? Number(profile.weight_kg) : undefined,
+          activityLevel: profile.activity_level || undefined,
+        });
       }
-    } catch {
-      // localStorage unavailable
     }
+
+    loadProfile();
   }, []);
 
   const name = user?.name || "User";
