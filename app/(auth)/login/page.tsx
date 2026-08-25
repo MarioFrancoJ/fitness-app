@@ -8,12 +8,14 @@
  * Links to register and forgot-password pages.
  */
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+// ── Login Form (uses useSearchParams — requires Suspense) ─────────────────────
+
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/dashboard";
@@ -161,5 +163,21 @@ export default function LoginPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+// ── Page export (wraps in Suspense for useSearchParams) ───────────────────────
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-64 items-center justify-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
