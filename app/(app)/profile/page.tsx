@@ -51,8 +51,6 @@ interface ProfileData {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const HISTORY_KEY = "fitnessapp_measurement_history";
-
 const GENDERS = ["Male", "Female", "Other"];
 const ACTIVITY_LEVELS = ["Sedentary", "Lightly Active", "Moderately Active", "Very Active", "Athlete"];
 const FITNESS_GOALS = ["Lose Fat", "Build Muscle", "Maintain Weight", "Improve Performance", "Calisthenics Skills"];
@@ -140,17 +138,72 @@ async function saveProfileToSupabase(data: ProfileData) {
     .eq("id", user.id);
 }
 
-function loadHistory(): MeasurementRecord[] {
-  try {
-    const raw = localStorage.getItem(HISTORY_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+async function loadHistoryFromSupabase(): Promise<MeasurementRecord[]> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("measurement_entries")
+    .select("id, date, weight_kg, neck_cm, chest_cm, waist_cm, hips_cm, left_arm_cm, right_arm_cm, left_thigh_cm, right_thigh_cm, left_calf_cm, right_calf_cm")
+    .order("date", { ascending: false });
+
+  if (!data) return [];
+
+  return data.map((row) => ({
+    id: row.id,
+    date: row.date,
+    weight: row.weight_kg?.toString() || "",
+    measurements: {
+      neck: row.neck_cm?.toString() || "",
+      chest: row.chest_cm?.toString() || "",
+      waist: row.waist_cm?.toString() || "",
+      hips: row.hips_cm?.toString() || "",
+      leftArm: row.left_arm_cm?.toString() || "",
+      rightArm: row.right_arm_cm?.toString() || "",
+      leftThigh: row.left_thigh_cm?.toString() || "",
+      rightThigh: row.right_thigh_cm?.toString() || "",
+      leftCalf: row.left_calf_cm?.toString() || "",
+      rightCalf: row.right_calf_cm?.toString() || "",
+    },
+  }));
 }
 
-function saveHistory(records: MeasurementRecord[]) {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(records));
+async function saveMeasurementToSupabase(measurements: BodyMeasurements, weightKg: string): Promise<MeasurementRecord | null> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data: inserted } = await supabase
+    .from("measurement_entries")
+    .insert({
+      user_id: user.id,
+      date: today,
+      weight_kg: weightKg ? parseFloat(weightKg) : null,
+      neck_cm: measurements.neck ? parseFloat(measurements.neck) : null,
+      chest_cm: measurements.chest ? parseFloat(measurements.chest) : null,
+      waist_cm: measurements.waist ? parseFloat(measurements.waist) : null,
+      hips_cm: measurements.hips ? parseFloat(measurements.hips) : null,
+      left_arm_cm: measurements.leftArm ? parseFloat(measurements.leftArm) : null,
+      right_arm_cm: measurements.rightArm ? parseFloat(measurements.rightArm) : null,
+      left_thigh_cm: measurements.leftThigh ? parseFloat(measurements.leftThigh) : null,
+      right_thigh_cm: measurements.rightThigh ? parseFloat(measurements.rightThigh) : null,
+      left_calf_cm: measurements.leftCalf ? parseFloat(measurements.leftCalf) : null,
+      right_calf_cm: measurements.rightCalf ? parseFloat(measurements.rightCalf) : null,
+    })
+    .select("id, date")
+    .single();
+
+  if (!inserted) return null;
+
+  return {
+    id: inserted.id,
+    date: inserted.date,
+    weight: weightKg,
+    measurements: { ...measurements },
+  };
 }
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -236,13 +289,18 @@ export default function ProfilePage() {
 
   // Hydrate
   useEffect(() => {
-    loadProfileFromSupabase().then((profile) => {
+    async function loadAll() {
+      const [profile, measurementHistory] = await Promise.all([
+        loadProfileFromSupabase(),
+        loadHistoryFromSupabase(),
+      ]);
       setPersonalInfo(profile.personalInfo);
       setWeight(profile.weight);
       setMeasurements(profile.measurements);
-      setHistory(loadHistory());
+      setHistory(measurementHistory);
       setHydrated(true);
-    });
+    }
+    loadAll();
   }, []);
 
   // ── Validation ─────────────────────────────────────────────────────────────
@@ -269,25 +327,20 @@ export default function ProfilePage() {
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
-  function handleSave(e: FormEvent) {
+  async function handleSave(e: FormEvent) {
     e.preventDefault();
     if (!validate()) return;
 
     const data: ProfileData = { personalInfo, weight, measurements };
-    saveProfileToSupabase(data);
+    await saveProfileToSupabase(data);
 
-    // Add measurement record to history
+    // Add measurement record to history via Supabase
     const hasAnyMeasurement = Object.values(measurements).some((v) => v !== "");
     if (hasAnyMeasurement || weight.currentWeight) {
-      const record: MeasurementRecord = {
-        id: crypto.randomUUID(),
-        date: new Date().toISOString().slice(0, 10),
-        weight: weight.currentWeight,
-        measurements: { ...measurements },
-      };
-      const updated = [record, ...history];
-      setHistory(updated);
-      saveHistory(updated);
+      const record = await saveMeasurementToSupabase(measurements, weight.currentWeight);
+      if (record) {
+        setHistory((prev) => [record, ...prev]);
+      }
     }
 
     setEditMode(false);
@@ -295,13 +348,16 @@ export default function ProfilePage() {
   }
 
   function handleCancel() {
-    loadProfileFromSupabase().then((profile) => {
-      setPersonalInfo(profile.personalInfo);
-      setWeight(profile.weight);
-      setMeasurements(profile.measurements);
-      setErrors({});
-      setEditMode(false);
-    });
+    Promise.all([loadProfileFromSupabase(), loadHistoryFromSupabase()]).then(
+      ([profile, measurementHistory]) => {
+        setPersonalInfo(profile.personalInfo);
+        setWeight(profile.weight);
+        setMeasurements(profile.measurements);
+        setHistory(measurementHistory);
+        setErrors({});
+        setEditMode(false);
+      }
+    );
   }
 
   // ── Weight change indicator ────────────────────────────────────────────────
