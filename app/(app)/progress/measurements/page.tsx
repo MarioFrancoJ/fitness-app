@@ -3,6 +3,9 @@
 import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Measurement {
   id: string;
@@ -15,20 +18,7 @@ interface Measurement {
   thigh: string;
 }
 
-const STORAGE_KEY = "fitnessapp_measurements";
-
-function loadMeasurements(): Measurement[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveMeasurements(data: Measurement[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function MeasurementsPage() {
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
@@ -40,37 +30,146 @@ export default function MeasurementsPage() {
     arm: "",
     thigh: "",
   });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  // ── Load from Supabase ────────────────────────────────────────────────────
 
   useEffect(() => {
-    setMeasurements(loadMeasurements());
+    async function loadEntries() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error: fetchError } = await supabase
+        .from("measurement_entries")
+        .select("id, date, neck_cm, chest_cm, waist_cm, hips_cm, left_arm_cm, left_thigh_cm")
+        .order("date", { ascending: false });
+
+      if (!fetchError && data) {
+        setMeasurements(
+          data.map((row) => ({
+            id: row.id,
+            date: new Date(row.date).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            }),
+            neck: row.neck_cm?.toString() || "",
+            chest: row.chest_cm?.toString() || "",
+            waist: row.waist_cm?.toString() || "",
+            hips: row.hips_cm?.toString() || "",
+            arm: row.left_arm_cm?.toString() || "",
+            thigh: row.left_thigh_cm?.toString() || "",
+          }))
+        );
+      }
+
+      setLoading(false);
+    }
+
+    loadEntries();
   }, []);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { id, value } = e.target;
     setForm((prev) => ({ ...prev, [id]: value }));
+    if (error) setError("");
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
     // Require at least one field filled
     const hasValue = Object.values(form).some((v) => v.trim() !== "");
-    if (!hasValue) return;
+    if (!hasValue) {
+      setError("Enter at least one measurement.");
+      return;
+    }
 
-    const entry: Measurement = {
-      id: Date.now().toString(),
-      date: new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      }),
-      ...form,
-    };
+    setError("");
+    setSaving(true);
 
-    const updated = [entry, ...measurements];
-    setMeasurements(updated);
-    saveMeasurements(updated);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setError("Not authenticated.");
+      setSaving(false);
+      return;
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("measurement_entries")
+      .insert({
+        user_id: user.id,
+        date: today,
+        neck_cm: form.neck ? parseFloat(form.neck) : null,
+        chest_cm: form.chest ? parseFloat(form.chest) : null,
+        waist_cm: form.waist ? parseFloat(form.waist) : null,
+        hips_cm: form.hips ? parseFloat(form.hips) : null,
+        left_arm_cm: form.arm ? parseFloat(form.arm) : null,
+        left_thigh_cm: form.thigh ? parseFloat(form.thigh) : null,
+      })
+      .select("id, date, neck_cm, chest_cm, waist_cm, hips_cm, left_arm_cm, left_thigh_cm")
+      .single();
+
+    if (insertError) {
+      setError("Error saving: " + insertError.message);
+      setSaving(false);
+      return;
+    }
+
+    if (inserted) {
+      const newEntry: Measurement = {
+        id: inserted.id,
+        date: new Date(inserted.date).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        }),
+        neck: inserted.neck_cm?.toString() || "",
+        chest: inserted.chest_cm?.toString() || "",
+        waist: inserted.waist_cm?.toString() || "",
+        hips: inserted.hips_cm?.toString() || "",
+        arm: inserted.left_arm_cm?.toString() || "",
+        thigh: inserted.left_thigh_cm?.toString() || "",
+      };
+
+      setMeasurements((prev) => [newEntry, ...prev]);
+    }
+
     setForm({ neck: "", chest: "", waist: "", hips: "", arm: "", thigh: "" });
+    setSaving(false);
+  }
+
+  async function handleDelete(entryId: string) {
+    const supabase = createClient();
+    const { error: deleteError } = await supabase
+      .from("measurement_entries")
+      .delete()
+      .eq("id", entryId);
+
+    if (!deleteError) {
+      setMeasurements((prev) => prev.filter((m) => m.id !== entryId));
+    }
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading measurements...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -92,6 +191,13 @@ export default function MeasurementsPage() {
         <p className="mb-4 text-sm font-semibold text-zinc-700">
           New Measurement
         </p>
+
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-50 px-4 py-3" role="alert">
+            <p className="text-sm font-medium text-red-700">{error}</p>
+          </div>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Input id="neck" type="number" label="Neck (cm)" placeholder="e.g. 38" step={0.1} value={form.neck} onChange={handleChange} />
           <Input id="chest" type="number" label="Chest (cm)" placeholder="e.g. 100" step={0.1} value={form.chest} onChange={handleChange} />
@@ -101,14 +207,18 @@ export default function MeasurementsPage() {
           <Input id="thigh" type="number" label="Thigh (cm)" placeholder="e.g. 55" step={0.1} value={form.thigh} onChange={handleChange} />
         </div>
         <div className="mt-5">
-          <Button type="submit">Save Measurement</Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? "Saving..." : "Save Measurement"}
+          </Button>
         </div>
       </form>
 
       {/* History table */}
       <div className="rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div className="border-b border-zinc-100 px-6 py-4">
-          <p className="text-sm font-semibold text-zinc-700">History</p>
+          <p className="text-sm font-semibold text-zinc-700">
+            History ({measurements.length} entries)
+          </p>
         </div>
 
         {measurements.length === 0 ? (
@@ -127,6 +237,7 @@ export default function MeasurementsPage() {
                   <th className="px-5 py-3 font-semibold text-zinc-700">Hips</th>
                   <th className="px-5 py-3 font-semibold text-zinc-700">Arm</th>
                   <th className="px-5 py-3 font-semibold text-zinc-700">Thigh</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-700"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
@@ -139,6 +250,16 @@ export default function MeasurementsPage() {
                     <td className="px-5 py-3 text-zinc-600">{m.hips || "—"}</td>
                     <td className="px-5 py-3 text-zinc-600">{m.arm || "—"}</td>
                     <td className="px-5 py-3 text-zinc-600">{m.thigh || "—"}</td>
+                    <td className="px-5 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(m.id)}
+                        className="text-xs font-medium text-zinc-400 transition-colors hover:text-red-600"
+                        aria-label={`Delete measurement from ${m.date}`}
+                      >
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
