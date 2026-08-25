@@ -3,6 +3,9 @@
 import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface WeightEntry {
   id: string;
@@ -10,30 +13,50 @@ interface WeightEntry {
   weight: number;
 }
 
-const STORAGE_KEY = "fitnessapp_weight_logs";
-
-function loadWeightLogs(): WeightEntry[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveWeightLogs(data: WeightEntry[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function WeightPage() {
   const [logs, setLogs] = useState<WeightEntry[]>([]);
   const [weight, setWeight] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // ── Load from Supabase ────────────────────────────────────────────────────
 
   useEffect(() => {
-    setLogs(loadWeightLogs());
+    async function loadEntries() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error: fetchError } = await supabase
+        .from("weight_entries")
+        .select("id, date, weight_kg")
+        .order("date", { ascending: false });
+
+      if (!fetchError && data) {
+        setLogs(
+          data.map((row) => ({
+            id: row.id,
+            date: new Date(row.date).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            }),
+            weight: Number(row.weight_kg),
+          }))
+        );
+      }
+
+      setLoading(false);
+    }
+
+    loadEntries();
   }, []);
+
+  // ── Computed metrics ──────────────────────────────────────────────────────
 
   const currentWeight = logs.length > 0 ? logs[0].weight : null;
   const startingWeight = logs.length > 0 ? logs[logs.length - 1].weight : null;
@@ -42,7 +65,9 @@ export default function WeightPage() {
       ? currentWeight - startingWeight
       : null;
 
-  function handleSubmit(e: FormEvent) {
+  // ── Save (Upsert) ────────────────────────────────────────────────────────
+
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
     const parsed = parseFloat(weight);
@@ -52,21 +77,87 @@ export default function WeightPage() {
     }
 
     setError("");
+    setSaving(true);
 
-    const entry: WeightEntry = {
-      id: Date.now().toString(),
-      date: new Date(date).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      }),
-      weight: parsed,
-    };
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setError("Not authenticated.");
+      setSaving(false);
+      return;
+    }
 
-    const updated = [entry, ...logs];
-    setLogs(updated);
-    saveWeightLogs(updated);
+    const { data: upserted, error: upsertError } = await supabase
+      .from("weight_entries")
+      .upsert(
+        {
+          user_id: user.id,
+          date,
+          weight_kg: parsed,
+        },
+        { onConflict: "user_id,date" }
+      )
+      .select("id, date, weight_kg")
+      .single();
+
+    if (upsertError) {
+      setError("Error saving: " + upsertError.message);
+      setSaving(false);
+      return;
+    }
+
+    // Update local state
+    if (upserted) {
+      const formattedEntry: WeightEntry = {
+        id: upserted.id,
+        date: new Date(upserted.date).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        }),
+        weight: Number(upserted.weight_kg),
+      };
+
+      // Replace existing entry for same date or add new
+      setLogs((prev) => {
+        const filtered = prev.filter((e) => e.id !== upserted.id);
+        const updated = [formattedEntry, ...filtered];
+        // Re-sort by date descending
+        return updated.sort((a, b) =>
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+      });
+    }
+
     setWeight("");
+    setSaving(false);
+  }
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+
+  async function handleDelete(entryId: string) {
+    const supabase = createClient();
+    const { error: deleteError } = await supabase
+      .from("weight_entries")
+      .delete()
+      .eq("id", entryId);
+
+    if (!deleteError) {
+      setLogs((prev) => prev.filter((e) => e.id !== entryId));
+    }
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading weight data...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -145,7 +236,9 @@ export default function WeightPage() {
               onChange={(e) => setDate(e.target.value)}
             />
           </div>
-          <Button type="submit">Save</Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? "Saving..." : "Save"}
+          </Button>
         </div>
       </form>
 
@@ -169,6 +262,7 @@ export default function WeightPage() {
                   <th className="px-5 py-3 font-semibold text-zinc-700">Date</th>
                   <th className="px-5 py-3 font-semibold text-zinc-700">Weight</th>
                   <th className="px-5 py-3 font-semibold text-zinc-700">Change</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-700"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
@@ -202,6 +296,16 @@ export default function WeightPage() {
                         ) : (
                           <span className="text-xs text-zinc-400">—</span>
                         )}
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(entry.id)}
+                          className="text-xs font-medium text-zinc-400 transition-colors hover:text-red-600"
+                          aria-label={`Delete entry for ${entry.date}`}
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   );
