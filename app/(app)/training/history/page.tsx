@@ -2,36 +2,81 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { loadSessions } from "@/lib/training-store";
-import type { WorkoutSession } from "@/data/training-sessions";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type FilterPeriod = "today" | "week" | "month" | "all";
 
-function getDateRange(filter: FilterPeriod): Date | null {
+interface SessionRow {
+  id: string;
+  date: string;
+  workout_name: string | null;
+  duration_minutes: number | null;
+  exerciseCount: number;
+  completedSets: number;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getDateCutoff(filter: FilterPeriod): string | null {
   const now = new Date();
   switch (filter) {
-    case "today": { const d = new Date(now); d.setHours(0, 0, 0, 0); return d; }
-    case "week": { const d = new Date(now); d.setDate(now.getDate() - 7); return d; }
-    case "month": { const d = new Date(now); d.setDate(now.getDate() - 30); return d; }
+    case "today": return now.toISOString().split("T")[0];
+    case "week": { const d = new Date(now); d.setDate(now.getDate() - 7); return d.toISOString().split("T")[0]; }
+    case "month": { const d = new Date(now); d.setDate(now.getDate() - 30); return d.toISOString().split("T")[0]; }
     default: return null;
   }
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function TrainingHistoryPage() {
-  const [sessions, setSessions] = useState<WorkoutSession[]>([]);
+  const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [filter, setFilter] = useState<FilterPeriod>("all");
-  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setSessions(loadSessions());
-    setHydrated(true);
+    async function loadHistory() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      const { data } = await supabase
+        .from("training_sessions")
+        .select("id, date, workout_name, duration_minutes, session_exercise_logs(id, session_set_logs(completed))")
+        .eq("user_id", user.id)
+        .eq("status", "Completed")
+        .order("date", { ascending: false });
+
+      if (data) {
+        setSessions(data.map((s) => {
+          const logs = s.session_exercise_logs || [];
+          const completedSets = logs.reduce(
+            (sum: number, ex: { session_set_logs: { completed: boolean }[] }) =>
+              sum + (ex.session_set_logs || []).filter((set) => set.completed).length, 0
+          );
+          return {
+            id: s.id,
+            date: s.date,
+            workout_name: s.workout_name,
+            duration_minutes: s.duration_minutes,
+            exerciseCount: logs.length,
+            completedSets,
+          };
+        }));
+      }
+
+      setLoading(false);
+    }
+
+    loadHistory();
   }, []);
 
   const filtered = useMemo(() => {
-    const cutoff = getDateRange(filter);
-    return sessions
-      .filter((s) => s.status === "Completed")
-      .filter((s) => !cutoff || new Date(s.date) >= cutoff);
+    const cutoff = getDateCutoff(filter);
+    if (!cutoff) return sessions;
+    return sessions.filter((s) => s.date >= cutoff);
   }, [sessions, filter]);
 
   const filters: { label: string; value: FilterPeriod }[] = [
@@ -41,7 +86,16 @@ export default function TrainingHistoryPage() {
     { label: "All Time", value: "all" },
   ];
 
-  if (!hydrated) return null;
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading history...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -88,20 +142,19 @@ export default function TrainingHistoryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-50">
-                {filtered.map((s) => {
-                  const totalSets = s.exerciseLogs.reduce((sum, ex) => sum + ex.sets.filter((set) => set.completed).length, 0);
-                  return (
-                    <tr key={s.id} className="hover:bg-zinc-50">
-                      <td className="px-5 py-3 font-medium text-zinc-900">
-                        <Link href={`/training/session/${s.id}`} className="hover:underline">{s.date}</Link>
-                      </td>
-                      <td className="px-5 py-3 text-zinc-700">{s.workoutName}</td>
-                      <td className="px-5 py-3 text-zinc-600">{s.durationMinutes} min</td>
-                      <td className="px-5 py-3 text-zinc-600">{s.exerciseLogs.length}</td>
-                      <td className="px-5 py-3 text-zinc-600">{totalSets}</td>
-                    </tr>
-                  );
-                })}
+                {filtered.map((s) => (
+                  <tr key={s.id} className="hover:bg-zinc-50">
+                    <td className="px-5 py-3 font-medium text-zinc-900">
+                      <Link href={`/training/session/${s.id}`} className="hover:underline">
+                        {new Date(s.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </Link>
+                    </td>
+                    <td className="px-5 py-3 text-zinc-700">{s.workout_name || "Custom"}</td>
+                    <td className="px-5 py-3 text-zinc-600">{s.duration_minutes || 0} min</td>
+                    <td className="px-5 py-3 text-zinc-600">{s.exerciseCount}</td>
+                    <td className="px-5 py-3 text-zinc-600">{s.completedSets}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
