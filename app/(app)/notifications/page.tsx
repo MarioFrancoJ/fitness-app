@@ -2,14 +2,23 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import {
-  loadNotifications, markAsRead, markAsUnread, archiveNotification, deleteNotification, markAllAsRead, generateReminders,
-  type Notification, type NotificationType, type NotificationStatus,
-} from "@/lib/notifications";
+import { createClient } from "@/lib/supabase/client";
+
+interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  priority: string;
+  status: string;
+  action_url: string | null;
+  created_at: string;
+  read_at: string | null;
+}
 
 type FilterTab = "all" | "unread" | "archived";
 
-function typeIcon(t: NotificationType): string {
+function typeIcon(t: string): string {
   switch (t) {
     case "Workout Reminder":       return "💪";
     case "Nutrition Reminder":     return "🥗";
@@ -19,6 +28,7 @@ function typeIcon(t: NotificationType): string {
     case "Recommendation":         return "💡";
     case "Subscription":           return "⭐";
     case "System":                 return "🔔";
+    default:                       return "🔔";
   }
 }
 
@@ -43,30 +53,126 @@ function timeAgo(iso: string): string {
 }
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [filter, setFilter] = useState<FilterTab>("all");
-  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
 
   const dismissToast = useCallback(() => setToast(null), []);
 
+  async function loadNotifications() {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setNotifications(data ?? []);
+    } catch (err) {
+      console.error("Failed to load notifications:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    generateReminders();
-    setNotifications(loadNotifications());
-    setHydrated(true);
+    loadNotifications();
   }, []);
 
   useEffect(() => {
     if (toast) { const t = setTimeout(dismissToast, 3000); return () => clearTimeout(t); }
   }, [toast, dismissToast]);
 
-  function refresh() { setNotifications(loadNotifications()); }
+  async function handleMarkRead(id: string) {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("notifications")
+        .update({ status: "Read", read_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, status: "Read", read_at: new Date().toISOString() } : n))
+      );
+    } catch (err) {
+      console.error("Failed to mark as read:", err);
+    }
+  }
 
-  function handleMarkRead(id: string) { markAsRead(id); refresh(); }
-  function handleMarkUnread(id: string) { markAsUnread(id); refresh(); }
-  function handleArchive(id: string) { archiveNotification(id); refresh(); setToast("Archived"); }
-  function handleDelete(id: string) { deleteNotification(id); refresh(); setToast("Deleted"); }
-  function handleMarkAllRead() { markAllAsRead(); refresh(); setToast("All marked as read"); }
+  async function handleMarkUnread(id: string) {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("notifications")
+        .update({ status: "Unread", read_at: null })
+        .eq("id", id);
+      if (error) throw error;
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, status: "Unread", read_at: null } : n))
+      );
+    } catch (err) {
+      console.error("Failed to mark as unread:", err);
+    }
+  }
+
+  async function handleArchive(id: string) {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("notifications")
+        .update({ status: "Archived" })
+        .eq("id", id);
+      if (error) throw error;
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, status: "Archived" } : n))
+      );
+      setToast("Archived");
+    } catch (err) {
+      console.error("Failed to archive notification:", err);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("notifications")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      setToast("Deleted");
+    } catch (err) {
+      console.error("Failed to delete notification:", err);
+    }
+  }
+
+  async function handleMarkAllRead() {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from("notifications")
+        .update({ status: "Read", read_at: new Date().toISOString() })
+        .eq("user_id", user.id)
+        .eq("status", "Unread");
+      if (error) throw error;
+      setNotifications((prev) =>
+        prev.map((n) => (n.status === "Unread" ? { ...n, status: "Read", read_at: new Date().toISOString() } : n))
+      );
+      setToast("All marked as read");
+    } catch (err) {
+      console.error("Failed to mark all as read:", err);
+    }
+  }
 
   const filtered = useMemo(() => {
     switch (filter) {
@@ -78,7 +184,13 @@ export default function NotificationsPage() {
 
   const unreadCount = notifications.filter((n) => n.status === "Unread").length;
 
-  if (!hydrated) return null;
+  if (loading) {
+    return (
+      <div className="flex h-48 items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -137,9 +249,9 @@ export default function NotificationsPage() {
                   <p className="mt-0.5 text-xs text-zinc-500">{notif.message}</p>
                   <div className="mt-2 flex items-center gap-3 text-[10px] text-zinc-400">
                     <span>{notif.type}</span>
-                    <span>{timeAgo(notif.createdAt)}</span>
-                    {notif.actionUrl && (
-                      <Link href={notif.actionUrl} className="font-medium text-zinc-600 hover:text-zinc-900 underline underline-offset-2">
+                    <span>{timeAgo(notif.created_at)}</span>
+                    {notif.action_url && (
+                      <Link href={notif.action_url} className="font-medium text-zinc-600 hover:text-zinc-900 underline underline-offset-2">
                         View
                       </Link>
                     )}
