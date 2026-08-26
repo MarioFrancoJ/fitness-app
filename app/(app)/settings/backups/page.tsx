@@ -31,8 +31,8 @@ export default function BackupsPage() {
     showToast("Backup created successfully!");
   }
 
-  function handleDownload(id: string) {
-    downloadBackup(id);
+  async function handleDownload(id: string) {
+    await downloadBackup(id);
     showToast("Backup downloaded");
   }
 

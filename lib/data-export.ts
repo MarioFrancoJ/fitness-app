@@ -58,7 +58,6 @@ export interface StorageStats {
 const APP_VERSION = "2.0.0";
 const SCHEMA_VERSION = "2";
 const BACKUPS_KEY = "app_backups_metadata";
-const BACKUP_DATA_PREFIX = "app_backup_";
 
 export const ALL_CATEGORIES: ExportCategory[] = [
   "profile", "nutrition", "workouts", "progress", "notifications", "subscriptions",
@@ -169,7 +168,7 @@ export async function exportAndDownload(options: ExportOptions) {
   downloadFile(content, `fitnessapp-export-${timestamp}.${ext}`, mime);
 }
 
-// ── Backup Functions (localStorage for backup metadata only) ──────────────────
+// ── Backup Functions (metadata-only in localStorage, payload streamed directly) ─
 
 export function loadBackupList(): BackupMetadata[] {
   try {
@@ -184,39 +183,54 @@ function saveBackupList(list: BackupMetadata[]) {
   localStorage.setItem(BACKUPS_KEY, JSON.stringify(list));
 }
 
+/**
+ * Creates a backup: exports data from Supabase, triggers immediate download,
+ * and stores only lightweight metadata in localStorage.
+ * The payload is NEVER stored in localStorage (avoids 5MB quota issues).
+ */
 export async function createBackup(categories: ExportCategory[] = ALL_CATEGORIES): Promise<BackupMetadata> {
   const content = await exportData({ categories, format: "json" });
   const id = crypto.randomUUID();
+  const fileSize = new Blob([content]).size;
 
   const metadata: BackupMetadata = {
     id,
     createdAt: new Date().toISOString(),
-    fileSize: new Blob([content]).size,
+    fileSize,
     version: SCHEMA_VERSION,
     appVersion: APP_VERSION,
     categoriesIncluded: categories,
   };
 
-  // Store backup data in localStorage (for local retrieval)
-  localStorage.setItem(`${BACKUP_DATA_PREFIX}${id}`, content);
-
-  // Update metadata list
+  // Store ONLY metadata (lightweight, <1KB per backup)
   const list = loadBackupList();
   list.unshift(metadata);
   saveBackupList(list);
 
+  // Trigger immediate download from memory (no localStorage caching)
+  const timestamp = new Date().toISOString().slice(0, 10);
+  downloadFile(content, `fitnessapp-backup-${timestamp}.json`, "application/json");
+
   return metadata;
 }
 
-export function downloadBackup(id: string) {
-  const raw = localStorage.getItem(`${BACKUP_DATA_PREFIX}${id}`);
-  if (!raw) return;
-  const timestamp = new Date().toISOString().slice(0, 10);
-  downloadFile(raw, `fitnessapp-backup-${timestamp}.json`, "application/json");
+/**
+ * Re-downloads a backup by re-exporting from Supabase.
+ * Since payloads are not cached, this performs a fresh export
+ * using the categories stored in the backup metadata.
+ */
+export async function downloadBackup(id: string) {
+  const list = loadBackupList();
+  const backup = list.find((b) => b.id === id);
+  if (!backup) return;
+
+  // Re-export from Supabase using the original categories
+  const content = await exportData({ categories: backup.categoriesIncluded, format: "json" });
+  const timestamp = backup.createdAt.slice(0, 10);
+  downloadFile(content, `fitnessapp-backup-${timestamp}.json`, "application/json");
 }
 
 export function deleteBackup(id: string) {
-  localStorage.removeItem(`${BACKUP_DATA_PREFIX}${id}`);
   const list = loadBackupList().filter((b) => b.id !== id);
   saveBackupList(list);
 }
@@ -374,11 +388,7 @@ export async function deleteAllUserData(): Promise<boolean> {
       await (supabase as any).from(table).delete().eq("user_id", user.id);
     }
 
-    // Clear local backup storage
-    const backups = loadBackupList();
-    for (const b of backups) {
-      localStorage.removeItem(`${BACKUP_DATA_PREFIX}${b.id}`);
-    }
+    // Clear local backup metadata
     localStorage.removeItem(BACKUPS_KEY);
 
     return true;
