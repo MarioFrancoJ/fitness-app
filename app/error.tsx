@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { logError } from "@/lib/monitoring";
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    logError(error.message, error.stack || null, "critical");
+    // Log to console for now. Future: send to Sentry/external monitoring.
+    console.error("[GlobalError]", error.message, error.stack);
   }, [error]);
 
   return (

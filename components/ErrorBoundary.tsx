@@ -1,7 +1,6 @@
 "use client";
 
 import { Component, type ReactNode } from "react";
-import { logError } from "@/lib/monitoring";
 
 interface Props {
   children: ReactNode;
@@ -24,7 +23,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    logError(error.message, error.stack || null, "high");
+    console.error("[ErrorBoundary]", error.message, error.stack);
     console.error("ErrorBoundary caught:", error, errorInfo);
   }
 

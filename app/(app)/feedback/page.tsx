@@ -1,29 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 type FeedbackType = "Bug Report" | "Feature Request" | "General Feedback";
 
-interface FeedbackEntry {
-  id: string;
-  type: FeedbackType;
-  title: string;
-  description: string;
-  priority: string;
-  submittedAt: string;
-}
-
-const FEEDBACK_KEY = "fitnessapp_feedback";
 const TYPES: FeedbackType[] = ["Bug Report", "Feature Request", "General Feedback"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
-
-function saveFeedback(entry: FeedbackEntry) {
-  try {
-    const all = JSON.parse(localStorage.getItem(FEEDBACK_KEY) || "[]");
-    all.unshift(entry);
-    localStorage.setItem(FEEDBACK_KEY, JSON.stringify(all));
-  } catch {}
-}
 
 export default function FeedbackPage() {
   const [type, setType] = useState<FeedbackType>("General Feedback");
@@ -31,12 +14,30 @@ export default function FeedbackPage() {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("Medium");
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
-    saveFeedback({ id: crypto.randomUUID(), type, title: title.trim(), description: description.trim(), priority, submittedAt: new Date().toISOString() });
-    setSubmitted(true);
+
+    setSaving(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      await supabase.from("feedback").insert({
+        user_id: user?.id || null,
+        type,
+        title: title.trim(),
+        description: description.trim() || null,
+        priority: type === "Bug Report" ? (priority as "Low" | "Medium" | "High" | "Critical") : null,
+      });
+
+      setSubmitted(true);
+    } catch (err) {
+      console.error("Failed to submit feedback:", err);
+    }
+    setSaving(false);
   }
 
   function handleReset() {
@@ -66,22 +67,18 @@ export default function FeedbackPage() {
       ) : (
         <form onSubmit={handleSubmit} className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4">
-            {/* Type */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-zinc-700">Feedback Type</label>
               <div className="flex gap-2">
                 {TYPES.map((t) => (
                   <button key={t} type="button" onClick={() => setType(t)}
-                    className={["rounded-lg px-4 py-2 text-xs font-semibold transition-colors",
-                      type === t ? "bg-zinc-900 text-white" : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50",
-                    ].join(" ")}>
+                    className={["rounded-lg px-4 py-2 text-xs font-semibold transition-colors", type === t ? "bg-zinc-900 text-white" : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"].join(" ")}>
                     {t}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Title */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="fb-title" className="text-sm font-medium text-zinc-700">Title *</label>
               <input id="fb-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} required
@@ -89,15 +86,12 @@ export default function FeedbackPage() {
                 className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
             </div>
 
-            {/* Description */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="fb-desc" className="text-sm font-medium text-zinc-700">Description</label>
-              <textarea id="fb-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={4}
-                placeholder="Provide more details..."
+              <textarea id="fb-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder="Provide more details..."
                 className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
             </div>
 
-            {/* Priority (for bugs) */}
             {type === "Bug Report" && (
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="fb-priority" className="text-sm font-medium text-zinc-700">Severity</label>
@@ -108,8 +102,8 @@ export default function FeedbackPage() {
               </div>
             )}
 
-            <button type="submit" className="mt-2 h-11 w-full rounded-lg bg-zinc-900 text-sm font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2">
-              Submit Feedback
+            <button type="submit" disabled={saving} className="mt-2 h-11 w-full rounded-lg bg-zinc-900 text-sm font-semibold text-white hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2">
+              {saving ? "Submitting..." : "Submit Feedback"}
             </button>
           </div>
         </form>

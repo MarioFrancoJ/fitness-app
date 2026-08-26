@@ -5,41 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-
-// ── Storage ───────────────────────────────────────────────────────────────────
-
-const STORAGE_KEY = "fitnessapp_progress";
-
-interface ProgressEntry {
-  id: string;
-  date: string;
-  weight: number;
-  waist: string;
-  chest: string;
-  hips: string;
-  neck: string;
-  leftArm: string;
-  rightArm: string;
-  leftLeg: string;
-  rightLeg: string;
-  bodyFat: string;
-  notes: string;
-}
-
-function loadEntries(): ProgressEntry[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveEntries(entries: ProgressEntry[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-}
-
-// ── Component ─────────────────────────────────────────────────────────────────
+import { createClient } from "@/lib/supabase/client";
 
 export default function NewProgressPage() {
   const router = useRouter();
@@ -58,57 +24,54 @@ export default function NewProgressPage() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
 
     const w = parseFloat(weight);
-    if (!weight.trim() || isNaN(w)) {
-      setError("Weight is required.");
-      return;
-    }
-    if (w < 20 || w > 500) {
-      setError("Weight must be between 20 and 500 kg.");
-      return;
-    }
+    if (!weight.trim() || isNaN(w)) { setError("Weight is required."); return; }
+    if (w < 20 || w > 500) { setError("Weight must be between 20 and 500 kg."); return; }
 
     setIsSubmitting(true);
 
-    const entry: ProgressEntry = {
-      id: Date.now().toString(),
-      date: new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      }),
-      weight: w,
-      waist,
-      chest,
-      hips,
-      neck,
-      leftArm,
-      rightArm,
-      leftLeg,
-      rightLeg,
-      bodyFat,
-      notes,
-    };
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setError("Not authenticated."); setIsSubmitting(false); return; }
 
-    const existing = loadEntries();
-    saveEntries([entry, ...existing]);
+      const today = new Date().toISOString().slice(0, 10);
 
-    router.push("/progress");
+      // Insert weight entry
+      await supabase.from("weight_entries").insert({ user_id: user.id, date: today, weight_kg: w, notes: notes.trim() || null });
+
+      // Insert measurement entry (if any measurement provided)
+      const hasMeasurements = waist || chest || hips || neck || leftArm || rightArm || leftLeg || rightLeg;
+      if (hasMeasurements) {
+        await supabase.from("measurement_entries").insert({
+          user_id: user.id,
+          date: today,
+          weight_kg: w,
+          neck_cm: parseFloat(neck) || null,
+          chest_cm: parseFloat(chest) || null,
+          waist_cm: parseFloat(waist) || null,
+          hips_cm: parseFloat(hips) || null,
+          left_arm_cm: parseFloat(leftArm) || null,
+          right_arm_cm: parseFloat(rightArm) || null,
+          left_thigh_cm: parseFloat(leftLeg) || null,
+          right_thigh_cm: parseFloat(rightLeg) || null,
+        });
+      }
+
+      router.push("/progress");
+    } catch (err) {
+      setError("Failed to save. Please try again.");
+      setIsSubmitting(false);
+    }
   }
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Back */}
-      <Link
-        href="/progress"
-        className="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900"
-      >
-        ← Back to Progress
-      </Link>
+      <Link href="/progress" className="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900">← Back to Progress</Link>
 
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Add Measurement</h1>
@@ -116,32 +79,15 @@ export default function NewProgressPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
-        {/* Error */}
-        {error && (
-          <div className="rounded-lg bg-red-50 px-4 py-3" role="alert">
-            <p className="text-sm font-medium text-red-700">{error}</p>
-          </div>
-        )}
+        {error && (<div className="rounded-lg bg-red-50 px-4 py-3" role="alert"><p className="text-sm font-medium text-red-700">{error}</p></div>)}
 
-        {/* Weight — required */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <p className="mb-4 text-sm font-semibold text-zinc-700">Weight *</p>
           <div className="w-48">
-            <Input
-              id="weight"
-              type="number"
-              label="Weight (kg)"
-              placeholder="e.g. 75.4"
-              step={0.1}
-              min={20}
-              max={500}
-              value={weight}
-              onChange={(e) => { setWeight(e.target.value); if (error) setError(""); }}
-            />
+            <Input id="weight" type="number" label="Weight (kg)" placeholder="e.g. 75.4" step={0.1} min={20} max={500} value={weight} onChange={(e) => { setWeight(e.target.value); if (error) setError(""); }} />
           </div>
         </div>
 
-        {/* Body measurements */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <p className="mb-4 text-sm font-semibold text-zinc-700">Body Measurements (cm)</p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -156,33 +102,21 @@ export default function NewProgressPage() {
           </div>
         </div>
 
-        {/* Optional fields */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <p className="mb-4 text-sm font-semibold text-zinc-700">Additional</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <Input id="bodyFat" type="number" label="Body Fat (%)" placeholder="e.g. 18" step={0.1} min={1} max={60} value={bodyFat} onChange={(e) => setBodyFat(e.target.value)} />
             <div className="flex flex-col gap-1.5">
               <label htmlFor="notes" className="text-sm font-medium text-zinc-700">Notes</label>
-              <textarea
-                id="notes"
-                rows={3}
-                placeholder="How are you feeling? Any changes in diet or routine?"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-              />
+              <textarea id="notes" rows={3} placeholder="How are you feeling? Any changes in diet or routine?" value={notes} onChange={(e) => setNotes(e.target.value)}
+                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
             </div>
           </div>
         </div>
 
-        {/* Submit */}
         <div className="flex items-center gap-4">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : "Save Measurement"}
-          </Button>
-          <Link href="/progress" className="text-sm font-medium text-zinc-500 hover:text-zinc-900">
-            Cancel
-          </Link>
+          <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Measurement"}</Button>
+          <Link href="/progress" className="text-sm font-medium text-zinc-500 hover:text-zinc-900">Cancel</Link>
         </div>
       </form>
     </div>
