@@ -3,45 +3,42 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { loadWorkouts } from "@/lib/workouts-store";
-import { addSession, getActiveSession, saveActiveSession } from "@/lib/training-store";
-import type { Workout } from "@/data/workouts";
-import type { WorkoutSession, ExerciseLog, SetLog } from "@/data/training-sessions";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface WorkoutOption {
+  id: string;
+  name: string;
+  goal: string | null;
+  duration: number | null;
+  exerciseCount: number;
+}
+
+interface SetLog {
+  setNumber: number;
+  targetReps: number;
+  completedReps: number;
+  targetWeight: number;
+  completedWeight: number;
+  completed: boolean;
+}
+
+interface ExerciseLog {
+  exerciseId: string | null;
+  exerciseName: string;
+  sets: SetLog[];
+}
+
+interface ActiveSession {
+  id: string;
+  workoutId: string | null;
+  workoutName: string;
+  startTime: string;
+  exerciseLogs: ExerciseLog[];
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function createSession(workout: Workout): WorkoutSession {
-  const exerciseLogs: ExerciseLog[] = [];
-  for (const day of workout.workoutDays) {
-    for (const ex of day.exercises) {
-      exerciseLogs.push({
-        exerciseId: ex.exerciseId,
-        exerciseName: ex.exerciseName,
-        sets: Array.from({ length: ex.sets }, (_, i) => ({
-          setNumber: i + 1,
-          targetReps: ex.reps,
-          completedReps: 0,
-          targetWeight: 0,
-          completedWeight: 0,
-          completed: false,
-          notes: ex.notes || "",
-        })),
-      });
-    }
-  }
-
-  return {
-    id: crypto.randomUUID(),
-    workoutId: workout.id,
-    workoutName: workout.name,
-    date: new Date().toISOString().slice(0, 10),
-    startTime: new Date().toISOString(),
-    endTime: null,
-    durationMinutes: 0,
-    status: "In Progress",
-    exerciseLogs,
-  };
-}
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -53,35 +50,105 @@ function formatTime(seconds: number): string {
 
 export default function TrainingStartPage() {
   const router = useRouter();
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
-  const [session, setSession] = useState<WorkoutSession | null>(null);
-  const [hydrated, setHydrated] = useState(false);
+  const [workouts, setWorkouts] = useState<WorkoutOption[]>([]);
+  const [session, setSession] = useState<ActiveSession | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [currentExIdx, setCurrentExIdx] = useState(0);
 
   // Rest timer
   const [restTime, setRestTime] = useState(0);
   const [restRunning, setRestRunning] = useState(false);
-  const [restTarget, setRestTarget] = useState(60);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Session timer
   const [elapsed, setElapsed] = useState(0);
   const elapsedRef = useRef<NodeJS.Timeout | null>(null);
 
+  // ── Load workouts + check active session ──────────────────────────────────
+
   useEffect(() => {
-    const active = getActiveSession();
-    if (active) {
-      setSession(active);
-      const start = new Date(active.startTime).getTime();
-      setElapsed(Math.floor((Date.now() - start) / 1000));
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      // Check for active session
+      const { data: activeSession } = await supabase
+        .from("training_sessions")
+        .select("id, workout_id, workout_name, start_time")
+        .eq("user_id", user.id)
+        .eq("status", "In Progress")
+        .order("start_time", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (activeSession) {
+        // Resume active session — load exercise logs from DB
+        const { data: logs } = await supabase
+          .from("session_exercise_logs")
+          .select("id, exercise_id, exercise_name, sort_order, session_set_logs(set_number, target_reps, completed_reps, target_weight, completed_weight, completed)")
+          .eq("session_id", activeSession.id)
+          .order("sort_order");
+
+        if (logs && logs.length > 0) {
+          const exerciseLogs: ExerciseLog[] = logs.map((log) => ({
+            exerciseId: log.exercise_id,
+            exerciseName: log.exercise_name,
+            sets: (log.session_set_logs || [])
+              .sort((a: { set_number: number }, b: { set_number: number }) => a.set_number - b.set_number)
+              .map((s: { set_number: number; target_reps: number | null; completed_reps: number | null; target_weight: number | null; completed_weight: number | null; completed: boolean }) => ({
+                setNumber: s.set_number,
+                targetReps: s.target_reps || 0,
+                completedReps: s.completed_reps || 0,
+                targetWeight: Number(s.target_weight) || 0,
+                completedWeight: Number(s.completed_weight) || 0,
+                completed: s.completed,
+              })),
+          }));
+
+          setSession({
+            id: activeSession.id,
+            workoutId: activeSession.workout_id,
+            workoutName: activeSession.workout_name || "Workout",
+            startTime: activeSession.start_time,
+            exerciseLogs,
+          });
+
+          const start = new Date(activeSession.start_time).getTime();
+          setElapsed(Math.floor((Date.now() - start) / 1000));
+        }
+      }
+
+      // Load user workouts
+      const { data: workoutData } = await supabase
+        .from("workouts")
+        .select("id, name, goal, duration, workout_days(workout_exercises(id))")
+        .eq("user_id", user.id)
+        .eq("is_template", false)
+        .order("created_at", { ascending: false });
+
+      if (workoutData) {
+        setWorkouts(workoutData.map((w) => ({
+          id: w.id,
+          name: w.name,
+          goal: w.goal,
+          duration: w.duration,
+          exerciseCount: w.workout_days?.reduce(
+            (sum: number, d: { workout_exercises: { id: string }[] }) => sum + (d.workout_exercises?.length || 0), 0
+          ) || 0,
+        })));
+      }
+
+      setLoading(false);
     }
-    setWorkouts(loadWorkouts());
-    setHydrated(true);
+
+    loadData();
   }, []);
 
   // Session elapsed timer
   useEffect(() => {
-    if (session && session.status === "In Progress") {
+    if (session) {
       elapsedRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
       return () => { if (elapsedRef.current) clearInterval(elapsedRef.current); };
     }
@@ -97,69 +164,220 @@ export default function TrainingStartPage() {
     }
   }, [restRunning, restTime]);
 
-  // ── Actions ────────────────────────────────────────────────────────────────
+  // ── Start Session ─────────────────────────────────────────────────────────
 
-  function handleSelectWorkout(workout: Workout) {
-    const newSession = createSession(workout);
-    setSession(newSession);
-    saveActiveSession(newSession);
+  async function handleSelectWorkout(workoutId: string) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Fetch workout exercises
+    const { data: workout } = await supabase
+      .from("workouts")
+      .select("id, name, workout_days(workout_exercises(exercise_id, exercise_name, sets, reps, sort_order))")
+      .eq("id", workoutId)
+      .single();
+
+    if (!workout) return;
+
+    // Flatten exercises from all days
+    const allExercises: { exercise_id: string | null; exercise_name: string; sets: number; reps: number; sort_order: number }[] = [];
+    for (const day of (workout.workout_days || [])) {
+      for (const ex of (day.workout_exercises || [])) {
+        allExercises.push(ex);
+      }
+    }
+    allExercises.sort((a, b) => a.sort_order - b.sort_order);
+
+    // Create training session in Supabase
+    const { data: newSession, error: sessionErr } = await supabase
+      .from("training_sessions")
+      .insert({
+        user_id: user.id,
+        workout_id: workout.id,
+        workout_name: workout.name,
+        status: "In Progress",
+        start_time: new Date().toISOString(),
+        date: new Date().toISOString().split("T")[0],
+      })
+      .select("id, start_time")
+      .single();
+
+    if (sessionErr || !newSession) return;
+
+    // Create session_exercise_logs + session_set_logs
+    const exerciseLogs: ExerciseLog[] = [];
+
+    for (let i = 0; i < allExercises.length; i++) {
+      const ex = allExercises[i];
+
+      const { data: logRow } = await supabase
+        .from("session_exercise_logs")
+        .insert({
+          session_id: newSession.id,
+          user_id: user.id,
+          exercise_id: ex.exercise_id,
+          exercise_name: ex.exercise_name,
+          sort_order: i,
+        })
+        .select("id")
+        .single();
+
+      if (!logRow) continue;
+
+      const setInserts = Array.from({ length: ex.sets }, (_, si) => ({
+        exercise_log_id: logRow.id,
+        user_id: user.id,
+        set_number: si + 1,
+        target_reps: ex.reps,
+        completed_reps: 0,
+        target_weight: 0,
+        completed_weight: 0,
+        completed: false,
+      }));
+
+      await supabase.from("session_set_logs").insert(setInserts);
+
+      exerciseLogs.push({
+        exerciseId: ex.exercise_id,
+        exerciseName: ex.exercise_name,
+        sets: setInserts.map((s) => ({
+          setNumber: s.set_number,
+          targetReps: s.target_reps,
+          completedReps: 0,
+          targetWeight: 0,
+          completedWeight: 0,
+          completed: false,
+        })),
+      });
+    }
+
+    setSession({
+      id: newSession.id,
+      workoutId: workout.id,
+      workoutName: workout.name,
+      startTime: newSession.start_time,
+      exerciseLogs,
+    });
     setCurrentExIdx(0);
     setElapsed(0);
   }
 
-  const persistSession = useCallback((s: WorkoutSession) => {
-    setSession(s);
-    saveActiveSession(s);
-  }, []);
+  // ── Set Actions ───────────────────────────────────────────────────────────
 
   function handleSetComplete(exIdx: number, setIdx: number, reps: number, weight: number) {
     if (!session) return;
-    const updated = { ...session, exerciseLogs: session.exerciseLogs.map((ex, ei) => {
-      if (ei !== exIdx) return ex;
-      return { ...ex, sets: ex.sets.map((set, si) => {
-        if (si !== setIdx) return set;
-        return { ...set, completedReps: reps, completedWeight: weight, completed: true };
-      })};
-    })};
-    persistSession(updated);
+    const updated = {
+      ...session,
+      exerciseLogs: session.exerciseLogs.map((ex, ei) => {
+        if (ei !== exIdx) return ex;
+        return { ...ex, sets: ex.sets.map((set, si) => {
+          if (si !== setIdx) return set;
+          return { ...set, completedReps: reps, completedWeight: weight, completed: true };
+        })};
+      }),
+    };
+    setSession(updated);
 
     // Start rest timer
-    setRestTarget(60);
     setRestTime(60);
     setRestRunning(true);
   }
 
   function handleSetUndo(exIdx: number, setIdx: number) {
     if (!session) return;
-    const updated = { ...session, exerciseLogs: session.exerciseLogs.map((ex, ei) => {
-      if (ei !== exIdx) return ex;
-      return { ...ex, sets: ex.sets.map((set, si) => {
-        if (si !== setIdx) return set;
-        return { ...set, completed: false };
-      })};
-    })};
-    persistSession(updated);
+    const updated = {
+      ...session,
+      exerciseLogs: session.exerciseLogs.map((ex, ei) => {
+        if (ei !== exIdx) return ex;
+        return { ...ex, sets: ex.sets.map((set, si) => {
+          if (si !== setIdx) return set;
+          return { ...set, completed: false };
+        })};
+      }),
+    };
+    setSession(updated);
   }
 
-  function handleFinish() {
+  // ── Finish / Cancel ───────────────────────────────────────────────────────
+
+  async function handleFinish() {
     if (!session) return;
-    const endTime = new Date().toISOString();
-    const durationMinutes = Math.round(elapsed / 60);
-    const completed: WorkoutSession = { ...session, endTime, durationMinutes, status: "Completed" };
-    addSession(completed);
-    saveActiveSession(null);
-    router.push(`/training/session/${completed.id}`);
+    setSaving(true);
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
+
+    // Update training_session status
+    await supabase
+      .from("training_sessions")
+      .update({
+        status: "Completed",
+        end_time: new Date().toISOString(),
+        duration_minutes: Math.round(elapsed / 60),
+      })
+      .eq("id", session.id);
+
+    // Update all set logs with completed data
+    const { data: exerciseLogs } = await supabase
+      .from("session_exercise_logs")
+      .select("id, sort_order")
+      .eq("session_id", session.id)
+      .order("sort_order");
+
+    if (exerciseLogs) {
+      for (let i = 0; i < exerciseLogs.length; i++) {
+        const logId = exerciseLogs[i].id;
+        const localEx = session.exerciseLogs[i];
+        if (!localEx) continue;
+
+        for (const set of localEx.sets) {
+          await supabase
+            .from("session_set_logs")
+            .update({
+              completed_reps: set.completedReps,
+              completed_weight: set.completedWeight,
+              completed: set.completed,
+            })
+            .eq("exercise_log_id", logId)
+            .eq("set_number", set.setNumber);
+        }
+      }
+    }
+
+    setSaving(false);
+    router.push(`/training/session/${session.id}`);
   }
 
-  function handleCancel() {
+  async function handleCancel() {
     if (!session) return;
-    const cancelled: WorkoutSession = { ...session, endTime: new Date().toISOString(), durationMinutes: Math.round(elapsed / 60), status: "Cancelled" };
-    addSession(cancelled);
-    saveActiveSession(null);
+
+    const supabase = createClient();
+    await supabase
+      .from("training_sessions")
+      .update({
+        status: "Cancelled",
+        end_time: new Date().toISOString(),
+        duration_minutes: Math.round(elapsed / 60),
+      })
+      .eq("id", session.id);
+
     router.push("/training");
   }
 
-  if (!hydrated) return null;
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   // ── Workout selection screen ───────────────────────────────────────────────
   if (!session) {
@@ -180,16 +398,15 @@ export default function TrainingStartPage() {
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {workouts.map((w) => {
-              const totalEx = w.workoutDays.reduce((s, d) => s + d.exercises.length, 0);
-              return (
-                <button key={w.id} type="button" onClick={() => handleSelectWorkout(w)}
-                  className="flex flex-col items-start rounded-xl border border-zinc-200 bg-white p-5 text-left shadow-sm transition-shadow hover:shadow-md">
-                  <p className="text-sm font-semibold text-zinc-900">{w.name}</p>
-                  <p className="mt-1 text-xs text-zinc-400">{w.goal} · {totalEx} exercises · {w.duration} min</p>
-                </button>
-              );
-            })}
+            {workouts.map((w) => (
+              <button key={w.id} type="button" onClick={() => handleSelectWorkout(w.id)}
+                className="flex flex-col items-start rounded-xl border border-zinc-200 bg-white p-5 text-left shadow-sm transition-shadow hover:shadow-md">
+                <p className="text-sm font-semibold text-zinc-900">{w.name}</p>
+                <p className="mt-1 text-xs text-zinc-400">
+                  {w.goal || "Custom"} · {w.exerciseCount} exercises{w.duration ? ` · ${w.duration} min` : ""}
+                </p>
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -211,7 +428,9 @@ export default function TrainingStartPage() {
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={handleCancel} className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">Cancel</button>
-          <button type="button" onClick={handleFinish} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">Finish</button>
+          <button type="button" onClick={handleFinish} disabled={saving} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
+            {saving ? "Saving..." : "Finish"}
+          </button>
         </div>
       </div>
 
@@ -219,10 +438,10 @@ export default function TrainingStartPage() {
       <div>
         <div className="mb-1 flex items-center justify-between text-xs text-zinc-500">
           <span>{completedSets} / {totalSets} sets</span>
-          <span>{Math.round((completedSets / totalSets) * 100) || 0}%</span>
+          <span>{totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0}%</span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
-          <div className="h-full rounded-full bg-zinc-900 transition-all" style={{ width: `${(completedSets / totalSets) * 100}%` }} />
+          <div className="h-full rounded-full bg-zinc-900 transition-all" style={{ width: `${totalSets > 0 ? (completedSets / totalSets) * 100 : 0}%` }} />
         </div>
       </div>
 
