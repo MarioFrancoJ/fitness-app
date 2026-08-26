@@ -2,25 +2,166 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getTrainingStats, computePersonalRecords, loadSessions, getActiveSession } from "@/lib/training-store";
-import type { WorkoutSession, PersonalRecord } from "@/data/training-sessions";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface TrainingStats {
+  workoutsThisWeek: number;
+  currentStreak: number;
+  totalSessions: number;
+  totalTrainingTime: number;
+}
+
+interface PersonalRecord {
+  exerciseName: string;
+  highestWeight: number;
+  mostReps: number;
+}
+
+interface RecentSession {
+  id: string;
+  workoutName: string;
+  date: string;
+  durationMinutes: number;
+  exerciseCount: number;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function TrainingPage() {
-  const [stats, setStats] = useState({ workoutsThisWeek: 0, currentStreak: 0, lastWorkout: null as WorkoutSession | null, totalTrainingTime: 0, totalSessions: 0 });
+  const [stats, setStats] = useState<TrainingStats>({ workoutsThisWeek: 0, currentStreak: 0, totalSessions: 0, totalTrainingTime: 0 });
   const [records, setRecords] = useState<PersonalRecord[]>([]);
-  const [recentSessions, setRecentSessions] = useState<WorkoutSession[]>([]);
-  const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
-  const [hydrated, setHydrated] = useState(false);
+  const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
+  const [hasActiveSession, setHasActiveSession] = useState(false);
+  const [activeWorkoutName, setActiveWorkoutName] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setStats(getTrainingStats());
-    setRecords(computePersonalRecords().slice(0, 5));
-    setRecentSessions(loadSessions().filter((s) => s.status === "Completed").slice(0, 5));
-    setActiveSession(getActiveSession());
-    setHydrated(true);
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      // 1. Load all completed sessions for stats
+      const { data: sessions } = await supabase
+        .from("training_sessions")
+        .select("id, date, duration_minutes, status, workout_name")
+        .eq("user_id", user.id)
+        .order("date", { ascending: false });
+
+      if (sessions) {
+        const completed = sessions.filter((s) => s.status === "Completed");
+
+        // Stats
+        const now = new Date();
+        const weekAgo = new Date(now);
+        weekAgo.setDate(now.getDate() - 7);
+        const weekAgoStr = weekAgo.toISOString().split("T")[0];
+
+        const workoutsThisWeek = completed.filter((s) => s.date >= weekAgoStr).length;
+        const totalSessions = completed.length;
+        const totalTrainingTime = completed.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+
+        // Streak: count consecutive days with sessions going backwards
+        const daySet = new Set(completed.map((s) => s.date));
+        let streak = 0;
+        for (let i = 0; i < 365; i++) {
+          const d = new Date(now);
+          d.setDate(now.getDate() - i);
+          const key = d.toISOString().split("T")[0];
+          if (daySet.has(key)) { streak++; } else if (i > 0) break;
+        }
+
+        setStats({ workoutsThisWeek, currentStreak: streak, totalSessions, totalTrainingTime });
+
+        // Recent sessions (top 5)
+        setRecentSessions(completed.slice(0, 5).map((s) => ({
+          id: s.id,
+          workoutName: s.workout_name || "Workout",
+          date: new Date(s.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          durationMinutes: s.duration_minutes || 0,
+          exerciseCount: 0, // Will enrich below
+        })));
+
+        // Check active session
+        const active = sessions.find((s) => s.status === "In Progress");
+        if (active) {
+          setHasActiveSession(true);
+          setActiveWorkoutName(active.workout_name || "Workout");
+        }
+      }
+
+      // 2. Load recent sessions with exercise count
+      const { data: recentData } = await supabase
+        .from("training_sessions")
+        .select("id, date, workout_name, duration_minutes, session_exercise_logs(id)")
+        .eq("user_id", user.id)
+        .eq("status", "Completed")
+        .order("date", { ascending: false })
+        .limit(5);
+
+      if (recentData) {
+        setRecentSessions(recentData.map((s) => ({
+          id: s.id,
+          workoutName: s.workout_name || "Workout",
+          date: new Date(s.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          durationMinutes: s.duration_minutes || 0,
+          exerciseCount: s.session_exercise_logs?.length || 0,
+        })));
+      }
+
+      // 3. Personal records (highest weight per exercise from completed sets)
+      const { data: setLogs } = await supabase
+        .from("session_set_logs")
+        .select("completed_weight, completed_reps, completed, session_exercise_logs!inner(exercise_name, session_id, training_sessions!inner(user_id, status))")
+        .eq("user_id", user.id)
+        .eq("completed", true);
+
+      if (setLogs && setLogs.length > 0) {
+        const prMap = new Map<string, { highestWeight: number; mostReps: number }>();
+
+        for (const log of setLogs) {
+          const exName = (log.session_exercise_logs as unknown as { exercise_name: string }).exercise_name;
+          const weight = Number(log.completed_weight) || 0;
+          const reps = log.completed_reps || 0;
+
+          const existing = prMap.get(exName);
+          if (!existing) {
+            prMap.set(exName, { highestWeight: weight, mostReps: reps });
+          } else {
+            if (weight > existing.highestWeight) existing.highestWeight = weight;
+            if (reps > existing.mostReps) existing.mostReps = reps;
+          }
+        }
+
+        const prs = Array.from(prMap.entries())
+          .map(([exerciseName, data]) => ({ exerciseName, ...data }))
+          .filter((pr) => pr.highestWeight > 0 || pr.mostReps > 0)
+          .sort((a, b) => b.highestWeight - a.highestWeight)
+          .slice(0, 5);
+
+        setRecords(prs);
+      }
+
+      setLoading(false);
+    }
+
+    loadData();
   }, []);
 
-  if (!hydrated) return null;
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading training data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -36,11 +177,11 @@ export default function TrainingPage() {
       </div>
 
       {/* Active session banner */}
-      {activeSession && (
+      {hasActiveSession && (
         <Link href="/training/start" className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4">
           <div>
             <p className="text-sm font-semibold text-amber-900">Workout In Progress</p>
-            <p className="text-xs text-amber-700">{activeSession.workoutName}</p>
+            <p className="text-xs text-amber-700">{activeWorkoutName}</p>
           </div>
           <span className="rounded-lg bg-amber-200 px-3 py-1 text-xs font-semibold text-amber-900">Resume</span>
         </Link>
@@ -88,7 +229,7 @@ export default function TrainingPage() {
           <p className="mb-4 text-sm font-semibold text-zinc-900">Personal Records</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {records.map((pr) => (
-              <div key={pr.exerciseId} className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+              <div key={pr.exerciseName} className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 p-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-700 text-sm font-bold">PR</div>
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-zinc-900 truncate">{pr.exerciseName}</p>
@@ -120,7 +261,7 @@ export default function TrainingPage() {
                   <p className="text-sm font-medium text-zinc-900">{s.workoutName}</p>
                   <p className="text-xs text-zinc-400">{s.date} · {s.durationMinutes} min</p>
                 </div>
-                <span className="text-xs text-zinc-400">{s.exerciseLogs.length} exercises</span>
+                <span className="text-xs text-zinc-400">{s.exerciseCount} exercises</span>
               </Link>
             ))}
           </div>
