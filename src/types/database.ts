@@ -29,6 +29,7 @@ export type Database = {
           user_id: string
           role: Database["public"]["Enums"]["ai_chat_role"]
           content: string
+          channel: string
           timestamp: string
         }
         Insert: {
@@ -36,6 +37,7 @@ export type Database = {
           user_id: string
           role: Database["public"]["Enums"]["ai_chat_role"]
           content: string
+          channel?: string
           timestamp?: string
         }
         Update: {
@@ -43,6 +45,7 @@ export type Database = {
           user_id?: string
           role?: Database["public"]["Enums"]["ai_chat_role"]
           content?: string
+          channel?: string
           timestamp?: string
         }
         Relationships: [

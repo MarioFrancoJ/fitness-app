@@ -57,11 +57,12 @@ export default function AiCoachChatPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setInitialLoading(false); return; }
 
-      // Load chat history — use a filter to distinguish from ai/chat (coach role messages here)
+      // Load chat history — coach_chat channel only
       const { data } = await supabase
         .from("ai_chat_messages")
         .select("id, role, content, timestamp")
         .eq("user_id", user.id)
+        .eq("channel", "coach_chat")
         .order("timestamp", { ascending: true });
 
       if (data && data.length > 0) {
@@ -69,7 +70,7 @@ export default function AiCoachChatPage() {
       } else {
         const welcome: ChatMsg = { id: "welcome", role: "coach", content: "Hey! I'm your AI fitness coach. Ask me anything about training, nutrition, recovery, or motivation. I'm here to help!", timestamp: new Date().toISOString() };
         setMessages([welcome]);
-        await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content });
+        await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content, channel: "coach_chat" });
       }
 
       setInitialLoading(false);
@@ -99,8 +100,8 @@ export default function AiCoachChatPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase.from("ai_chat_messages").insert([
-          { user_id: user.id, role: "user", content: userContent },
-          { user_id: user.id, role: "coach", content: response },
+          { user_id: user.id, role: "user", content: userContent, channel: "coach_chat" },
+          { user_id: user.id, role: "coach", content: response, channel: "coach_chat" },
         ]);
       }
     } catch (err) {
@@ -117,7 +118,7 @@ export default function AiCoachChatPage() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabase.from("ai_chat_messages").delete().eq("user_id", user.id);
+        await supabase.from("ai_chat_messages").delete().eq("user_id", user.id).eq("channel", "coach_chat");
       }
     } catch {}
 
@@ -128,7 +129,7 @@ export default function AiCoachChatPage() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content });
+        await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content, channel: "coach_chat" });
       }
     } catch {}
   }

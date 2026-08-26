@@ -63,6 +63,7 @@ export default function AIChatPage() {
         .from("ai_chat_messages")
         .select("id, role, content, timestamp")
         .eq("user_id", user.id)
+        .eq("channel", "ai_chat")
         .order("timestamp", { ascending: true });
 
       if (data && data.length > 0) {
@@ -71,7 +72,7 @@ export default function AIChatPage() {
         // Create welcome message
         const welcome: ChatMsg = { id: "welcome", role: "coach", content: "Hey! I'm your AI fitness coach. I have access to your profile, nutrition, training, and progress data — ask me anything and I'll give you personalized advice.", timestamp: new Date().toISOString() };
         setMessages([welcome]);
-        await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content });
+        await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content, channel: "ai_chat" });
       }
 
       setInitialLoading(false);
@@ -98,14 +99,14 @@ export default function AIChatPage() {
       if (!user) { setLoading(false); return; }
 
       // Save user message
-      await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "user", content: userContent });
+      await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "user", content: userContent, channel: "ai_chat" });
 
       // Generate response (rule-based fallback)
       const responseContent = getAIResponse(userContent);
       const assistantMsg: ChatMsg = { id: crypto.randomUUID(), role: "coach", content: responseContent, timestamp: new Date().toISOString() };
 
       // Save coach response
-      await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: responseContent });
+      await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: responseContent, channel: "ai_chat" });
 
       setMessages([...updated, assistantMsg]);
     } catch {
@@ -125,9 +126,9 @@ export default function AIChatPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    await supabase.from("ai_chat_messages").delete().eq("user_id", user.id);
+    await supabase.from("ai_chat_messages").delete().eq("user_id", user.id).eq("channel", "ai_chat");
     const welcome: ChatMsg = { id: "welcome", role: "coach", content: "Chat cleared! How can I help you today?", timestamp: new Date().toISOString() };
-    await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content });
+    await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content, channel: "ai_chat" });
     setMessages([welcome]);
   }
 
