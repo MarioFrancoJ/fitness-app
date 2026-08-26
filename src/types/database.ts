@@ -1137,6 +1137,56 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          description: string | null
+          event_type: string
+          start_date: string
+          end_date: string | null
+          all_day: boolean
+          color: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          description?: string | null
+          event_type?: string
+          start_date: string
+          end_date?: string | null
+          all_day?: boolean
+          color?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          description?: string | null
+          event_type?: string
+          start_date?: string
+          end_date?: string | null
+          all_day?: boolean
+          color?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trigger_errors: {
         Row: {
           id: string
