@@ -4,6 +4,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -53,6 +54,7 @@ export default function AdminRecipesPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // Form fields
   const [name, setName] = useState("");
@@ -125,6 +127,7 @@ export default function AdminRecipesPage() {
     const supabase = createClient();
     const { error } = await supabase.from("recipes").delete().eq("id", id);
     if (!error) setRecipes((prev) => prev.filter((r) => r.id !== id));
+    setDeleteTarget(null);
   }
 
   function handleAddIngredient() {
@@ -310,7 +313,7 @@ export default function AdminRecipesPage() {
                     <td className="px-5 py-3 text-zinc-600">{r.carbs}g</td>
                     <td className="px-5 py-3 text-zinc-600">{r.fat}g</td>
                     <td className="px-5 py-3 text-zinc-600">{r.servings}</td>
-                    <td className="px-5 py-3"><div className="flex gap-2"><button type="button" onClick={() => handleEdit(r)} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">Edit</button><button type="button" onClick={() => handleDelete(r.id)} className="text-xs font-medium text-zinc-500 hover:text-red-600">Delete</button></div></td>
+                    <td className="px-5 py-3"><div className="flex gap-2"><button type="button" onClick={() => handleEdit(r)} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">Edit</button><button type="button" onClick={() => setDeleteTarget(r.id)} className="text-xs font-medium text-zinc-500 hover:text-red-600">Delete</button></div></td>
                   </tr>
                 ))}
               </tbody>
@@ -318,6 +321,13 @@ export default function AdminRecipesPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete recipe?"
+        description="This recipe and all its ingredients/instructions will be permanently removed."
+        onConfirm={() => { if (deleteTarget) handleDelete(deleteTarget); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

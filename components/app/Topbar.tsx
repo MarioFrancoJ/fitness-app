@@ -7,7 +7,7 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import NotificationPanel from "./NotificationPanel";
 import { createClient } from "@/lib/supabase/client";
 
-// ── Inline SVG icons ──────────────────────────────────────────────────────────
+// ── Icons ─────────────────────────────────────────────────────────────────────
 
 function IconSearch() {
   return (
@@ -25,13 +25,22 @@ function IconBell() {
   );
 }
 
+function IconMenu() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
+      <path fillRule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface TopbarProps {
   locale: Locale;
+  onMenuToggle?: () => void;
 }
 
-export default function Topbar({ locale }: TopbarProps) {
+export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
   const router = useRouter();
   const [unread, setUnread] = useState(0);
   const [userInitial, setUserInitial] = useState("U");
@@ -43,11 +52,9 @@ export default function Topbar({ locale }: TopbarProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get user initial
       const name = user.user_metadata?.name || user.email || "";
       setUserInitial(name.charAt(0).toUpperCase() || "U");
 
-      // Get unread count from Supabase
       const { count } = await supabase
         .from("notifications")
         .select("id", { count: "exact", head: true })
@@ -78,24 +85,39 @@ export default function Topbar({ locale }: TopbarProps) {
   }
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-zinc-100 bg-white px-6">
-      {/* Search */}
-      <div className="relative w-64">
-        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-          <IconSearch />
-        </span>
-        <input
-          type="search"
-          placeholder="Search..."
-          aria-label="Search"
-          className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-        />
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-zinc-100 bg-white px-4 md:px-6">
+      {/* Left side */}
+      <div className="flex items-center gap-3">
+        {/* Hamburger - mobile only */}
+        <button
+          type="button"
+          onClick={onMenuToggle}
+          aria-label="Open menu"
+          className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 md:hidden"
+        >
+          <IconMenu />
+        </button>
+
+        {/* Search */}
+        <div className="relative hidden w-64 sm:block">
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+            <IconSearch />
+          </span>
+          <input
+            type="search"
+            placeholder="Search..."
+            aria-label="Search"
+            className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+          />
+        </div>
       </div>
 
       {/* Right actions */}
-      <div className="flex items-center gap-3">
-        {/* Language switcher */}
-        <LanguageSwitcher currentLocale={locale} />
+      <div className="flex items-center gap-2 md:gap-3">
+        {/* Language switcher - hidden on small mobile */}
+        <div className="hidden sm:block">
+          <LanguageSwitcher currentLocale={locale} />
+        </div>
 
         {/* Notifications */}
         <div className="relative">
@@ -125,8 +147,8 @@ export default function Topbar({ locale }: TopbarProps) {
           {userInitial}
         </button>
 
-        {/* Logout */}
-        <button type="button" onClick={handleLogout} aria-label="Sign out" className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900">
+        {/* Logout - hidden on mobile */}
+        <button type="button" onClick={handleLogout} aria-label="Sign out" className="hidden rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 sm:block">
           Sign out
         </button>
       </div>

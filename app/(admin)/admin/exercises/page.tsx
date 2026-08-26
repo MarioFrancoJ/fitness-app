@@ -4,6 +4,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,7 @@ export default function AdminExercisesPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -102,6 +104,7 @@ export default function AdminExercisesPage() {
     const supabase = createClient();
     const { error } = await supabase.from("exercises").delete().eq("id", id);
     if (!error) setExercises((prev) => prev.filter((e) => e.id !== id));
+    setDeleteTarget(null);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -208,7 +211,7 @@ export default function AdminExercisesPage() {
                     <td className="px-5 py-3">
                       <div className="flex gap-2">
                         <button type="button" onClick={() => handleEdit(ex)} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">Edit</button>
-                        <button type="button" onClick={() => handleDelete(ex.id)} className="text-xs font-medium text-zinc-500 hover:text-red-600">Delete</button>
+                        <button type="button" onClick={() => setDeleteTarget(ex.id)} className="text-xs font-medium text-zinc-500 hover:text-red-600">Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -218,6 +221,14 @@ export default function AdminExercisesPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete exercise?"
+        description="This exercise will be permanently removed. This action cannot be undone."
+        onConfirm={() => { if (deleteTarget) handleDelete(deleteTarget); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

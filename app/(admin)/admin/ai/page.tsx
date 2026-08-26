@@ -3,6 +3,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -57,6 +58,7 @@ export default function AdminAIPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // AI Config
   const [aiConfig, setAiConfig] = useState<AIConfig>({ provider: "rule_based", model: "gpt-4o-mini", apiKey: "", temperature: 0.7, maxTokens: 1024 });
@@ -159,6 +161,7 @@ export default function AdminAIPage() {
     const supabase = createClient();
     const { error } = await supabase.from("recommendation_rules").delete().eq("id", id);
     if (!error) { setRules((prev) => prev.filter((r) => r.id !== id)); setToast("Rule deleted"); }
+    setDeleteTarget(null);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -265,7 +268,7 @@ export default function AdminAIPage() {
                       <td className="px-5 py-3"><p className="font-medium text-zinc-900">{rule.name}</p><p className="text-xs text-zinc-400">{rule.description}</p></td>
                       <td className="px-5 py-3 text-zinc-600 text-xs">{rule.category}</td>
                       <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${priorityBadge(rule.priority)}`}>{rule.priority}</span></td>
-                      <td className="px-5 py-3"><div className="flex gap-2"><button type="button" onClick={() => handleEdit(rule)} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">Edit</button><button type="button" onClick={() => handleDeleteRule(rule.id)} className="text-xs font-medium text-zinc-500 hover:text-red-600">Delete</button></div></td>
+                      <td className="px-5 py-3"><div className="flex gap-2"><button type="button" onClick={() => handleEdit(rule)} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">Edit</button><button type="button" onClick={() => setDeleteTarget(rule.id)} className="text-xs font-medium text-zinc-500 hover:text-red-600">Delete</button></div></td>
                     </tr>
                   ))}
                 </tbody>
@@ -275,6 +278,14 @@ export default function AdminAIPage() {
         </div>
       </div>
       {toast && (<div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg"><p className="text-sm font-medium text-zinc-800">{toast}</p></div>)}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete rule?"
+        description="This recommendation rule will be permanently removed."
+        onConfirm={() => { if (deleteTarget) handleDeleteRule(deleteTarget); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </>
   );
 }

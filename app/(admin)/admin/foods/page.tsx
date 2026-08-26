@@ -3,6 +3,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,6 +43,7 @@ export default function AdminNotificationsPage() {
   const [formPriority, setFormPriority] = useState<NotificationPriority>("Medium");
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -90,6 +92,7 @@ export default function AdminNotificationsPage() {
     const supabase = createClient();
     const { error } = await supabase.from("notifications").delete().eq("id", id);
     if (!error) setNotifications((prev) => prev.filter((n) => n.id !== id));
+    setDeleteTarget(null);
   }
 
   // Stats
@@ -148,7 +151,7 @@ export default function AdminNotificationsPage() {
                       <td className="px-5 py-2 text-zinc-500 text-xs">{n.type}</td>
                       <td className="px-5 py-2"><span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${priorityBadge(n.priority)}`}>{n.priority}</span></td>
                       <td className="px-5 py-2 text-xs text-zinc-500">{n.status}</td>
-                      <td className="px-5 py-2"><button type="button" onClick={() => handleDelete(n.id)} className="text-xs text-red-400 hover:text-red-600">Delete</button></td>
+                      <td className="px-5 py-2"><button type="button" onClick={() => setDeleteTarget(n.id)} className="text-xs text-red-400 hover:text-red-600">Delete</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -159,6 +162,14 @@ export default function AdminNotificationsPage() {
       </div>
 
       {toast && (<div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg"><p className="text-sm font-medium text-zinc-800">{toast}</p></div>)}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete notification?"
+        description="This notification will be permanently removed."
+        onConfirm={() => { if (deleteTarget) handleDelete(deleteTarget); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </>
   );
 }

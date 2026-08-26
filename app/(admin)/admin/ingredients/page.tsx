@@ -4,6 +4,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -32,6 +33,7 @@ export default function AdminIngredientsPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // Form fields
   const [name, setName] = useState("");
@@ -83,6 +85,7 @@ export default function AdminIngredientsPage() {
     const supabase = createClient();
     const { error } = await supabase.from("ingredients").delete().eq("id", id);
     if (!error) setIngredients((prev) => prev.filter((i) => i.id !== id));
+    setDeleteTarget(null);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -208,7 +211,7 @@ export default function AdminIngredientsPage() {
                     <td className="px-5 py-3">
                       <div className="flex gap-2">
                         <button type="button" onClick={() => handleEdit(i)} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">Edit</button>
-                        <button type="button" onClick={() => handleDelete(i.id)} className="text-xs font-medium text-zinc-500 hover:text-red-600">Delete</button>
+                        <button type="button" onClick={() => setDeleteTarget(i.id)} className="text-xs font-medium text-zinc-500 hover:text-red-600">Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -218,6 +221,14 @@ export default function AdminIngredientsPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete ingredient?"
+        description="This ingredient will be permanently removed. This action cannot be undone."
+        onConfirm={() => { if (deleteTarget) handleDelete(deleteTarget); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

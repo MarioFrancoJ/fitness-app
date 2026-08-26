@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ export default function AdminWorkoutTemplatesPage() {
   const [search, setSearch] = useState("");
   const [goalFilter, setGoalFilter] = useState<"All" | WorkoutGoal>("All");
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -67,6 +69,7 @@ export default function AdminWorkoutTemplatesPage() {
     const supabase = createClient();
     const { error } = await supabase.from("workouts").delete().eq("id", id);
     if (!error) setTemplates((prev) => prev.filter((t) => t.id !== id));
+    setDeleteTarget(null);
   }
 
   const filtered = templates.filter((t) => {
@@ -129,7 +132,7 @@ export default function AdminWorkoutTemplatesPage() {
                     <td className="px-5 py-3 text-zinc-600">{tpl.dayCount}</td>
                     <td className="px-5 py-3 text-zinc-600">{tpl.duration || "—"} min</td>
                     <td className="px-5 py-3">
-                      <button type="button" onClick={() => handleDelete(tpl.id)} className="text-xs font-medium text-zinc-500 hover:text-red-600">Delete</button>
+                      <button type="button" onClick={() => setDeleteTarget(tpl.id)} className="text-xs font-medium text-zinc-500 hover:text-red-600">Delete</button>
                     </td>
                   </tr>
                 ))
@@ -138,6 +141,14 @@ export default function AdminWorkoutTemplatesPage() {
           </table>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete template?"
+        description="This workout template will be permanently removed. This action cannot be undone."
+        onConfirm={() => { if (deleteTarget) handleDelete(deleteTarget); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
