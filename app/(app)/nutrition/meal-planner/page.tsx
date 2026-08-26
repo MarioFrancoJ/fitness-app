@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { recipes, type Recipe } from "@/data/recipes";
+import { useState, useEffect, useMemo } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -12,7 +12,14 @@ type Day = (typeof DAYS)[number];
 type Meal = (typeof MEALS)[number];
 type MealPlan = Record<Day, Record<Meal, string | null>>; // recipe ID or null
 
-const STORAGE_KEY = "fitnessapp_meal_plan";
+interface RecipeSummary {
+  id: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -24,28 +31,26 @@ function emptyPlan(): MealPlan {
   return plan;
 }
 
-function loadPlan(): MealPlan {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : emptyPlan();
-  } catch {
-    return emptyPlan();
-  }
+function getWeekDates(): { start: string; end: string } {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + mondayOffset);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) };
 }
 
-function savePlan(plan: MealPlan) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
-}
-
-function getRecipe(id: string | null): Recipe | undefined {
+function getRecipe(id: string | null, recipes: RecipeSummary[]): RecipeSummary | undefined {
   if (!id) return undefined;
   return recipes.find((r) => r.id === id);
 }
 
-function dayTotals(plan: MealPlan, day: Day) {
+function dayTotals(plan: MealPlan, day: Day, recipes: RecipeSummary[]) {
   let calories = 0, protein = 0, carbs = 0, fat = 0;
   for (const meal of MEALS) {
-    const r = getRecipe(plan[day][meal]);
+    const r = getRecipe(plan[day][meal], recipes);
     if (r) { calories += r.calories; protein += r.protein; carbs += r.carbs; fat += r.fat; }
   }
   return { calories, protein, carbs, fat };
@@ -55,11 +60,92 @@ function dayTotals(plan: MealPlan, day: Day) {
 
 export default function MealPlannerPage() {
   const [plan, setPlan] = useState<MealPlan>(emptyPlan());
+  const [planId, setPlanId] = useState<string | null>(null);
+  const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [selectedDay, setSelectedDay] = useState<Day>("Monday");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
-    setPlan(loadPlan());
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      // Load recipes for dropdown
+      const { data: recipesData } = await supabase
+        .from("recipes")
+        .select("id, name, calories, protein, carbs, fat")
+        .order("name");
+
+      if (recipesData) {
+        setRecipes(recipesData.map((r) => ({
+          id: r.id,
+          name: r.name,
+          calories: r.calories || 0,
+          protein: r.protein || 0,
+          carbs: r.carbs || 0,
+          fat: r.fat || 0,
+        })));
+      }
+
+      // Load current week's meal plan
+      const { start, end } = getWeekDates();
+      const { data: planData } = await supabase
+        .from("meal_plans")
+        .select("id, plan_data")
+        .eq("user_id", user.id)
+        .eq("week_start_date", start)
+        .eq("week_end_date", end)
+        .maybeSingle();
+
+      if (planData && planData.plan_data) {
+        setPlanId(planData.id);
+        setPlan(planData.plan_data as MealPlan);
+      }
+
+      setLoading(false);
+    }
+    loadData();
   }, []);
+
+  // ── Persist to Supabase ─────────────────────────────────────────────────────
+
+  async function savePlan(updatedPlan: MealPlan) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    setSaving(true);
+    const { start, end } = getWeekDates();
+
+    if (planId) {
+      // Update existing
+      await supabase
+        .from("meal_plans")
+        .update({ plan_data: updatedPlan as any })
+        .eq("id", planId);
+    } else {
+      // Insert new
+      const { data: inserted } = await supabase
+        .from("meal_plans")
+        .insert({
+          user_id: user.id,
+          week_start_date: start,
+          week_end_date: end,
+          plan_data: updatedPlan as any,
+          is_saved: true,
+        })
+        .select("id")
+        .single();
+
+      if (inserted) setPlanId(inserted.id);
+    }
+    setSaving(false);
+  }
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   function handleSelect(meal: Meal, recipeId: string) {
     const updated = { ...plan, [selectedDay]: { ...plan[selectedDay], [meal]: recipeId || null } };
@@ -73,135 +159,191 @@ export default function MealPlannerPage() {
     savePlan(updated);
   }
 
-  const totals = dayTotals(plan, selectedDay);
+  async function handleClearAll() {
+    const cleared = emptyPlan();
+    setPlan(cleared);
+    await savePlan(cleared);
+    setToast("Meal plan cleared");
+  }
+
+  const totals = useMemo(() => dayTotals(plan, selectedDay, recipes), [plan, selectedDay, recipes]);
 
   // Weekly totals
-  const weekTotals = DAYS.reduce(
-    (acc, day) => {
-      const t = dayTotals(plan, day);
-      return { calories: acc.calories + t.calories, protein: acc.protein + t.protein, carbs: acc.carbs + t.carbs, fat: acc.fat + t.fat };
-    },
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
-  );
+  const weekTotals = useMemo(() => {
+    return DAYS.reduce(
+      (acc, day) => {
+        const t = dayTotals(plan, day, recipes);
+        return { calories: acc.calories + t.calories, protein: acc.protein + t.protein, carbs: acc.carbs + t.carbs, fat: acc.fat + t.fat };
+      },
+      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    );
+  }, [plan, recipes]);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading meal planner...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Meal Planner</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Plan your meals for the week by assigning recipes to each slot.
-        </p>
-      </div>
-
-      {/* Day tabs */}
-      <div className="flex gap-1 overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 p-1">
-        {DAYS.map((day) => (
+    <>
+      <div className="flex flex-col gap-6">
+        {/* Header */}
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Meal Planner</h1>
+            <p className="mt-1 text-sm text-zinc-500">
+              Plan your meals for the week by assigning recipes to each slot.
+              {saving && <span className="ml-2 text-xs text-zinc-400">(Saving...)</span>}
+            </p>
+          </div>
           <button
-            key={day}
             type="button"
-            onClick={() => setSelectedDay(day)}
-            className={[
-              "shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
-              selectedDay === day
-                ? "bg-zinc-900 text-white shadow-sm"
-                : "text-zinc-500 hover:text-zinc-900",
-            ].join(" ")}
+            onClick={handleClearAll}
+            className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
           >
-            {day.slice(0, 3)}
+            Clear Week
           </button>
-        ))}
-      </div>
+        </div>
 
-      {/* Day totals */}
-      <div className="grid gap-3 sm:grid-cols-4">
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <p className="text-lg font-bold text-zinc-900">{totals.calories}</p>
-          <p className="text-xs text-zinc-400">Calories</p>
+        {/* Day tabs */}
+        <div className="flex gap-1 overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 p-1">
+          {DAYS.map((day) => (
+            <button
+              key={day}
+              type="button"
+              onClick={() => setSelectedDay(day)}
+              className={[
+                "shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
+                selectedDay === day
+                  ? "bg-zinc-900 text-white shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-900",
+              ].join(" ")}
+            >
+              {day.slice(0, 3)}
+            </button>
+          ))}
         </div>
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <p className="text-lg font-bold text-blue-600">{totals.protein}g</p>
-          <p className="text-xs text-zinc-400">Protein</p>
-        </div>
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <p className="text-lg font-bold text-amber-600">{totals.carbs}g</p>
-          <p className="text-xs text-zinc-400">Carbs</p>
-        </div>
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <p className="text-lg font-bold text-emerald-600">{totals.fat}g</p>
-          <p className="text-xs text-zinc-400">Fat</p>
-        </div>
-      </div>
 
-      {/* Meal slots */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {MEALS.map((meal) => {
-          const selected = getRecipe(plan[selectedDay][meal]);
-          return (
-            <div key={meal} className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-semibold text-zinc-700">{meal}</p>
-                {selected && (
-                  <button
-                    type="button"
-                    onClick={() => handleClear(meal)}
-                    className="text-xs font-medium text-zinc-400 transition-colors hover:text-red-600"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
+        {/* Day totals */}
+        <div className="grid gap-3 sm:grid-cols-4">
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-lg font-bold text-zinc-900">{totals.calories}</p>
+            <p className="text-xs text-zinc-400">Calories</p>
+          </div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-lg font-bold text-blue-600">{totals.protein}g</p>
+            <p className="text-xs text-zinc-400">Protein</p>
+          </div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-lg font-bold text-amber-600">{totals.carbs}g</p>
+            <p className="text-xs text-zinc-400">Carbs</p>
+          </div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-lg font-bold text-emerald-600">{totals.fat}g</p>
+            <p className="text-xs text-zinc-400">Fat</p>
+          </div>
+        </div>
 
-              {selected ? (
-                <div className="rounded-lg bg-zinc-50 p-3">
-                  <p className="text-sm font-medium text-zinc-900">{selected.name}</p>
-                  <p className="mt-1 text-xs text-zinc-400">
-                    {selected.calories} kcal · P {selected.protein}g · C {selected.carbs}g · F {selected.fat}g
-                  </p>
+        {/* Meal slots */}
+        {recipes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white py-16">
+            <p className="mb-1 text-base font-semibold text-zinc-900">No recipes available</p>
+            <p className="text-sm text-zinc-500">Create recipes first to start building your meal plan.</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {MEALS.map((meal) => {
+              const selected = getRecipe(plan[selectedDay][meal], recipes);
+              return (
+                <div key={meal} className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-zinc-700">{meal}</p>
+                    {selected && (
+                      <button
+                        type="button"
+                        onClick={() => handleClear(meal)}
+                        className="text-xs font-medium text-zinc-400 transition-colors hover:text-red-600"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+
+                  {selected ? (
+                    <div className="rounded-lg bg-zinc-50 p-3">
+                      <p className="text-sm font-medium text-zinc-900">{selected.name}</p>
+                      <p className="mt-1 text-xs text-zinc-400">
+                        {selected.calories} kcal · P {selected.protein}g · C {selected.carbs}g · F {selected.fat}g
+                      </p>
+                    </div>
+                  ) : (
+                    <select
+                      value=""
+                      onChange={(e) => handleSelect(meal, e.target.value)}
+                      aria-label={`Select recipe for ${meal}`}
+                      className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                    >
+                      <option value="" disabled>
+                        Select a recipe...
+                      </option>
+                      {recipes.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name} ({r.calories} kcal)
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
-              ) : (
-                <select
-                  value=""
-                  onChange={(e) => handleSelect(meal, e.target.value)}
-                  aria-label={`Select recipe for ${meal}`}
-                  className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-                >
-                  <option value="" disabled>
-                    Select a recipe...
-                  </option>
-                  {recipes.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name} ({r.calories} kcal)
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        )}
 
-      {/* Weekly summary */}
-      <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-5">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-          Weekly Totals
-        </p>
-        <div className="flex flex-wrap gap-6 text-sm">
-          <span className="text-zinc-700">
-            <strong className="text-zinc-900">{weekTotals.calories}</strong> kcal
-          </span>
-          <span className="text-zinc-700">
-            <strong className="text-blue-600">{weekTotals.protein}g</strong> protein
-          </span>
-          <span className="text-zinc-700">
-            <strong className="text-amber-600">{weekTotals.carbs}g</strong> carbs
-          </span>
-          <span className="text-zinc-700">
-            <strong className="text-emerald-600">{weekTotals.fat}g</strong> fat
-          </span>
+        {/* Weekly summary */}
+        <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-5">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">
+            Weekly Totals
+          </p>
+          <div className="flex flex-wrap gap-6 text-sm">
+            <span className="text-zinc-700">
+              <strong className="text-zinc-900">{weekTotals.calories}</strong> kcal
+            </span>
+            <span className="text-zinc-700">
+              <strong className="text-blue-600">{weekTotals.protein}g</strong> protein
+            </span>
+            <span className="text-zinc-700">
+              <strong className="text-amber-600">{weekTotals.carbs}g</strong> carbs
+            </span>
+            <span className="text-zinc-700">
+              <strong className="text-emerald-600">{weekTotals.fat}g</strong> fat
+            </span>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Toast */}
+      {toast && (
+        <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true">
+              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+            </svg>
+          </span>
+          <p className="text-sm font-medium text-zinc-800">{toast}</p>
+          <button type="button" onClick={() => setToast(null)} aria-label="Dismiss" className="ml-1 text-zinc-400 hover:text-zinc-600 focus-visible:outline-none">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+              <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+            </svg>
+          </button>
+        </div>
+      )}
+    </>
   );
 }

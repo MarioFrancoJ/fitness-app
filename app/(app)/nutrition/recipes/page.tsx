@@ -2,8 +2,35 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { loadRecipes } from "@/lib/recipes-store";
-import { RECIPE_GOALS, type Recipe, type RecipeGoal } from "@/data/recipes";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type RecipeGoal = "Fat Loss" | "Muscle Gain" | "Maintenance";
+
+interface RecipeIngredient {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+}
+
+interface Recipe {
+  id: string;
+  name: string;
+  description: string;
+  goal: RecipeGoal;
+  ingredients: RecipeIngredient[];
+  servings: number;
+  instructions: string[];
+  prepTime: number;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+const RECIPE_GOALS: RecipeGoal[] = ["Fat Loss", "Muscle Gain", "Maintenance"];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -85,11 +112,66 @@ export default function RecipesPage() {
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [search, setSearch] = useState("");
   const [goalFilter, setGoalFilter] = useState<"All" | RecipeGoal>("All");
-  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setAllRecipes(loadRecipes());
-    setHydrated(true);
+    async function loadRecipes() {
+      const supabase = createClient();
+
+      const { data: recipesData } = await supabase
+        .from("recipes")
+        .select(`
+          id,
+          name,
+          description,
+          goal,
+          servings,
+          prep_time,
+          calories,
+          protein,
+          carbs,
+          fat,
+          recipe_ingredients (
+            id,
+            name,
+            quantity,
+            unit
+          ),
+          recipe_instructions (
+            id,
+            step_number,
+            instruction
+          )
+        `)
+        .order("name");
+
+      if (recipesData) {
+        setAllRecipes(recipesData.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          description: r.description || "",
+          goal: (r.goal || "Maintenance") as RecipeGoal,
+          servings: r.servings || 1,
+          prepTime: r.prep_time || 0,
+          calories: r.calories || 0,
+          protein: r.protein || 0,
+          carbs: r.carbs || 0,
+          fat: r.fat || 0,
+          ingredients: (r.recipe_ingredients || []).map((ing: any) => ({
+            id: ing.id,
+            name: ing.name,
+            quantity: ing.quantity || 0,
+            unit: ing.unit || "",
+          })),
+          instructions: (r.recipe_instructions || [])
+            .sort((a: any, b: any) => (a.step_number || 0) - (b.step_number || 0))
+            .map((inst: any) => inst.instruction),
+        })));
+      }
+
+      setLoading(false);
+    }
+    loadRecipes();
   }, []);
 
   const filtered = useMemo(() => {
@@ -107,7 +189,16 @@ export default function RecipesPage() {
   const fatLoss = useMemo(() => filtered.filter((r) => r.goal === "Fat Loss"), [filtered]);
   const maintenance = useMemo(() => filtered.filter((r) => r.goal === "Maintenance"), [filtered]);
 
-  if (!hydrated) return null;
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading recipes...</p>
+        </div>
+      </div>
+    );
+  }
 
   const showGrouped = goalFilter === "All" && !search;
 

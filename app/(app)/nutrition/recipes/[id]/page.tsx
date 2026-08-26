@@ -1,6 +1,37 @@
-import { notFound } from "next/navigation";
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { recipes } from "@/data/recipes";
+import { useParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type RecipeGoal = "Fat Loss" | "Muscle Gain" | "Maintenance";
+
+interface RecipeIngredient {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+}
+
+interface Recipe {
+  id: string;
+  name: string;
+  description: string;
+  goal: RecipeGoal;
+  ingredients: RecipeIngredient[];
+  servings: number;
+  instructions: string[];
+  prepTime: number;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function goalColor(goal: string) {
   switch (goal) {
@@ -11,25 +42,108 @@ function goalColor(goal: string) {
   }
 }
 
-export async function generateStaticParams() {
-  return recipes.map((r) => ({ id: r.id }));
-}
+// ── Page ──────────────────────────────────────────────────────────────────────
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const recipe = recipes.find((r) => r.id === id);
-  return { title: recipe ? `${recipe.name} — Recipes` : "Recipe Not Found" };
-}
+export default function RecipeDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
 
-export default async function RecipeDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const recipe = recipes.find((r) => r.id === id);
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
-  if (!recipe) notFound();
+  useEffect(() => {
+    async function loadRecipe() {
+      if (!id) { setLoading(false); setNotFound(true); return; }
+
+      const supabase = createClient();
+
+      const { data, error } = await supabase
+        .from("recipes")
+        .select(`
+          id,
+          name,
+          description,
+          goal,
+          servings,
+          prep_time,
+          calories,
+          protein,
+          carbs,
+          fat,
+          recipe_ingredients (
+            id,
+            name,
+            quantity,
+            unit
+          ),
+          recipe_instructions (
+            id,
+            step_number,
+            instruction
+          )
+        `)
+        .eq("id", id)
+        .single();
+
+      if (error || !data) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+
+      setRecipe({
+        id: data.id,
+        name: data.name,
+        description: data.description || "",
+        goal: (data.goal || "Maintenance") as RecipeGoal,
+        servings: data.servings || 1,
+        prepTime: data.prep_time || 0,
+        calories: data.calories || 0,
+        protein: data.protein || 0,
+        carbs: data.carbs || 0,
+        fat: data.fat || 0,
+        ingredients: (data.recipe_ingredients || []).map((ing: any) => ({
+          id: ing.id,
+          name: ing.name,
+          quantity: ing.quantity || 0,
+          unit: ing.unit || "",
+        })),
+        instructions: (data.recipe_instructions || [])
+          .sort((a: any, b: any) => (a.step_number || 0) - (b.step_number || 0))
+          .map((inst: any) => inst.instruction),
+      });
+
+      setLoading(false);
+    }
+    loadRecipe();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading recipe...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (notFound || !recipe) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <p className="mb-2 text-lg font-semibold text-zinc-900">Recipe Not Found</p>
+        <p className="mb-6 text-sm text-zinc-500">This recipe doesn&apos;t exist or has been removed.</p>
+        <Link
+          href="/nutrition/recipes"
+          className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700"
+        >
+          &larr; Back to Recipes
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -99,19 +213,23 @@ export default async function RecipeDetailPage({
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-zinc-400">
             Ingredients
           </h2>
-          <ul className="flex flex-col gap-2.5">
-            {recipe.ingredients.map((item, i) => (
-              <li key={i} className="flex items-center justify-between text-sm text-zinc-700">
-                <span className="flex items-center gap-2.5">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300" />
-                  {item.name}
-                </span>
-                <span className="shrink-0 text-xs text-zinc-400">
-                  {item.quantity} {item.unit}
-                </span>
-              </li>
-            ))}
-          </ul>
+          {recipe.ingredients.length === 0 ? (
+            <p className="text-sm text-zinc-400">No ingredients listed.</p>
+          ) : (
+            <ul className="flex flex-col gap-2.5">
+              {recipe.ingredients.map((item) => (
+                <li key={item.id} className="flex items-center justify-between text-sm text-zinc-700">
+                  <span className="flex items-center gap-2.5">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300" />
+                    {item.name}
+                  </span>
+                  <span className="shrink-0 text-xs text-zinc-400">
+                    {item.quantity} {item.unit}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Instructions */}
@@ -119,23 +237,27 @@ export default async function RecipeDetailPage({
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-zinc-400">
             Instructions
           </h2>
-          <ol className="flex flex-col gap-3">
-            {recipe.instructions.map((step, i) => (
-              <li key={i} className="flex gap-3 text-sm text-zinc-700">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">
-                  {i + 1}
-                </span>
-                <span className="pt-0.5">{step}</span>
-              </li>
-            ))}
-          </ol>
+          {recipe.instructions.length === 0 ? (
+            <p className="text-sm text-zinc-400">No instructions listed.</p>
+          ) : (
+            <ol className="flex flex-col gap-3">
+              {recipe.instructions.map((step, i) => (
+                <li key={i} className="flex gap-3 text-sm text-zinc-700">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">
+                    {i + 1}
+                  </span>
+                  <span className="pt-0.5">{step}</span>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
       </div>
 
       {/* Add to Meal Plan */}
       <div>
         <Link
-          href="/meal-planner"
+          href="/nutrition/meal-planner"
           className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
         >
           + Add to Meal Plan

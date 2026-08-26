@@ -2,20 +2,29 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { loadRecipes } from "@/lib/recipes-store";
-import type { Recipe } from "@/data/recipes";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Day = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
 type MealSlot = "Breakfast" | "Lunch" | "Dinner" | "Snack 1" | "Snack 2";
 
-interface MealPlan {
+interface MealPlanRow {
   id: string;
-  userId: string;
   weekStartDate: string;
   weekEndDate: string;
-  plan: Record<Day, Record<MealSlot, string | null>>; // recipeId or null
+  plan: Record<Day, Record<MealSlot, string | null>>;
+  isSaved: boolean;
+}
+
+interface RecipeSummary {
+  id: string;
+  name: string;
+  goal: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
 }
 
 interface DaySummary {
@@ -29,8 +38,6 @@ interface DaySummary {
 
 const DAYS: Day[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const MEAL_SLOTS: MealSlot[] = ["Breakfast", "Lunch", "Dinner", "Snack 1", "Snack 2"];
-const STORAGE_KEY = "fitnessapp_weekly_meal_plan";
-const PLANS_KEY = "fitnessapp_saved_meal_plans";
 
 // ── Templates ─────────────────────────────────────────────────────────────────
 
@@ -38,29 +45,12 @@ interface PlanTemplate {
   name: string;
   goal: string;
   description: string;
-  // Uses recipe goals to auto-fill
-  mealGoals: Record<MealSlot, string>;
 }
 
 const TEMPLATES: PlanTemplate[] = [
-  {
-    name: "Fat Loss",
-    goal: "Fat Loss",
-    description: "Low-calorie plan focused on lean proteins and vegetables.",
-    mealGoals: { Breakfast: "Fat Loss", Lunch: "Fat Loss", Dinner: "Fat Loss", "Snack 1": "Fat Loss", "Snack 2": "Fat Loss" },
-  },
-  {
-    name: "Maintenance",
-    goal: "Maintenance",
-    description: "Balanced plan to maintain current weight and energy.",
-    mealGoals: { Breakfast: "Maintenance", Lunch: "Maintenance", Dinner: "Maintenance", "Snack 1": "Maintenance", "Snack 2": "Maintenance" },
-  },
-  {
-    name: "Muscle Gain",
-    goal: "Muscle Gain",
-    description: "High-protein, high-calorie plan for muscle growth.",
-    mealGoals: { Breakfast: "Muscle Gain", Lunch: "Muscle Gain", Dinner: "Muscle Gain", "Snack 1": "Muscle Gain", "Snack 2": "Muscle Gain" },
-  },
+  { name: "Fat Loss", goal: "Fat Loss", description: "Low-calorie plan focused on lean proteins and vegetables." },
+  { name: "Maintenance", goal: "Maintenance", description: "Balanced plan to maintain current weight and energy." },
+  { name: "Muscle Gain", goal: "Muscle Gain", description: "High-protein, high-calorie plan for muscle growth." },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -84,43 +74,7 @@ function getWeekDates(): { start: string; end: string } {
   return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) };
 }
 
-function createMealPlan(): MealPlan {
-  const { start, end } = getWeekDates();
-  return {
-    id: crypto.randomUUID(),
-    userId: "current-user",
-    weekStartDate: start,
-    weekEndDate: end,
-    plan: emptyPlan(),
-  };
-}
-
-function loadMealPlan(): MealPlan {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return createMealPlan();
-}
-
-function saveMealPlan(plan: MealPlan) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
-}
-
-function loadSavedPlans(): MealPlan[] {
-  try {
-    const raw = localStorage.getItem(PLANS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function savePlans(plans: MealPlan[]) {
-  localStorage.setItem(PLANS_KEY, JSON.stringify(plans));
-}
-
-function getDaySummary(plan: Record<MealSlot, string | null>, recipes: Recipe[]): DaySummary {
+function getDaySummary(plan: Record<MealSlot, string | null>, recipes: RecipeSummary[]): DaySummary {
   let calories = 0, protein = 0, carbs = 0, fat = 0;
   for (const slot of MEAL_SLOTS) {
     const id = plan[slot];
@@ -168,10 +122,10 @@ function EmptyState() {
       <p className="mb-1 text-base font-semibold text-zinc-900">No recipes available</p>
       <p className="mb-6 text-sm text-zinc-500">Create recipes first to start building your meal plan.</p>
       <Link
-        href="/nutrition/recipes/new"
+        href="/nutrition/recipes"
         className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
       >
-        Create Recipe
+        View Recipes
       </Link>
     </div>
   );
@@ -180,30 +134,126 @@ function EmptyState() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function MealPlannerPage() {
-  const [mealPlan, setMealPlan] = useState<MealPlan>(createMealPlan());
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [mealPlan, setMealPlan] = useState<MealPlanRow>({
+    id: "",
+    weekStartDate: "",
+    weekEndDate: "",
+    plan: emptyPlan(),
+    isSaved: false,
+  });
+  const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
-  const [savedPlans, setSavedPlans] = useState<MealPlan[]>([]);
+  const [savedPlans, setSavedPlans] = useState<MealPlanRow[]>([]);
   const [clipboardDay, setClipboardDay] = useState<Record<MealSlot, string | null> | null>(null);
 
   const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
-    setRecipes(loadRecipes());
-    setMealPlan(loadMealPlan());
-    setSavedPlans(loadSavedPlans());
-    setHydrated(true);
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      // Load recipes
+      const { data: recipesData } = await supabase
+        .from("recipes")
+        .select("id, name, goal, calories, protein, carbs, fat")
+        .order("name");
+
+      if (recipesData) {
+        setRecipes(recipesData.map((r) => ({
+          id: r.id,
+          name: r.name,
+          goal: r.goal || "Maintenance",
+          calories: r.calories || 0,
+          protein: r.protein || 0,
+          carbs: r.carbs || 0,
+          fat: r.fat || 0,
+        })));
+      }
+
+      // Load current week's meal plan
+      const { start, end } = getWeekDates();
+      const { data: planData } = await supabase
+        .from("meal_plans")
+        .select("id, week_start_date, week_end_date, plan_data, is_saved")
+        .eq("user_id", user.id)
+        .eq("week_start_date", start)
+        .eq("week_end_date", end)
+        .maybeSingle();
+
+      if (planData) {
+        setMealPlan({
+          id: planData.id,
+          weekStartDate: planData.week_start_date,
+          weekEndDate: planData.week_end_date,
+          plan: (planData.plan_data as any) || emptyPlan(),
+          isSaved: planData.is_saved || false,
+        });
+      } else {
+        setMealPlan({
+          id: "",
+          weekStartDate: start,
+          weekEndDate: end,
+          plan: emptyPlan(),
+          isSaved: false,
+        });
+      }
+
+      setLoading(false);
+    }
+    loadData();
   }, []);
+
+  // ── Persist ─────────────────────────────────────────────────────────────────
+
+  async function persistPlan(updatedPlan: Record<Day, Record<MealSlot, string | null>>, isSaved?: boolean) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    setSaving(true);
+
+    if (mealPlan.id) {
+      await supabase
+        .from("meal_plans")
+        .update({
+          plan_data: updatedPlan as any,
+          ...(isSaved !== undefined ? { is_saved: isSaved } : {}),
+        })
+        .eq("id", mealPlan.id);
+    } else {
+      const { start, end } = getWeekDates();
+      const { data: inserted } = await supabase
+        .from("meal_plans")
+        .insert({
+          user_id: user.id,
+          week_start_date: start,
+          week_end_date: end,
+          plan_data: updatedPlan as any,
+          is_saved: isSaved ?? false,
+        })
+        .select("id")
+        .single();
+
+      if (inserted) {
+        setMealPlan((prev) => ({ ...prev, id: inserted.id }));
+      }
+    }
+
+    setSaving(false);
+  }
 
   // ── Setters ────────────────────────────────────────────────────────────────
 
   function updateSlot(day: Day, slot: MealSlot, recipeId: string | null) {
     setMealPlan((prev) => {
       const next = { ...prev, plan: { ...prev.plan, [day]: { ...prev.plan[day], [slot]: recipeId } } };
-      saveMealPlan(next);
+      persistPlan(next.plan);
       return next;
     });
   }
@@ -219,7 +269,7 @@ export default function MealPlannerPage() {
     if (!clipboardDay) return;
     setMealPlan((prev) => {
       const next = { ...prev, plan: { ...prev.plan, [day]: { ...clipboardDay } } };
-      saveMealPlan(next);
+      persistPlan(next.plan);
       return next;
     });
     setToast(`Pasted to ${day}`);
@@ -228,25 +278,17 @@ export default function MealPlannerPage() {
   function clearDay(day: Day) {
     setMealPlan((prev) => {
       const next = { ...prev, plan: { ...prev.plan, [day]: { Breakfast: null, Lunch: null, Dinner: null, "Snack 1": null, "Snack 2": null } } };
-      saveMealPlan(next);
+      persistPlan(next.plan);
       return next;
     });
     setToast(`${day} cleared`);
   }
 
   function clearWeek() {
-    setMealPlan((prev) => {
-      const next = { ...prev, plan: emptyPlan() };
-      saveMealPlan(next);
-      return next;
-    });
+    const cleared = emptyPlan();
+    setMealPlan((prev) => ({ ...prev, plan: cleared }));
+    persistPlan(cleared);
     setToast("Week cleared");
-  }
-
-  function copyWeek() {
-    setClipboardDay(null); // re-use clipboard concept
-    // Save entire week as a clipboard via state
-    setToast("Week copied — use Load to duplicate");
   }
 
   // ── Templates ──────────────────────────────────────────────────────────────
@@ -262,52 +304,74 @@ export default function MealPlannerPage() {
     const newPlan = emptyPlan();
     for (const day of DAYS) {
       for (const slot of MEAL_SLOTS) {
-        // Rotate through available recipes
         const idx = (DAYS.indexOf(day) * MEAL_SLOTS.length + MEAL_SLOTS.indexOf(slot)) % goalRecipes.length;
         newPlan[day][slot] = goalRecipes[idx].id;
       }
     }
 
-    setMealPlan((prev) => {
-      const next = { ...prev, plan: newPlan };
-      saveMealPlan(next);
-      return next;
-    });
+    setMealPlan((prev) => ({ ...prev, plan: newPlan }));
+    persistPlan(newPlan);
     setShowTemplates(false);
     setToast(`${template.name} template applied`);
   }
 
   // ── Save & Load ────────────────────────────────────────────────────────────
 
-  function handleSave() {
-    saveMealPlan(mealPlan);
-    // Also save to saved plans list
-    const plans = loadSavedPlans();
-    const existing = plans.findIndex((p) => p.id === mealPlan.id);
-    if (existing >= 0) {
-      plans[existing] = mealPlan;
-    } else {
-      plans.unshift(mealPlan);
-    }
-    savePlans(plans);
-    setSavedPlans(plans);
+  async function handleSave() {
+    await persistPlan(mealPlan.plan, true);
+    setMealPlan((prev) => ({ ...prev, isSaved: true }));
     setToast("Meal plan saved!");
   }
 
-  function handleLoadPlan(plan: MealPlan) {
+  async function handleLoadSaved() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: plans } = await supabase
+      .from("meal_plans")
+      .select("id, week_start_date, week_end_date, plan_data, is_saved")
+      .eq("user_id", user.id)
+      .eq("is_saved", true)
+      .order("week_start_date", { ascending: false })
+      .limit(10);
+
+    if (plans) {
+      setSavedPlans(plans.map((p) => ({
+        id: p.id,
+        weekStartDate: p.week_start_date,
+        weekEndDate: p.week_end_date,
+        plan: (p.plan_data as any) || emptyPlan(),
+        isSaved: p.is_saved || false,
+      })));
+    }
+    setShowSaved(true);
+  }
+
+  function handleLoadPlan(plan: MealPlanRow) {
     setMealPlan(plan);
-    saveMealPlan(plan);
+    persistPlan(plan.plan);
     setShowSaved(false);
     setToast("Meal plan loaded");
   }
 
-  function handleDuplicate() {
-    const dup: MealPlan = { ...mealPlan, id: crypto.randomUUID() };
-    const plans = loadSavedPlans();
-    plans.unshift(dup);
-    savePlans(plans);
-    setSavedPlans(plans);
-    setToast("Meal plan duplicated");
+  async function handleDuplicate() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { start, end } = getWeekDates();
+    await supabase
+      .from("meal_plans")
+      .insert({
+        user_id: user.id,
+        week_start_date: start,
+        week_end_date: end,
+        plan_data: mealPlan.plan as any,
+        is_saved: true,
+      });
+
+    setToast("Meal plan duplicated & saved");
   }
 
   // ── Summaries ──────────────────────────────────────────────────────────────
@@ -332,7 +396,16 @@ export default function MealPlannerPage() {
     );
   }, [daySummaries]);
 
-  if (!hydrated) return null;
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading meal planner...</p>
+        </div>
+      </div>
+    );
+  }
 
   const hasRecipes = recipes.length > 0;
 
@@ -345,13 +418,14 @@ export default function MealPlannerPage() {
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Weekly Meal Planner</h1>
             <p className="mt-1 text-sm text-zinc-500">
               {mealPlan.weekStartDate} — {mealPlan.weekEndDate}
+              {saving && <span className="ml-2 text-xs text-zinc-400">(Saving...)</span>}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setShowTemplates(true)} className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300">
               Templates
             </button>
-            <button type="button" onClick={() => { setSavedPlans(loadSavedPlans()); setShowSaved(true); }} className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300">
+            <button type="button" onClick={handleLoadSaved} className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300">
               Load Plan
             </button>
             <button type="button" onClick={handleDuplicate} className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300">
@@ -389,7 +463,6 @@ export default function MealPlannerPage() {
 
             {/* ── Quick Actions ── */}
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={copyWeek} className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50">Copy Week</button>
               <button type="button" onClick={clearWeek} className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50">Clear Week</button>
               {clipboardDay && <span className="self-center text-xs text-emerald-600 font-medium">Day copied — click Paste on a day</span>}
             </div>

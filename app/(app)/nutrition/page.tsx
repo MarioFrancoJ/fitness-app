@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, type FormEvent } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,8 +43,6 @@ interface NutritionTargets {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const MEALS_KEY = "fitnessapp_nutrition_meals";
-const PROFILE_KEY = "fitnessapp_user";
 const MEAL_TYPES: MealType[] = ["Breakfast", "Lunch", "Dinner", "Snack"];
 
 const DEFAULT_TARGETS: NutritionTargets = { calories: 2200, protein: 150, carbs: 250, fat: 70 };
@@ -56,43 +55,6 @@ function todayISO(): string {
 
 function nowTime(): string {
   return new Date().toTimeString().slice(0, 5);
-}
-
-function loadMeals(): Meal[] {
-  try {
-    const raw = localStorage.getItem(MEALS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveMeals(meals: Meal[]) {
-  localStorage.setItem(MEALS_KEY, JSON.stringify(meals));
-}
-
-function loadTargets(): NutritionTargets {
-  try {
-    const raw = localStorage.getItem(PROFILE_KEY);
-    if (!raw) return DEFAULT_TARGETS;
-    const data = JSON.parse(raw);
-    const weight = data.currentWeight || data.weight || 70;
-    const goal = data.fitnessGoal || data.goal || "";
-
-    // Estimate targets based on goal
-    let multiplier = 30; // maintenance
-    if (goal.toLowerCase().includes("lose") || goal.toLowerCase().includes("fat")) multiplier = 25;
-    if (goal.toLowerCase().includes("muscle") || goal.toLowerCase().includes("build")) multiplier = 35;
-
-    const calories = Math.round(weight * multiplier);
-    const protein = Math.round(weight * 2);
-    const fat = Math.round((calories * 0.25) / 9);
-    const carbs = Math.round((calories - protein * 4 - fat * 9) / 4);
-
-    return { calories, protein: Math.max(protein, 80), carbs: Math.max(carbs, 100), fat: Math.max(fat, 40) };
-  } catch {
-    return DEFAULT_TARGETS;
-  }
 }
 
 function getDailySummary(meals: Meal[], date: string): DailyNutritionSummary {
@@ -215,9 +177,56 @@ export default function NutritionPage() {
   const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
-    setMeals(loadMeals());
-    setTargets(loadTargets());
-    setHydrated(true);
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setHydrated(true); return; }
+
+      // Load all meals
+      const { data: mealData } = await supabase
+        .from("meal_logs")
+        .select("id, name, description, meal_type, calories, protein, carbs, fat, date, time, photo_url")
+        .order("date", { ascending: false });
+
+      if (mealData) {
+        setMeals(mealData.map((m) => ({
+          id: m.id,
+          name: m.name,
+          description: m.description || "",
+          mealType: m.meal_type as MealType,
+          calories: m.calories,
+          protein: m.protein,
+          carbs: m.carbs,
+          fat: m.fat,
+          date: m.date,
+          time: m.time || "",
+          photoUrl: m.photo_url,
+        })));
+      }
+
+      // Load targets from profile
+      const { data: profile } = await supabase
+        .from("users")
+        .select("weight_kg, fitness_goal")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.weight_kg) {
+        const weight = Number(profile.weight_kg);
+        const goal = profile.fitness_goal || "";
+        let multiplier = 30;
+        if (goal.toLowerCase().includes("lose") || goal.toLowerCase().includes("fat")) multiplier = 25;
+        if (goal.toLowerCase().includes("muscle") || goal.toLowerCase().includes("build")) multiplier = 35;
+        const cal = Math.round(weight * multiplier);
+        const prot = Math.round(weight * 2);
+        const fatG = Math.round((cal * 0.25) / 9);
+        const carbsG = Math.round((cal - prot * 4 - fatG * 9) / 4);
+        setTargets({ calories: cal, protein: Math.max(prot, 80), carbs: Math.max(carbsG, 100), fat: Math.max(fatG, 40) });
+      }
+
+      setHydrated(true);
+    }
+    loadData();
   }, []);
 
   // ── Form handlers ──────────────────────────────────────────────────────────
@@ -256,7 +265,7 @@ export default function NutritionPage() {
     setShowForm(true);
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!formName.trim()) return;
 
@@ -277,14 +286,31 @@ export default function NutritionPage() {
     let updated: Meal[];
     if (editingId) {
       updated = meals.map((m) => (m.id === editingId ? meal : m));
+      // Update in Supabase
+      const supabase = createClient();
+      await supabase.from("meal_logs").update({
+        name: meal.name, description: meal.description || null, meal_type: meal.mealType,
+        calories: meal.calories, protein: meal.protein, carbs: meal.carbs, fat: meal.fat,
+        date: meal.date, time: meal.time || null, photo_url: meal.photoUrl,
+      }).eq("id", editingId);
       setToast("Meal updated successfully!");
     } else {
+      // Insert in Supabase
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: inserted } = await supabase.from("meal_logs").insert({
+          user_id: user.id, name: meal.name, description: meal.description || null,
+          meal_type: meal.mealType, calories: meal.calories, protein: meal.protein,
+          carbs: meal.carbs, fat: meal.fat, date: meal.date, time: meal.time || null, photo_url: meal.photoUrl,
+        }).select("id").single();
+        if (inserted) meal.id = inserted.id;
+      }
       updated = [meal, ...meals];
       setToast("Meal added successfully!");
     }
 
     setMeals(updated);
-    saveMeals(updated);
     setShowForm(false);
     resetForm();
   }
@@ -292,7 +318,8 @@ export default function NutritionPage() {
   function handleDelete(id: string) {
     const updated = meals.filter((m) => m.id !== id);
     setMeals(updated);
-    saveMeals(updated);
+    const supabase = createClient();
+    supabase.from("meal_logs").delete().eq("id", id);
     setToast("Meal deleted");
   }
 

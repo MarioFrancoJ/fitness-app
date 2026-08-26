@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect, type FormEvent } from "react";
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import { recipes } from "@/data/recipes";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -11,95 +9,180 @@ interface ShoppingItem {
   id: string;
   name: string;
   quantity: string;
-}
-
-// ── Storage ───────────────────────────────────────────────────────────────────
-
-const STORAGE_KEY = "fitnessapp_shopping_list";
-const MEAL_PLAN_KEY = "fitnessapp_meal_plan";
-
-function loadList(): ShoppingItem[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveList(items: ShoppingItem[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-}
-
-// ── Meal Plan ingredient aggregation ──────────────────────────────────────────
-
-function generateFromMealPlan(): ShoppingItem[] {
-  try {
-    const stored = localStorage.getItem(MEAL_PLAN_KEY);
-    if (!stored) return [];
-
-    const plan: Record<string, Record<string, string | null>> = JSON.parse(stored);
-
-    // Collect all recipe IDs assigned in the meal plan
-    const recipeIds = new Set<string>();
-    for (const day of Object.values(plan)) {
-      for (const id of Object.values(day)) {
-        if (id) recipeIds.add(id);
-      }
-    }
-
-    // Count how many times each recipe appears (for quantity)
-    const recipeCounts: Record<string, number> = {};
-    for (const day of Object.values(plan)) {
-      for (const id of Object.values(day)) {
-        if (id) recipeCounts[id] = (recipeCounts[id] || 0) + 1;
-      }
-    }
-
-    // Aggregate ingredients across all recipes
-    const ingredientMap: Record<string, { qty: number; unit: string }> = {};
-
-    for (const id of recipeIds) {
-      const recipe = recipes.find((r) => r.id === id);
-      if (!recipe) continue;
-
-      const count = recipeCounts[id] || 1;
-
-      for (const ing of recipe.ingredients) {
-        const key = ing.name;
-        if (ingredientMap[key]) {
-          ingredientMap[key].qty += ing.quantity * count;
-        } else {
-          ingredientMap[key] = { qty: ing.quantity * count, unit: ing.unit };
-        }
-      }
-    }
-
-    // Convert to ShoppingItem format
-    return Object.entries(ingredientMap).map(([name, { qty, unit }]) => ({
-      id: `gen-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      name: `${name} (${qty} ${unit})`,
-      quantity: `${qty} ${unit}`,
-    }));
-  } catch {
-    return [];
-  }
+  checked: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function ShoppingListPage() {
   const [items, setItems] = useState<ShoppingItem[]>([]);
+  const [listId, setListId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [generated, setGenerated] = useState(false);
 
   useEffect(() => {
-    setItems(loadList());
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      // Load shopping list (most recent)
+      const { data: listData } = await supabase
+        .from("shopping_lists")
+        .select("id, items")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (listData) {
+        setListId(listData.id);
+        const storedItems = (listData.items as any[]) || [];
+        setItems(storedItems.map((item: any) => ({
+          id: item.id || crypto.randomUUID(),
+          name: item.name || "",
+          quantity: item.quantity || "—",
+          checked: item.checked || false,
+        })));
+      }
+
+      setLoading(false);
+    }
+    loadData();
   }, []);
 
-  function handleAdd(e: FormEvent) {
+  // ── Persist to Supabase ─────────────────────────────────────────────────────
+
+  async function saveItems(updatedItems: ShoppingItem[]) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    setSaving(true);
+
+    if (listId) {
+      await supabase
+        .from("shopping_lists")
+        .update({ items: updatedItems as any })
+        .eq("id", listId);
+    } else {
+      const { data: inserted } = await supabase
+        .from("shopping_lists")
+        .insert({
+          user_id: user.id,
+          items: updatedItems as any,
+        })
+        .select("id")
+        .single();
+
+      if (inserted) setListId(inserted.id);
+    }
+
+    setSaving(false);
+  }
+
+  // ── Generate from Meal Plan ─────────────────────────────────────────────────
+
+  async function handleGenerate() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Get the current week's meal plan
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + mondayOffset);
+    const weekStart = monday.toISOString().slice(0, 10);
+
+    const { data: planData } = await supabase
+      .from("meal_plans")
+      .select("plan_data")
+      .eq("user_id", user.id)
+      .eq("week_start_date", weekStart)
+      .maybeSingle();
+
+    if (!planData || !planData.plan_data) {
+      setError("No meal plan found for this week. Create a meal plan first.");
+      return;
+    }
+
+    // Extract recipe IDs from plan
+    const plan = planData.plan_data as Record<string, Record<string, string | null>>;
+    const recipeIds = new Set<string>();
+    const recipeCounts: Record<string, number> = {};
+
+    for (const day of Object.values(plan)) {
+      for (const id of Object.values(day)) {
+        if (id) {
+          recipeIds.add(id);
+          recipeCounts[id] = (recipeCounts[id] || 0) + 1;
+        }
+      }
+    }
+
+    if (recipeIds.size === 0) {
+      setError("Your meal plan is empty. Add recipes to your meal plan first.");
+      return;
+    }
+
+    // Load recipe ingredients
+    const { data: recipesData } = await supabase
+      .from("recipes")
+      .select(`
+        id,
+        recipe_ingredients (
+          name,
+          quantity,
+          unit
+        )
+      `)
+      .in("id", Array.from(recipeIds));
+
+    if (!recipesData || recipesData.length === 0) {
+      setError("Could not load recipe ingredients.");
+      return;
+    }
+
+    // Aggregate ingredients
+    const ingredientMap: Record<string, { qty: number; unit: string }> = {};
+
+    for (const recipe of recipesData) {
+      const count = recipeCounts[recipe.id] || 1;
+      for (const ing of (recipe.recipe_ingredients || [])) {
+        const key = ing.name;
+        if (ingredientMap[key]) {
+          ingredientMap[key].qty += (ing.quantity || 0) * count;
+        } else {
+          ingredientMap[key] = { qty: (ing.quantity || 0) * count, unit: ing.unit || "" };
+        }
+      }
+    }
+
+    // Convert to ShoppingItem format
+    const generatedItems: ShoppingItem[] = Object.entries(ingredientMap).map(([itemName, { qty, unit }]) => ({
+      id: crypto.randomUUID(),
+      name: itemName,
+      quantity: `${qty} ${unit}`.trim(),
+      checked: false,
+    }));
+
+    const updated = [...items, ...generatedItems];
+    setItems(updated);
+    await saveItems(updated);
+    setGenerated(true);
+    setError("");
+    setTimeout(() => setGenerated(false), 2500);
+  }
+
+  // ── Add item ────────────────────────────────────────────────────────────────
+
+  async function handleAdd(e: FormEvent) {
     e.preventDefault();
 
     if (!name.trim()) {
@@ -110,38 +193,51 @@ export default function ShoppingListPage() {
     setError("");
 
     const newItem: ShoppingItem = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       name: name.trim(),
       quantity: quantity.trim() || "—",
+      checked: false,
     };
 
     const updated = [...items, newItem];
     setItems(updated);
-    saveList(updated);
+    await saveItems(updated);
     setName("");
     setQuantity("");
   }
 
-  function handleRemove(id: string) {
+  // ── Remove / toggle / clear ─────────────────────────────────────────────────
+
+  async function handleRemove(id: string) {
     const updated = items.filter((item) => item.id !== id);
     setItems(updated);
-    saveList(updated);
+    await saveItems(updated);
   }
 
-  function handleClearAll() {
-    setItems([]);
-    saveList([]);
-  }
-
-  function handleGenerate() {
-    const generated = generateFromMealPlan();
-    if (generated.length === 0) return;
-
-    const updated = [...items, ...generated];
+  async function handleToggle(id: string) {
+    const updated = items.map((item) =>
+      item.id === id ? { ...item, checked: !item.checked } : item
+    );
     setItems(updated);
-    saveList(updated);
-    setGenerated(true);
-    setTimeout(() => setGenerated(false), 2500);
+    await saveItems(updated);
+  }
+
+  async function handleClearAll() {
+    setItems([]);
+    await saveItems([]);
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading shopping list...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -154,12 +250,17 @@ export default function ShoppingListPage() {
           </h1>
           <p className="mt-1 text-sm text-zinc-500">
             {items.length} item{items.length !== 1 ? "s" : ""} on your list
+            {saving && <span className="ml-2 text-xs text-zinc-400">(Saving...)</span>}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={handleGenerate}>
+          <button
+            type="button"
+            onClick={handleGenerate}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+          >
             Generate from Meal Plan
-          </Button>
+          </button>
           {items.length > 0 && (
             <button
               type="button"
@@ -178,6 +279,10 @@ export default function ShoppingListPage() {
         </p>
       )}
 
+      {error && (
+        <p className="text-sm text-red-500">{error}</p>
+      )}
+
       {/* Add form */}
       <form
         onSubmit={handleAdd}
@@ -186,30 +291,33 @@ export default function ShoppingListPage() {
         <p className="mb-4 text-sm font-semibold text-zinc-700">Add Ingredient</p>
         <div className="flex flex-wrap items-end gap-4">
           <div className="w-56">
-            <Input
+            <label htmlFor="ingredient-name" className="mb-1 block text-xs font-medium text-zinc-600">Ingredient</label>
+            <input
               id="ingredient-name"
               type="text"
-              label="Ingredient"
               placeholder="e.g. Chicken breast"
               value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                if (error) setError("");
-              }}
-              error={error}
+              onChange={(e) => { setName(e.target.value); if (error) setError(""); }}
+              className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
             />
           </div>
           <div className="w-36">
-            <Input
+            <label htmlFor="ingredient-qty" className="mb-1 block text-xs font-medium text-zinc-600">Quantity</label>
+            <input
               id="ingredient-qty"
               type="text"
-              label="Quantity"
               placeholder="e.g. 500g"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
+              className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
             />
           </div>
-          <Button type="submit">Add</Button>
+          <button
+            type="submit"
+            className="inline-flex items-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+          >
+            Add
+          </button>
         </div>
       </form>
 
@@ -233,9 +341,22 @@ export default function ShoppingListPage() {
                 className="flex items-center justify-between px-6 py-4"
               >
                 <div className="flex items-center gap-4">
-                  <span className="h-2 w-2 shrink-0 rounded-full bg-zinc-300" />
+                  <button
+                    type="button"
+                    onClick={() => handleToggle(item.id)}
+                    aria-label={item.checked ? `Uncheck ${item.name}` : `Check ${item.name}`}
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
+                      item.checked ? "border-emerald-500 bg-emerald-500" : "border-zinc-300 hover:border-zinc-400"
+                    }`}
+                  >
+                    {item.checked && (
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 text-white" aria-hidden="true">
+                        <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </button>
                   <div>
-                    <p className="text-sm font-medium text-zinc-900">
+                    <p className={`text-sm font-medium ${item.checked ? "text-zinc-400 line-through" : "text-zinc-900"}`}>
                       {item.name}
                     </p>
                     <p className="text-xs text-zinc-400">{item.quantity}</p>
