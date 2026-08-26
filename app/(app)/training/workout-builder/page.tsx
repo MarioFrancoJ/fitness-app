@@ -2,131 +2,240 @@
 
 import { useState, useEffect } from "react";
 import Button from "@/components/ui/Button";
-import { exercises } from "@/data/exercises";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface WorkoutSet {
+interface ExerciseOption {
   id: string;
-  reps: number;
-  weight: number;
+  name: string;
+  muscle_group: string;
 }
 
-interface WorkoutExercise {
-  id: string;
+interface BuilderExercise {
+  tempId: string;
   exerciseId: string;
   name: string;
-  sets: WorkoutSet[];
+  sets: number;
+  reps: number;
+  restSeconds: number;
+  notes: string;
 }
 
-interface Workout {
+interface SavedWorkout {
   id: string;
   name: string;
-  exercises: WorkoutExercise[];
+  exerciseCount: number;
   createdAt: string;
-}
-
-// ── Storage ───────────────────────────────────────────────────────────────────
-
-const STORAGE_KEY = "fitnessapp_workouts";
-
-function loadWorkouts(): Workout[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveWorkouts(workouts: Workout[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts));
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function WorkoutBuilderPage() {
+  const [exercises, setExercises] = useState<ExerciseOption[]>([]);
   const [workoutName, setWorkoutName] = useState("My Workout");
-  const [selectedExercises, setSelectedExercises] = useState<WorkoutExercise[]>([]);
+  const [selectedExercises, setSelectedExercises] = useState<BuilderExercise[]>([]);
+  const [history, setHistory] = useState<SavedWorkout[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [history, setHistory] = useState<Workout[]>([]);
+  const [error, setError] = useState("");
+
+  // ── Load exercises + user workouts from Supabase ──────────────────────────
 
   useEffect(() => {
-    setHistory(loadWorkouts());
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      // Load exercise options for dropdown
+      const { data: exerciseData } = await supabase
+        .from("exercises")
+        .select("id, name, muscle_group")
+        .order("name");
+
+      if (exerciseData) {
+        setExercises(exerciseData);
+      }
+
+      // Load user's saved workouts (non-template)
+      const { data: workoutData } = await supabase
+        .from("workouts")
+        .select("id, name, created_at, workout_days(workout_exercises(id))")
+        .eq("user_id", user.id)
+        .eq("is_template", false)
+        .order("created_at", { ascending: false });
+
+      if (workoutData) {
+        setHistory(
+          workoutData.map((w) => ({
+            id: w.id,
+            name: w.name,
+            exerciseCount: w.workout_days?.reduce(
+              (sum: number, d: { workout_exercises: { id: string }[] }) => sum + (d.workout_exercises?.length || 0), 0
+            ) || 0,
+            createdAt: new Date(w.created_at).toLocaleDateString("en-US", {
+              year: "numeric", month: "short", day: "numeric",
+            }),
+          }))
+        );
+      }
+
+      setLoading(false);
+    }
+
+    loadData();
   }, []);
+
+  // ── Exercise Management ───────────────────────────────────────────────────
 
   function handleAddExercise(exerciseId: string) {
     const ex = exercises.find((e) => e.id === exerciseId);
     if (!ex) return;
 
-    const newExercise: WorkoutExercise = {
-      id: Date.now().toString(),
+    const newExercise: BuilderExercise = {
+      tempId: crypto.randomUUID(),
       exerciseId: ex.id,
       name: ex.name,
-      sets: [{ id: `${Date.now()}-1`, reps: 10, weight: 0 }],
+      sets: 3,
+      reps: 10,
+      restSeconds: 60,
+      notes: "",
     };
 
     setSelectedExercises((prev) => [...prev, newExercise]);
   }
 
-  function handleRemoveExercise(id: string) {
-    setSelectedExercises((prev) => prev.filter((e) => e.id !== id));
+  function handleRemoveExercise(tempId: string) {
+    setSelectedExercises((prev) => prev.filter((e) => e.tempId !== tempId));
   }
 
-  function handleAddSet(exerciseId: string) {
+  function handleExerciseChange(tempId: string, field: "sets" | "reps" | "restSeconds", value: number) {
     setSelectedExercises((prev) =>
-      prev.map((ex) => {
-        if (ex.id !== exerciseId) return ex;
-        return {
-          ...ex,
-          sets: [...ex.sets, { id: `${Date.now()}`, reps: 10, weight: 0 }],
-        };
-      })
+      prev.map((ex) => (ex.tempId === tempId ? { ...ex, [field]: value } : ex))
     );
   }
 
-  function handleRemoveSet(exerciseId: string, setId: string) {
-    setSelectedExercises((prev) =>
-      prev.map((ex) => {
-        if (ex.id !== exerciseId) return ex;
-        return { ...ex, sets: ex.sets.filter((s) => s.id !== setId) };
-      })
-    );
-  }
+  // ── Save Workout to Supabase ──────────────────────────────────────────────
 
-  function handleSetChange(exerciseId: string, setId: string, field: "reps" | "weight", value: number) {
-    setSelectedExercises((prev) =>
-      prev.map((ex) => {
-        if (ex.id !== exerciseId) return ex;
-        return {
-          ...ex,
-          sets: ex.sets.map((s) => (s.id === setId ? { ...s, [field]: value } : s)),
-        };
-      })
-    );
-  }
-
-  function handleSave() {
+  async function handleSave() {
     if (selectedExercises.length === 0) return;
+    setError("");
+    setSaving(true);
 
-    const workout: Workout = {
-      id: Date.now().toString(),
-      name: workoutName.trim() || "My Workout",
-      exercises: selectedExercises,
-      createdAt: new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      }),
-    };
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setError("Not authenticated.");
+      setSaving(false);
+      return;
+    }
 
-    const updated = [workout, ...history];
-    setHistory(updated);
-    saveWorkouts(updated);
+    // 1. Create workout
+    const { data: workout, error: workoutErr } = await supabase
+      .from("workouts")
+      .insert({
+        user_id: user.id,
+        name: workoutName.trim() || "My Workout",
+        is_template: false,
+        duration: selectedExercises.length * 10, // rough estimate
+      })
+      .select("id")
+      .single();
+
+    if (workoutErr || !workout) {
+      setError("Error creating workout: " + (workoutErr?.message || "unknown"));
+      setSaving(false);
+      return;
+    }
+
+    // 2. Create a single workout_day
+    const { data: day, error: dayErr } = await supabase
+      .from("workout_days")
+      .insert({
+        workout_id: workout.id,
+        user_id: user.id,
+        day_name: "Workout",
+        sort_order: 0,
+      })
+      .select("id")
+      .single();
+
+    if (dayErr || !day) {
+      setError("Error creating workout day: " + (dayErr?.message || "unknown"));
+      setSaving(false);
+      return;
+    }
+
+    // 3. Create workout_exercises
+    const exerciseInserts = selectedExercises.map((ex, i) => ({
+      workout_day_id: day.id,
+      user_id: user.id,
+      exercise_id: ex.exerciseId,
+      exercise_name: ex.name,
+      sets: ex.sets,
+      reps: ex.reps,
+      rest_seconds: ex.restSeconds,
+      notes: ex.notes || null,
+      sort_order: i,
+    }));
+
+    const { error: exErr } = await supabase
+      .from("workout_exercises")
+      .insert(exerciseInserts);
+
+    if (exErr) {
+      setError("Error saving exercises: " + exErr.message);
+      setSaving(false);
+      return;
+    }
+
+    // Success — update local state
+    setHistory((prev) => [
+      {
+        id: workout.id,
+        name: workoutName.trim() || "My Workout",
+        exerciseCount: selectedExercises.length,
+        createdAt: new Date().toLocaleDateString("en-US", {
+          year: "numeric", month: "short", day: "numeric",
+        }),
+      },
+      ...prev,
+    ]);
+
     setSelectedExercises([]);
     setWorkoutName("My Workout");
+    setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+  }
+
+  // ── Delete Workout ────────────────────────────────────────────────────────
+
+  async function handleDeleteWorkout(workoutId: string) {
+    const supabase = createClient();
+    const { error: delErr } = await supabase
+      .from("workouts")
+      .delete()
+      .eq("id", workoutId);
+
+    if (!delErr) {
+      setHistory((prev) => prev.filter((w) => w.id !== workoutId));
+    }
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading workout builder...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -139,8 +248,15 @@ export default function WorkoutBuilderPage() {
         </p>
       </div>
 
-      {/* Workout name */}
-      <div className="flex items-end gap-4">
+      {/* Error */}
+      {error && (
+        <div className="rounded-lg bg-red-50 px-4 py-3" role="alert">
+          <p className="text-sm font-medium text-red-700">{error}</p>
+        </div>
+      )}
+
+      {/* Workout name + exercise selector */}
+      <div className="flex flex-wrap items-end gap-4">
         <div className="w-64">
           <label htmlFor="workout-name" className="mb-1.5 block text-sm font-medium text-zinc-700">
             Workout Name
@@ -154,7 +270,6 @@ export default function WorkoutBuilderPage() {
           />
         </div>
 
-        {/* Add exercise dropdown */}
         <div className="w-64">
           <label htmlFor="add-exercise" className="mb-1.5 block text-sm font-medium text-zinc-700">
             Add Exercise
@@ -171,7 +286,7 @@ export default function WorkoutBuilderPage() {
             <option value="" disabled>Select an exercise...</option>
             {exercises.map((ex) => (
               <option key={ex.id} value={ex.id}>
-                {ex.name} ({ex.muscleGroup})
+                {ex.name} ({ex.muscle_group})
               </option>
             ))}
           </select>
@@ -186,7 +301,7 @@ export default function WorkoutBuilderPage() {
       ) : (
         <div className="flex flex-col gap-4">
           {selectedExercises.map((ex, exIndex) => (
-            <div key={ex.id} className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <div key={ex.tempId} className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">
@@ -196,73 +311,50 @@ export default function WorkoutBuilderPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleRemoveExercise(ex.id)}
+                  onClick={() => handleRemoveExercise(ex.tempId)}
                   className="text-xs font-medium text-zinc-400 transition-colors hover:text-red-600"
                 >
                   Remove
                 </button>
               </div>
 
-              {/* Sets table */}
-              <div className="overflow-hidden rounded-lg border border-zinc-100">
-                <table className="w-full text-sm">
-                  <thead className="bg-zinc-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-zinc-500">Set</th>
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-zinc-500">Reps</th>
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-zinc-500">Weight (kg)</th>
-                      <th className="px-4 py-2 text-right text-xs font-semibold text-zinc-500"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100">
-                    {ex.sets.map((set, setIndex) => (
-                      <tr key={set.id}>
-                        <td className="px-4 py-2 font-medium text-zinc-700">{setIndex + 1}</td>
-                        <td className="px-4 py-2">
-                          <input
-                            type="number"
-                            min={1}
-                            max={100}
-                            value={set.reps}
-                            onChange={(e) => handleSetChange(ex.id, set.id, "reps", parseInt(e.target.value) || 0)}
-                            className="h-8 w-16 rounded border border-zinc-200 px-2 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-200"
-                          />
-                        </td>
-                        <td className="px-4 py-2">
-                          <input
-                            type="number"
-                            min={0}
-                            max={500}
-                            step={2.5}
-                            value={set.weight}
-                            onChange={(e) => handleSetChange(ex.id, set.id, "weight", parseFloat(e.target.value) || 0)}
-                            className="h-8 w-20 rounded border border-zinc-200 px-2 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-200"
-                          />
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          {ex.sets.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveSet(ex.id, set.id)}
-                              className="text-xs text-zinc-400 hover:text-red-600"
-                            >
-                              ×
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {/* Sets/Reps/Rest config */}
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium text-zinc-500">Sets</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={ex.sets}
+                    onChange={(e) => handleExerciseChange(ex.tempId, "sets", parseInt(e.target.value) || 1)}
+                    className="h-8 w-16 rounded border border-zinc-200 px-2 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-200"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium text-zinc-500">Reps</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={ex.reps}
+                    onChange={(e) => handleExerciseChange(ex.tempId, "reps", parseInt(e.target.value) || 1)}
+                    className="h-8 w-16 rounded border border-zinc-200 px-2 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-200"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium text-zinc-500">Rest (s)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={600}
+                    step={15}
+                    value={ex.restSeconds}
+                    onChange={(e) => handleExerciseChange(ex.tempId, "restSeconds", parseInt(e.target.value) || 0)}
+                    className="h-8 w-20 rounded border border-zinc-200 px-2 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-200"
+                  />
+                </div>
               </div>
-
-              <button
-                type="button"
-                onClick={() => handleAddSet(ex.id)}
-                className="mt-3 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900"
-              >
-                + Add Set
-              </button>
             </div>
           ))}
         </div>
@@ -271,8 +363,8 @@ export default function WorkoutBuilderPage() {
       {/* Save button */}
       {selectedExercises.length > 0 && (
         <div className="flex items-center gap-4">
-          <Button type="button" onClick={handleSave}>
-            Save Workout
+          <Button type="button" onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save Workout"}
           </Button>
           {saved && (
             <span className="text-sm font-medium text-emerald-600">✓ Workout saved</span>
@@ -294,9 +386,16 @@ export default function WorkoutBuilderPage() {
                 <div>
                   <p className="text-sm font-medium text-zinc-900">{w.name}</p>
                   <p className="text-xs text-zinc-400">
-                    {w.exercises.length} exercise{w.exercises.length !== 1 ? "s" : ""} · {w.createdAt}
+                    {w.exerciseCount} exercise{w.exerciseCount !== 1 ? "s" : ""} · {w.createdAt}
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteWorkout(w.id)}
+                  className="text-xs font-medium text-zinc-400 transition-colors hover:text-red-600"
+                >
+                  Delete
+                </button>
               </li>
             ))}
           </ul>
