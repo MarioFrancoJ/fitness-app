@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * LoginForm — Supabase Auth (replaces localStorage-based auth)
+ * LoginForm — Supabase Auth
  *
- * Authenticates via supabase.auth.signInWithPassword().
- * No localStorage session management.
- * No seed-admin dependency.
+ * Authenticates via:
+ * - supabase.auth.signInWithPassword() for email/password
+ * - supabase.auth.signInWithOAuth() for Google
  */
 
 import { useState, type FormEvent } from "react";
@@ -15,7 +15,8 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
 
-// Simple inline Google icon
+// ── Google icon ───────────────────────────────────────────────────────────────
+
 function GoogleIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none">
@@ -27,7 +28,18 @@ function GoogleIcon() {
   );
 }
 
-export default function LoginForm() {
+// ── Props ─────────────────────────────────────────────────────────────────────
+
+interface LoginFormProps {
+  /** URL to redirect after successful login. Defaults to /dashboard. */
+  redirectTo?: string;
+  /** Error message from URL params (e.g., auth callback failure). */
+  callbackError?: string | null;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export default function LoginForm({ redirectTo = "/dashboard", callbackError }: LoginFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -65,9 +77,18 @@ export default function LoginForm() {
       return;
     }
 
-    // Success — middleware handles role-based redirect
-    router.push("/dashboard");
+    router.push(redirectTo);
     router.refresh();
+  }
+
+  async function handleGoogleSignIn() {
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+      },
+    });
   }
 
   return (
@@ -88,6 +109,15 @@ export default function LoginForm() {
           {error && (
             <div className="rounded-lg bg-red-50 px-4 py-3" role="alert">
               <p className="text-sm font-medium text-red-700">{error}</p>
+            </div>
+          )}
+
+          {/* Callback error */}
+          {callbackError && (
+            <div className="rounded-lg bg-amber-50 px-4 py-3" role="alert">
+              <p className="text-sm font-medium text-amber-700">
+                Authentication error. Please try again.
+              </p>
             </div>
           )}
 
@@ -137,10 +167,10 @@ export default function LoginForm() {
             <div className="h-px flex-1 bg-zinc-200" />
           </div>
 
-          {/* Google button — Coming soon */}
-          <Button type="button" variant="outline" fullWidth disabled>
+          {/* Google OAuth */}
+          <Button type="button" variant="outline" fullWidth onClick={handleGoogleSignIn}>
             <GoogleIcon />
-            Continue with Google (Coming soon)
+            Continue with Google
           </Button>
         </form>
 
