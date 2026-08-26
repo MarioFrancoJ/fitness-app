@@ -21,7 +21,7 @@ export default function DataManagementPage() {
 
 
   useEffect(() => {
-    setStats(getStorageStats());
+    getStorageStats().then(setStats);
     setHydrated(true);
   }, []);
 
@@ -37,36 +37,36 @@ export default function DataManagementPage() {
     reader.readAsText(file);
   }
 
-  function handleImport() {
+  async function handleImport() {
     if (!importContent) return;
-    const result = restoreFromBackup(importContent, importMode);
+    const result = await restoreFromBackup(importContent, importMode);
     if (result.success) {
       showToast(`Imported ${result.restored.length} data sources`);
       setShowImport(false);
       setImportContent(null);
       setValidation(null);
-      setStats(getStorageStats());
+      getStorageStats().then(setStats);
     } else {
       showToast("Import failed");
     }
   }
 
   function handleDownloadAllData() {
-    exportAndDownload({ categories: ALL_CATEGORIES, format: "json", dateFrom: null, dateTo: null });
+    exportAndDownload({ categories: ALL_CATEGORIES, format: "json" });
     showToast("All personal data downloaded");
   }
 
-  function handleDeleteAll() {
-    deleteAllUserData();
+  async function handleDeleteAll() {
+    await deleteAllUserData();
     setShowDeleteConfirm(false);
-    setStats(getStorageStats());
+    getStorageStats().then(setStats);
     showToast("All personal data deleted");
   }
 
-  function handleReset() {
-    resetAccountData();
+  async function handleReset() {
+    await resetAccountData();
     setShowResetConfirm(false);
-    setStats(getStorageStats());
+    getStorageStats().then(setStats);
     showToast("Account data reset");
   }
 

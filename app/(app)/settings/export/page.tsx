@@ -8,14 +8,12 @@ export default function ExportPage() {
   const { success: showToast } = useToast();
   const [selectedCategories, setSelectedCategories] = useState<Set<ExportCategory>>(new Set(ALL_CATEGORIES));
   const [format, setFormat] = useState<ExportFormat>("json");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
   const [stats, setStats] = useState<StorageStats>({ totalRecords: 0, estimatedBytes: 0, backupCount: 0, lastBackupDate: null });
   const [hydrated, setHydrated] = useState(false);
 
 
   useEffect(() => {
-    setStats(getStorageStats());
+    getStorageStats().then(setStats);
     setHydrated(true);
   }, []);
 
@@ -35,14 +33,12 @@ export default function ExportPage() {
     exportAndDownload({
       categories: Array.from(selectedCategories),
       format,
-      dateFrom: dateFrom || null,
-      dateTo: dateTo || null,
     });
     showToast(`Data exported as ${format.toUpperCase()}`);
   }
 
   function handleExportAll() {
-    exportAndDownload({ categories: ALL_CATEGORIES, format: "json", dateFrom: null, dateTo: null });
+    exportAndDownload({ categories: ALL_CATEGORIES, format: "json" });
     showToast("All data exported as JSON");
   }
 
@@ -121,16 +117,6 @@ export default function ExportPage() {
                 <option value="json">JSON</option>
                 <option value="csv">CSV</option>
               </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">From Date (optional)</label>
-              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">To Date (optional)</label>
-              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
             </div>
           </div>
 

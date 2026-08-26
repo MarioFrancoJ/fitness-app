@@ -1,31 +1,40 @@
+/**
+ * Data Export/Import System — Supabase-backed
+ *
+ * Exports user data directly from Supabase tables as versioned JSON.
+ * Supports importing back into the system.
+ * Includes legacy localStorage backup migration adapter.
+ */
+
+import { createClient } from "@/lib/supabase/client";
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type ExportCategory = "profile" | "nutrition" | "workouts" | "progress" | "analytics" | "recipes" | "mealPlans" | "shoppingLists" | "notifications" | "recommendations";
+export type ExportCategory = "profile" | "nutrition" | "workouts" | "progress" | "notifications" | "subscriptions";
 export type ExportFormat = "json" | "csv";
-
-// Future formats
-export type FutureFormat = "pdf" | "excel";
-// Future cloud providers
-export type CloudProvider = "google_drive" | "dropbox" | "onedrive" | "aws_s3";
 
 export interface ExportOptions {
   categories: ExportCategory[];
   format: ExportFormat;
-  dateFrom: string | null;
-  dateTo: string | null;
 }
 
 export interface BackupMetadata {
   id: string;
   createdAt: string;
-  fileSize: number; // bytes
+  fileSize: number;
   version: string;
   appVersion: string;
   categoriesIncluded: ExportCategory[];
 }
 
 export interface BackupFile {
-  metadata: BackupMetadata;
+  metadata: {
+    version: string;
+    appVersion: string;
+    exportedAt: string;
+    userId: string;
+    categoriesIncluded: ExportCategory[];
+  };
   data: Record<string, unknown>;
 }
 
@@ -46,117 +55,99 @@ export interface StorageStats {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const BACKUPS_KEY = "fitnessapp_backups_metadata";
-const BACKUP_DATA_PREFIX = "fitnessapp_backup_";
-const APP_VERSION = "1.0.0";
-const SCHEMA_VERSION = "1";
+const APP_VERSION = "2.0.0";
+const SCHEMA_VERSION = "2";
+const BACKUPS_KEY = "app_backups_metadata";
+const BACKUP_DATA_PREFIX = "app_backup_";
 
 export const ALL_CATEGORIES: ExportCategory[] = [
-  "profile", "nutrition", "workouts", "progress", "analytics", "recipes", "mealPlans", "shoppingLists", "notifications", "recommendations",
+  "profile", "nutrition", "workouts", "progress", "notifications", "subscriptions",
 ];
 
 export const CATEGORY_LABELS: Record<ExportCategory, string> = {
   profile: "Profile & Measurements",
-  nutrition: "Nutrition Logs",
+  nutrition: "Nutrition & Meals",
   workouts: "Workouts & Training",
-  progress: "Progress Data",
-  analytics: "Analytics",
-  recipes: "Recipes",
-  mealPlans: "Meal Plans",
-  shoppingLists: "Shopping Lists",
+  progress: "Progress & Photos",
   notifications: "Notifications",
-  recommendations: "Recommendations",
+  subscriptions: "Subscription",
 };
 
-// Data source keys mapping
-// NOTE: These keys are used for the legacy localStorage backup/export system.
-// The app now uses Supabase as the primary data source.
-// Old key names preserved in LEGACY_KEY_ALIASES for backward-compatible import.
-const CATEGORY_KEYS: Record<ExportCategory, string[]> = {
-  profile: ["user_profile", "measurement_history"],
-  nutrition: ["nutrition_meals"],
-  workouts: ["workouts", "workout_templates", "training_sessions", "active_session"],
-  progress: ["progress_photos", "daily_checkins"],
-  analytics: ["progress_analytics"],
-  recipes: ["recipes", "ingredients"],
-  mealPlans: ["weekly_meal_plan", "saved_meal_plans"],
-  shoppingLists: ["shopping_list"],
-  notifications: ["notifications", "notification_preferences"],
-  recommendations: ["recommendations", "recommendation_rules"],
+// Category → Supabase table mappings
+const CATEGORY_TABLES: Record<ExportCategory, string[]> = {
+  profile: ["users", "weight_entries", "measurement_entries"],
+  nutrition: ["meal_logs"],
+  workouts: ["training_sessions"],
+  progress: ["progress_photos"],
+  notifications: ["notifications"],
+  subscriptions: ["subscriptions"],
 };
 
-// Legacy key aliases for backward-compatible import of old backups
-const LEGACY_KEY_ALIASES: Record<string, string> = {
-  "fitnessapp_user": "user_profile",
-  "fitnessapp_measurement_history": "measurement_history",
-  "fitnessapp_nutrition_meals": "nutrition_meals",
-  "fitnessapp_workouts": "workouts",
-  "fitnessapp_workout_templates": "workout_templates",
-  "fitnessapp_training_sessions": "training_sessions",
-  "fitnessapp_active_session": "active_session",
-  "fitnessapp_progress_photos": "progress_photos",
-  "fitnessapp_daily_checkins": "daily_checkins",
-  "fitnessapp_progress": "progress_analytics",
-  "fitnessapp_recipes": "recipes",
-  "fitnessapp_ingredients": "ingredients",
-  "fitnessapp_weekly_meal_plan": "weekly_meal_plan",
-  "fitnessapp_saved_meal_plans": "saved_meal_plans",
-  "fitnessapp_smart_shopping_list": "shopping_list",
-  "fitnessapp_notifications": "notifications",
-  "fitnessapp_notification_preferences": "notification_preferences",
-  "fitnessapp_recommendations": "recommendations",
-  "fitnessapp_recommendation_rules": "recommendation_rules",
-};
+// ── Export from Supabase ───────────────────────────────────────────────────────
 
-// ── Export Functions ───────────────────────────────────────────────────────────
+export async function exportData(options: ExportOptions): Promise<string> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
 
-export function exportData(options: ExportOptions): string {
-  const data: Record<string, unknown> = {};
+  const exportedData: Record<string, unknown> = {};
 
   for (const category of options.categories) {
-    const keys = CATEGORY_KEYS[category] || [];
-    for (const key of keys) {
-      try {
-        const raw = localStorage.getItem(key);
-        if (raw) data[key] = JSON.parse(raw);
-      } catch {
-        const raw = localStorage.getItem(key);
-        if (raw) data[key] = raw;
+    const tables = CATEGORY_TABLES[category] || [];
+    for (const table of tables) {
+      if (table === "users") {
+        const { data } = await (supabase as any).from(table).select("*").eq("id", user.id).single();
+        if (data) exportedData[table] = data;
+      } else {
+        const { data } = await (supabase as any).from(table).select("*").eq("user_id", user.id);
+        if (data && data.length > 0) exportedData[table] = data;
       }
     }
   }
 
+  const backup: BackupFile = {
+    metadata: {
+      version: SCHEMA_VERSION,
+      appVersion: APP_VERSION,
+      exportedAt: new Date().toISOString(),
+      userId: user.id,
+      categoriesIncluded: options.categories,
+    },
+    data: exportedData,
+  };
+
   if (options.format === "json") {
-    return JSON.stringify({ version: SCHEMA_VERSION, appVersion: APP_VERSION, exportedAt: new Date().toISOString(), categories: options.categories, data }, null, 2);
+    return JSON.stringify(backup, null, 2);
   }
 
-  // CSV: flatten to rows
-  return convertToCSV(data);
+  return convertToCSV(exportedData);
 }
 
 function convertToCSV(data: Record<string, unknown>): string {
-  const lines: string[] = ["category,key,index,field,value"];
+  const lines: string[] = ["table,index,field,value"];
 
-  for (const [key, value] of Object.entries(data)) {
+  for (const [table, value] of Object.entries(data)) {
     if (Array.isArray(value)) {
       value.forEach((item, idx) => {
         if (typeof item === "object" && item !== null) {
           for (const [field, val] of Object.entries(item as Record<string, unknown>)) {
             const safeVal = String(val ?? "").replace(/"/g, '""');
-            lines.push(`"${key}","${key}","${idx}","${field}","${safeVal}"`);
+            lines.push(`"${table}","${idx}","${field}","${safeVal}"`);
           }
         }
       });
     } else if (typeof value === "object" && value !== null) {
       for (const [field, val] of Object.entries(value as Record<string, unknown>)) {
         const safeVal = String(val ?? "").replace(/"/g, '""');
-        lines.push(`"${key}","${key}","0","${field}","${safeVal}"`);
+        lines.push(`"${table}","0","${field}","${safeVal}"`);
       }
     }
   }
 
   return lines.join("\n");
 }
+
+// ── Download helpers ──────────────────────────────────────────────────────────
 
 export function downloadFile(content: string, filename: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType });
@@ -170,15 +161,15 @@ export function downloadFile(content: string, filename: string, mimeType: string
   URL.revokeObjectURL(url);
 }
 
-export function exportAndDownload(options: ExportOptions) {
-  const content = exportData(options);
+export async function exportAndDownload(options: ExportOptions) {
+  const content = await exportData(options);
   const timestamp = new Date().toISOString().slice(0, 10);
   const ext = options.format;
   const mime = options.format === "json" ? "application/json" : "text/csv";
   downloadFile(content, `fitnessapp-export-${timestamp}.${ext}`, mime);
 }
 
-// ── Backup Functions ──────────────────────────────────────────────────────────
+// ── Backup Functions (localStorage for backup metadata only) ──────────────────
 
 export function loadBackupList(): BackupMetadata[] {
   try {
@@ -193,43 +184,28 @@ function saveBackupList(list: BackupMetadata[]) {
   localStorage.setItem(BACKUPS_KEY, JSON.stringify(list));
 }
 
-export function createBackup(categories: ExportCategory[] = ALL_CATEGORIES): BackupMetadata {
-  const data: Record<string, unknown> = {};
+export async function createBackup(categories: ExportCategory[] = ALL_CATEGORIES): Promise<BackupMetadata> {
+  const content = await exportData({ categories, format: "json" });
+  const id = crypto.randomUUID();
 
-  for (const category of categories) {
-    const keys = CATEGORY_KEYS[category] || [];
-    for (const key of keys) {
-      try {
-        const raw = localStorage.getItem(key);
-        if (raw) data[key] = JSON.parse(raw);
-      } catch {}
-    }
-  }
-
-  const backupFile: BackupFile = {
-    metadata: {
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      fileSize: 0,
-      version: SCHEMA_VERSION,
-      appVersion: APP_VERSION,
-      categoriesIncluded: categories,
-    },
-    data,
+  const metadata: BackupMetadata = {
+    id,
+    createdAt: new Date().toISOString(),
+    fileSize: new Blob([content]).size,
+    version: SCHEMA_VERSION,
+    appVersion: APP_VERSION,
+    categoriesIncluded: categories,
   };
 
-  const serialized = JSON.stringify(backupFile);
-  backupFile.metadata.fileSize = new Blob([serialized]).size;
-
-  // Store backup data
-  localStorage.setItem(`${BACKUP_DATA_PREFIX}${backupFile.metadata.id}`, serialized);
+  // Store backup data in localStorage (for local retrieval)
+  localStorage.setItem(`${BACKUP_DATA_PREFIX}${id}`, content);
 
   // Update metadata list
   const list = loadBackupList();
-  list.unshift(backupFile.metadata);
+  list.unshift(metadata);
   saveBackupList(list);
 
-  return backupFile.metadata;
+  return metadata;
 }
 
 export function downloadBackup(id: string) {
@@ -245,7 +221,23 @@ export function deleteBackup(id: string) {
   saveBackupList(list);
 }
 
-// ── Restore Functions ─────────────────────────────────────────────────────────
+// ── Validate & Restore ────────────────────────────────────────────────────────
+
+// Legacy key → table mapping for old backups
+const LEGACY_KEY_TO_TABLE: Record<string, string> = {
+  fitnessapp_user: "users",
+  user_profile: "users",
+  fitnessapp_measurement_history: "measurement_entries",
+  measurement_history: "measurement_entries",
+  fitnessapp_nutrition_meals: "meal_logs",
+  nutrition_meals: "meal_logs",
+  fitnessapp_training_sessions: "training_sessions",
+  training_sessions: "training_sessions",
+  fitnessapp_progress_photos: "progress_photos",
+  progress_photos: "progress_photos",
+  fitnessapp_notifications: "notifications",
+  fitnessapp_daily_checkins: "daily_checkins",
+};
 
 export function validateBackup(content: string): ValidationResult {
   const result: ValidationResult = { valid: false, errors: [], warnings: [], categoriesFound: [], version: null };
@@ -253,19 +245,13 @@ export function validateBackup(content: string): ValidationResult {
   try {
     const parsed = JSON.parse(content);
 
-    if (!parsed.metadata && !parsed.version) {
-      result.errors.push("Invalid backup format: missing metadata or version");
+    if (!parsed.metadata && !parsed.version && !parsed.data) {
+      result.errors.push("Invalid backup format: missing metadata or data");
       return result;
     }
 
-    // Handle both backup files and export files
     const version = parsed.metadata?.version || parsed.version;
-    result.version = version;
-
-    if (!version) {
-      result.errors.push("Missing schema version");
-      return result;
-    }
+    result.version = version || null;
 
     const data = parsed.data;
     if (!data || typeof data !== "object") {
@@ -273,33 +259,37 @@ export function validateBackup(content: string): ValidationResult {
       return result;
     }
 
-    // Detect categories (recognize both new keys and legacy fitnessapp_* keys)
+    // Detect categories — check for both new table names and legacy keys
+    const dataKeys = Object.keys(data);
     for (const cat of ALL_CATEGORIES) {
-      const keys = CATEGORY_KEYS[cat];
-      const legacyKeys = Object.values(LEGACY_KEY_ALIASES);
-      const allKnownKeys = [...keys, ...Object.keys(LEGACY_KEY_ALIASES).filter((lk) => keys.includes(LEGACY_KEY_ALIASES[lk]))];
-      if (allKnownKeys.some((k) => k in data) || keys.some((k) => k in data)) {
+      const tables = CATEGORY_TABLES[cat];
+      const hasNewFormat = tables.some((t) => dataKeys.includes(t));
+      const hasLegacyFormat = dataKeys.some((k) => {
+        const mappedTable = LEGACY_KEY_TO_TABLE[k];
+        return mappedTable && tables.includes(mappedTable);
+      });
+      if (hasNewFormat || hasLegacyFormat) {
         result.categoriesFound.push(cat);
       }
     }
 
     if (result.categoriesFound.length === 0) {
-      result.warnings.push("No recognized data categories found");
+      result.warnings.push("No recognized data categories found in this backup");
     }
 
-    if (version !== SCHEMA_VERSION) {
-      result.warnings.push(`Version mismatch: file is v${version}, current is v${SCHEMA_VERSION}`);
+    if (version && version !== SCHEMA_VERSION) {
+      result.warnings.push(`Version mismatch: file is v${version}, current is v${SCHEMA_VERSION}. Data will be migrated.`);
     }
 
     result.valid = result.errors.length === 0;
-  } catch (e) {
+  } catch {
     result.errors.push("Invalid JSON format");
   }
 
   return result;
 }
 
-export function restoreFromBackup(content: string, mode: "merge" | "replace", categories?: ExportCategory[]): { success: boolean; restored: string[] } {
+export async function restoreFromBackup(content: string, mode: "merge" | "replace", categories?: ExportCategory[]): Promise<{ success: boolean; restored: string[] }> {
   const restored: string[] = [];
 
   try {
@@ -307,119 +297,120 @@ export function restoreFromBackup(content: string, mode: "merge" | "replace", ca
     const data = parsed.data;
     if (!data) return { success: false, restored };
 
-    const allowedKeys = new Set<string>();
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, restored };
+
+    const allowedTables = new Set<string>();
     const cats = categories || ALL_CATEGORIES;
     for (const cat of cats) {
-      for (const key of CATEGORY_KEYS[cat]) {
-        allowedKeys.add(key);
+      for (const table of CATEGORY_TABLES[cat]) {
+        allowedTables.add(table);
       }
     }
 
-    // Also allow legacy keys and map them to new keys
-    const legacyToNew = LEGACY_KEY_ALIASES;
-
     for (const [key, value] of Object.entries(data)) {
-      // Determine the target key (map legacy → new, or use as-is if already new)
-      const targetKey = legacyToNew[key] || key;
-      if (!allowedKeys.has(targetKey) && !allowedKeys.has(key)) continue;
-      const storageKey = allowedKeys.has(targetKey) ? targetKey : key;
+      // Map legacy keys to table names
+      const tableName = LEGACY_KEY_TO_TABLE[key] || key;
+      if (!allowedTables.has(tableName)) continue;
 
-      if (mode === "replace") {
-        localStorage.setItem(storageKey, JSON.stringify(value));
-        restored.push(storageKey);
-      } else {
-        // Merge: for arrays, concat; for objects, shallow merge
-        const existing = localStorage.getItem(storageKey);
-        if (!existing) {
-          localStorage.setItem(storageKey, JSON.stringify(value));
-        } else {
-          try {
-            const existingData = JSON.parse(existing);
-            if (Array.isArray(existingData) && Array.isArray(value)) {
-              const merged = [...existingData, ...(value as unknown[])];
-              // Deduplicate by id if available
-              const seen = new Set();
-              const deduped = merged.filter((item) => {
-                if (typeof item === "object" && item !== null && "id" in item) {
-                  if (seen.has((item as { id: string }).id)) return false;
-                  seen.add((item as { id: string }).id);
-                }
-                return true;
-              });
-              localStorage.setItem(storageKey, JSON.stringify(deduped));
-            } else if (typeof existingData === "object" && typeof value === "object") {
-              localStorage.setItem(storageKey, JSON.stringify({ ...existingData, ...(value as object) }));
-            } else {
-              localStorage.setItem(storageKey, JSON.stringify(value));
-            }
-          } catch {
-            localStorage.setItem(storageKey, JSON.stringify(value));
-          }
+      if (tableName === "users" && typeof value === "object" && value !== null) {
+        // Profile: update current user's profile
+        const profileData = value as Record<string, unknown>;
+        const updateFields: Record<string, unknown> = {};
+        if (profileData.name) updateFields.name = profileData.name;
+        if (profileData.fitness_goal || profileData.fitnessGoal) updateFields.fitness_goal = profileData.fitness_goal || profileData.fitnessGoal;
+        if (profileData.gender) updateFields.gender = profileData.gender;
+        if (profileData.height_cm || profileData.height) updateFields.height_cm = profileData.height_cm || profileData.height;
+        if (profileData.weight_kg || profileData.weight || profileData.currentWeight) updateFields.weight_kg = profileData.weight_kg || profileData.weight || profileData.currentWeight;
+        if (profileData.activity_level || profileData.activityLevel) updateFields.activity_level = profileData.activity_level || profileData.activityLevel;
+
+        if (Object.keys(updateFields).length > 0) {
+          await (supabase as any).from("users").update(updateFields).eq("id", user.id);
+          restored.push("users");
         }
-        restored.push(storageKey);
+      } else if (Array.isArray(value) && value.length > 0) {
+        // Array data: insert rows (skip if they conflict)
+        if (mode === "replace") {
+          await (supabase as any).from(tableName).delete().eq("user_id", user.id);
+        }
+
+        // Insert rows, adding user_id
+        const rows = value.map((row: any) => ({
+          ...row,
+          user_id: user.id,
+          id: undefined,
+        }));
+
+        // Insert in batches of 50
+        for (let i = 0; i < rows.length; i += 50) {
+          const batch = rows.slice(i, i + 50);
+          await (supabase as any).from(tableName).insert(batch);
+        }
+
+        restored.push(tableName);
       }
     }
 
     return { success: true, restored };
-  } catch {
+  } catch (err) {
+    console.error("Restore error:", err);
     return { success: false, restored };
   }
 }
 
 // ── Data Privacy ──────────────────────────────────────────────────────────────
 
-export function deleteAllUserData() {
-  const allKeys = ALL_CATEGORIES.flatMap((cat) => CATEGORY_KEYS[cat]);
-  const additionalKeys = ["subscription", "coach_chat", "exercises", "platform_users", "audit_log", "platform_settings"];
+export async function deleteAllUserData(): Promise<boolean> {
+  try {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
 
-  for (const key of [...allKeys, ...additionalKeys]) {
-    localStorage.removeItem(key);
-  }
+    const tables = ALL_CATEGORIES.flatMap((cat) => CATEGORY_TABLES[cat]).filter((t) => t !== "users");
+    const uniqueTables = [...new Set(tables)];
 
-  // Also remove any legacy fitnessapp_* keys that may still exist
-  const legacyKeys = Object.keys(localStorage).filter((k) => k.startsWith("fitnessapp_"));
-  for (const key of legacyKeys) {
-    localStorage.removeItem(key);
-  }
-}
-
-export function resetAccountData() {
-  // Remove all app localStorage data (both legacy fitnessapp_* and new neutral keys)
-  // Session is managed by Supabase Auth cookies (not localStorage)
-  const allKeys = Object.keys(localStorage).filter((k) =>
-    k.startsWith("fitnessapp_") ||
-    ALL_CATEGORIES.flatMap((cat) => CATEGORY_KEYS[cat]).includes(k)
-  );
-  for (const key of allKeys) {
-    localStorage.removeItem(key);
-  }
-}
-
-// ── Storage Stats ─────────────────────────────────────────────────────────────
-
-export function getStorageStats(): StorageStats {
-  let totalRecords = 0;
-  let estimatedBytes = 0;
-
-  // Count both new neutral keys and legacy fitnessapp_* keys
-  const allCategoryKeys = ALL_CATEGORIES.flatMap((cat) => CATEGORY_KEYS[cat]);
-  const allKeys = Object.keys(localStorage).filter((k) =>
-    k.startsWith("fitnessapp_") || allCategoryKeys.includes(k)
-  );
-
-  for (const key of allKeys) {
-    const val = localStorage.getItem(key);
-    if (val) {
-      estimatedBytes += val.length * 2; // UTF-16
-      try {
-        const parsed = JSON.parse(val);
-        if (Array.isArray(parsed)) totalRecords += parsed.length;
-        else totalRecords += 1;
-      } catch {
-        totalRecords += 1;
-      }
+    for (const table of uniqueTables) {
+      await (supabase as any).from(table).delete().eq("user_id", user.id);
     }
+
+    // Clear local backup storage
+    const backups = loadBackupList();
+    for (const b of backups) {
+      localStorage.removeItem(`${BACKUP_DATA_PREFIX}${b.id}`);
+    }
+    localStorage.removeItem(BACKUPS_KEY);
+
+    return true;
+  } catch {
+    return false;
   }
+}
+
+export async function resetAccountData(): Promise<boolean> {
+  return deleteAllUserData();
+}
+
+// ── Storage Stats (from Supabase) ─────────────────────────────────────────────
+
+export async function getStorageStats(): Promise<StorageStats> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { totalRecords: 0, estimatedBytes: 0, backupCount: 0, lastBackupDate: null };
+
+  let totalRecords = 0;
+
+  const tables = ALL_CATEGORIES.flatMap((cat) => CATEGORY_TABLES[cat]).filter((t) => t !== "users");
+  const uniqueTables = [...new Set(tables)];
+
+  for (const table of uniqueTables) {
+    const { count } = await (supabase as any).from(table).select("id", { count: "exact", head: true }).eq("user_id", user.id);
+    totalRecords += count || 0;
+  }
+
+  // Estimate bytes (rough: ~200 bytes per record average)
+  const estimatedBytes = totalRecords * 200;
 
   const backups = loadBackupList();
   const lastBackup = backups.length > 0 ? backups[0].createdAt : null;
@@ -431,6 +422,8 @@ export function getStorageStats(): StorageStats {
     lastBackupDate: lastBackup,
   };
 }
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

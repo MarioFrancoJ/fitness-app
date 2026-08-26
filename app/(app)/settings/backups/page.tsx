@@ -25,8 +25,8 @@ export default function BackupsPage() {
 
   function refresh() { setBackups(loadBackupList()); }
 
-  function handleCreate() {
-    createBackup();
+  async function handleCreate() {
+    await createBackup();
     refresh();
     showToast("Backup created successfully!");
   }
@@ -56,9 +56,9 @@ export default function BackupsPage() {
     reader.readAsText(file);
   }
 
-  function handleRestore() {
+  async function handleRestore() {
     if (!restoreContent) return;
-    const result = restoreFromBackup(restoreContent, restoreMode, Array.from(restoreCategories));
+    const result = await restoreFromBackup(restoreContent, restoreMode, Array.from(restoreCategories));
     if (result.success) {
       showToast(`Restored ${result.restored.length} data sources`);
       setShowRestore(false);
