@@ -69,17 +69,43 @@ export const CATEGORY_LABELS: Record<ExportCategory, string> = {
 };
 
 // Data source keys mapping
+// NOTE: These keys are used for the legacy localStorage backup/export system.
+// The app now uses Supabase as the primary data source.
+// Old key names preserved in LEGACY_KEY_ALIASES for backward-compatible import.
 const CATEGORY_KEYS: Record<ExportCategory, string[]> = {
-  profile: ["fitnessapp_user", "fitnessapp_measurement_history"],
-  nutrition: ["fitnessapp_nutrition_meals"],
-  workouts: ["fitnessapp_workouts", "fitnessapp_workout_templates", "fitnessapp_training_sessions", "fitnessapp_active_session"],
-  progress: ["fitnessapp_progress_photos", "fitnessapp_daily_checkins"],
-  analytics: ["fitnessapp_progress"],
-  recipes: ["fitnessapp_recipes", "fitnessapp_ingredients"],
-  mealPlans: ["fitnessapp_weekly_meal_plan", "fitnessapp_saved_meal_plans"],
-  shoppingLists: ["fitnessapp_smart_shopping_list"],
-  notifications: ["fitnessapp_notifications", "fitnessapp_notification_preferences"],
-  recommendations: ["fitnessapp_recommendations", "fitnessapp_recommendation_rules"],
+  profile: ["user_profile", "measurement_history"],
+  nutrition: ["nutrition_meals"],
+  workouts: ["workouts", "workout_templates", "training_sessions", "active_session"],
+  progress: ["progress_photos", "daily_checkins"],
+  analytics: ["progress_analytics"],
+  recipes: ["recipes", "ingredients"],
+  mealPlans: ["weekly_meal_plan", "saved_meal_plans"],
+  shoppingLists: ["shopping_list"],
+  notifications: ["notifications", "notification_preferences"],
+  recommendations: ["recommendations", "recommendation_rules"],
+};
+
+// Legacy key aliases for backward-compatible import of old backups
+const LEGACY_KEY_ALIASES: Record<string, string> = {
+  "fitnessapp_user": "user_profile",
+  "fitnessapp_measurement_history": "measurement_history",
+  "fitnessapp_nutrition_meals": "nutrition_meals",
+  "fitnessapp_workouts": "workouts",
+  "fitnessapp_workout_templates": "workout_templates",
+  "fitnessapp_training_sessions": "training_sessions",
+  "fitnessapp_active_session": "active_session",
+  "fitnessapp_progress_photos": "progress_photos",
+  "fitnessapp_daily_checkins": "daily_checkins",
+  "fitnessapp_progress": "progress_analytics",
+  "fitnessapp_recipes": "recipes",
+  "fitnessapp_ingredients": "ingredients",
+  "fitnessapp_weekly_meal_plan": "weekly_meal_plan",
+  "fitnessapp_saved_meal_plans": "saved_meal_plans",
+  "fitnessapp_smart_shopping_list": "shopping_list",
+  "fitnessapp_notifications": "notifications",
+  "fitnessapp_notification_preferences": "notification_preferences",
+  "fitnessapp_recommendations": "recommendations",
+  "fitnessapp_recommendation_rules": "recommendation_rules",
 };
 
 // ── Export Functions ───────────────────────────────────────────────────────────
@@ -247,10 +273,12 @@ export function validateBackup(content: string): ValidationResult {
       return result;
     }
 
-    // Detect categories
+    // Detect categories (recognize both new keys and legacy fitnessapp_* keys)
     for (const cat of ALL_CATEGORIES) {
       const keys = CATEGORY_KEYS[cat];
-      if (keys.some((k) => k in data)) {
+      const legacyKeys = Object.values(LEGACY_KEY_ALIASES);
+      const allKnownKeys = [...keys, ...Object.keys(LEGACY_KEY_ALIASES).filter((lk) => keys.includes(LEGACY_KEY_ALIASES[lk]))];
+      if (allKnownKeys.some((k) => k in data) || keys.some((k) => k in data)) {
         result.categoriesFound.push(cat);
       }
     }
@@ -287,17 +315,23 @@ export function restoreFromBackup(content: string, mode: "merge" | "replace", ca
       }
     }
 
+    // Also allow legacy keys and map them to new keys
+    const legacyToNew = LEGACY_KEY_ALIASES;
+
     for (const [key, value] of Object.entries(data)) {
-      if (!allowedKeys.has(key)) continue;
+      // Determine the target key (map legacy → new, or use as-is if already new)
+      const targetKey = legacyToNew[key] || key;
+      if (!allowedKeys.has(targetKey) && !allowedKeys.has(key)) continue;
+      const storageKey = allowedKeys.has(targetKey) ? targetKey : key;
 
       if (mode === "replace") {
-        localStorage.setItem(key, JSON.stringify(value));
-        restored.push(key);
+        localStorage.setItem(storageKey, JSON.stringify(value));
+        restored.push(storageKey);
       } else {
         // Merge: for arrays, concat; for objects, shallow merge
-        const existing = localStorage.getItem(key);
+        const existing = localStorage.getItem(storageKey);
         if (!existing) {
-          localStorage.setItem(key, JSON.stringify(value));
+          localStorage.setItem(storageKey, JSON.stringify(value));
         } else {
           try {
             const existingData = JSON.parse(existing);
@@ -312,17 +346,17 @@ export function restoreFromBackup(content: string, mode: "merge" | "replace", ca
                 }
                 return true;
               });
-              localStorage.setItem(key, JSON.stringify(deduped));
+              localStorage.setItem(storageKey, JSON.stringify(deduped));
             } else if (typeof existingData === "object" && typeof value === "object") {
-              localStorage.setItem(key, JSON.stringify({ ...existingData, ...(value as object) }));
+              localStorage.setItem(storageKey, JSON.stringify({ ...existingData, ...(value as object) }));
             } else {
-              localStorage.setItem(key, JSON.stringify(value));
+              localStorage.setItem(storageKey, JSON.stringify(value));
             }
           } catch {
-            localStorage.setItem(key, JSON.stringify(value));
+            localStorage.setItem(storageKey, JSON.stringify(value));
           }
         }
-        restored.push(key);
+        restored.push(storageKey);
       }
     }
 
@@ -336,20 +370,26 @@ export function restoreFromBackup(content: string, mode: "merge" | "replace", ca
 
 export function deleteAllUserData() {
   const allKeys = ALL_CATEGORIES.flatMap((cat) => CATEGORY_KEYS[cat]);
-  const additionalKeys = [
-    "fitnessapp_subscription", "fitnessapp_coach_chat", "fitnessapp_exercises",
-    "fitnessapp_platform_users", "fitnessapp_audit_log", "fitnessapp_platform_settings",
-  ];
+  const additionalKeys = ["subscription", "coach_chat", "exercises", "platform_users", "audit_log", "platform_settings"];
 
   for (const key of [...allKeys, ...additionalKeys]) {
+    localStorage.removeItem(key);
+  }
+
+  // Also remove any legacy fitnessapp_* keys that may still exist
+  const legacyKeys = Object.keys(localStorage).filter((k) => k.startsWith("fitnessapp_"));
+  for (const key of legacyKeys) {
     localStorage.removeItem(key);
   }
 }
 
 export function resetAccountData() {
-  // Remove all fitnessapp localStorage data
-  // Session is now managed by Supabase Auth cookies (not localStorage)
-  const allKeys = Object.keys(localStorage).filter((k) => k.startsWith("fitnessapp_"));
+  // Remove all app localStorage data (both legacy fitnessapp_* and new neutral keys)
+  // Session is managed by Supabase Auth cookies (not localStorage)
+  const allKeys = Object.keys(localStorage).filter((k) =>
+    k.startsWith("fitnessapp_") ||
+    ALL_CATEGORIES.flatMap((cat) => CATEGORY_KEYS[cat]).includes(k)
+  );
   for (const key of allKeys) {
     localStorage.removeItem(key);
   }
@@ -361,7 +401,12 @@ export function getStorageStats(): StorageStats {
   let totalRecords = 0;
   let estimatedBytes = 0;
 
-  const allKeys = Object.keys(localStorage).filter((k) => k.startsWith("fitnessapp_"));
+  // Count both new neutral keys and legacy fitnessapp_* keys
+  const allCategoryKeys = ALL_CATEGORIES.flatMap((cat) => CATEGORY_KEYS[cat]);
+  const allKeys = Object.keys(localStorage).filter((k) =>
+    k.startsWith("fitnessapp_") || allCategoryKeys.includes(k)
+  );
+
   for (const key of allKeys) {
     const val = localStorage.getItem(key);
     if (val) {
