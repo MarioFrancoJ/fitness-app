@@ -1,47 +1,29 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import ExerciseForm, { type ExerciseFormData } from "@/components/admin/ExerciseForm";
-import { exercises } from "@/data/exercises";
+import { createClient } from "@/lib/supabase/client";
+
+// This page redirects to the main exercises admin page since
+// editing is now handled inline in the exercises table via the CRUD form.
+// Kept for route compatibility.
 
 export default function EditExercisePage() {
   const params = useParams<{ id: string }>();
-  const exercise = exercises.find((ex) => ex.id === params.id);
+  const router = useRouter();
 
-  if (!exercise) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-sm text-zinc-400">Exercise not found.</p>
-      </div>
-    );
-  }
-
-  const initialData: ExerciseFormData = {
-    name: exercise.name,
-    muscleGroup: exercise.muscleGroup,
-    equipment: exercise.equipment,
-    difficulty: exercise.difficulty,
-    instructions: exercise.instructions.join("\n"),
-    commonMistakes: exercise.commonMistakes.join("\n"),
-    alternatives: "",
-  };
+  useEffect(() => {
+    // Redirect to the exercises admin page where editing is done inline
+    router.replace("/admin/exercises");
+  }, [router]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <Link
-        href={`/admin/exercises/${params.id}`}
-        className="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900"
-      >
-        &larr; Back to {exercise.name}
-      </Link>
-
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Edit Exercise</h1>
-        <p className="mt-1 text-sm text-zinc-500">Editing: {exercise.name}</p>
+    <div className="flex h-64 items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+        <p className="text-sm text-zinc-400">Redirecting to exercises...</p>
       </div>
-
-      <ExerciseForm mode="edit" exerciseId={params.id} initialData={initialData} />
     </div>
   );
 }

@@ -4,10 +4,13 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import type { MuscleGroup, Difficulty, Equipment } from "@/data/exercises";
-import { MUSCLE_GROUPS as MG_OPTIONS, DIFFICULTIES as DIFF_OPTIONS, EQUIPMENT_OPTIONS as EQ_OPTIONS } from "@/data/exercises";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type MuscleGroup = "Chest" | "Back" | "Shoulders" | "Biceps" | "Triceps" | "Forearms" | "Core" | "Glutes" | "Quadriceps" | "Hamstrings" | "Calves" | "Full Body";
+type Difficulty = "Beginner" | "Intermediate" | "Advanced";
+type Equipment = "None" | "Dumbbells" | "Barbell" | "Resistance Bands" | "Pull-Up Bar" | "Machine" | "Kettlebell";
 
 export interface ExerciseFormData {
   name: string;
@@ -25,9 +28,9 @@ interface ExerciseFormProps {
   exerciseId?: string;
 }
 
-const MUSCLE_GROUPS = MG_OPTIONS;
-const DIFFICULTIES = DIFF_OPTIONS;
-const EQUIPMENT_OPTIONS = EQ_OPTIONS;
+const MUSCLE_GROUPS: MuscleGroup[] = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Forearms", "Core", "Glutes", "Quadriceps", "Hamstrings", "Calves", "Full Body"];
+const DIFFICULTIES: Difficulty[] = ["Beginner", "Intermediate", "Advanced"];
+const EQUIPMENT_OPTIONS: Equipment[] = ["None", "Dumbbells", "Barbell", "Resistance Bands", "Pull-Up Bar", "Machine", "Kettlebell"];
 
 const EMPTY_FORM: ExerciseFormData = {
   name: "",
@@ -39,23 +42,6 @@ const EMPTY_FORM: ExerciseFormData = {
   alternatives: "",
 };
 
-// ── Storage ───────────────────────────────────────────────────────────────────
-
-const STORAGE_KEY = "fitnessapp_admin_exercises";
-
-function loadCustomExercises(): ExerciseFormData[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCustomExercises(data: ExerciseFormData[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function ExerciseForm({ initialData, mode, exerciseId }: ExerciseFormProps) {
@@ -63,6 +49,7 @@ export default function ExerciseForm({ initialData, mode, exerciseId }: Exercise
   const [form, setForm] = useState<ExerciseFormData>(initialData || EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<Record<keyof ExerciseFormData, string>>>({});
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   function validate(): boolean {
     const errs: Partial<Record<keyof ExerciseFormData, string>> = {};
@@ -79,166 +66,85 @@ export default function ExerciseForm({ initialData, mode, exerciseId }: Exercise
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!validate()) return;
 
-    const existing = loadCustomExercises();
+    setSaving(true);
+    const supabase = createClient();
 
-    if (mode === "edit" && exerciseId) {
-      // Update in localStorage
-      const updated = existing.map((ex, i) =>
-        i.toString() === exerciseId ? form : ex
-      );
-      saveCustomExercises(updated);
-    } else {
-      // Create new
-      saveCustomExercises([...existing, form]);
+    const data = {
+      name: form.name.trim(),
+      muscle_group: form.muscleGroup as MuscleGroup,
+      equipment: form.equipment as Equipment,
+      difficulty: form.difficulty as Difficulty,
+      category: "Strength" as const,
+      instructions: form.instructions.split("\n").filter((l) => l.trim()),
+      common_mistakes: form.commonMistakes.split("\n").filter((l) => l.trim()),
+    };
+
+    try {
+      if (mode === "edit" && exerciseId) {
+        await supabase.from("exercises").update(data).eq("id", exerciseId);
+      } else {
+        await supabase.from("exercises").insert(data);
+      }
+      setSaved(true);
+      setTimeout(() => router.push("/admin/exercises"), 1000);
+    } catch {
+      setErrors({ name: "Failed to save. Please try again." });
     }
+    setSaving(false);
+  }
 
-    setSaved(true);
-    setTimeout(() => {
-      router.push("/admin/exercises");
-    }, 1000);
+  if (saved) {
+    return (
+      <div className="flex h-32 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50">
+        <p className="text-sm font-medium text-emerald-700">✓ Exercise {mode === "edit" ? "updated" : "created"} successfully!</p>
+      </div>
+    );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-      {/* Basic info */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <p className="mb-5 text-sm font-semibold text-zinc-700">Basic Information</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            id="name"
-            type="text"
-            label="Exercise Name"
-            placeholder="e.g. Bulgarian Split Squat"
-            value={form.name}
-            onChange={(e) => handleChange("name", e.target.value)}
-            error={errors.name}
-          />
-
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="muscleGroup" className="text-sm font-medium text-zinc-700">
-              Muscle Group
-            </label>
-            <select
-              id="muscleGroup"
-              value={form.muscleGroup}
-              onChange={(e) => handleChange("muscleGroup", e.target.value)}
-              className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-            >
-              <option value="" disabled>Select muscle group</option>
-              {MUSCLE_GROUPS.map((mg) => (
-                <option key={mg} value={mg}>{mg}</option>
-              ))}
-            </select>
-            {errors.muscleGroup && <p className="text-xs text-red-500" role="alert">{errors.muscleGroup}</p>}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="equipment" className="text-sm font-medium text-zinc-700">
-              Equipment
-            </label>
-            <select
-              id="equipment"
-              value={form.equipment}
-              onChange={(e) => handleChange("equipment", e.target.value)}
-              className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-            >
-              <option value="" disabled>Select equipment</option>
-              {EQUIPMENT_OPTIONS.map((eq) => (
-                <option key={eq} value={eq}>{eq}</option>
-              ))}
-            </select>
-            {errors.equipment && <p className="text-xs text-red-500" role="alert">{errors.equipment}</p>}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="difficulty" className="text-sm font-medium text-zinc-700">
-              Difficulty
-            </label>
-            <select
-              id="difficulty"
-              value={form.difficulty}
-              onChange={(e) => handleChange("difficulty", e.target.value)}
-              className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-            >
-              <option value="" disabled>Select difficulty</option>
-              {DIFFICULTIES.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-            {errors.difficulty && <p className="text-xs text-red-500" role="alert">{errors.difficulty}</p>}
-          </div>
+    <form onSubmit={handleSubmit} className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Input id="ex-name" type="text" label="Exercise Name" value={form.name} onChange={(e) => handleChange("name", e.target.value)} placeholder="e.g. Barbell Squat" error={errors.name} />
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="ex-muscle" className="text-sm font-medium text-zinc-700">Muscle Group</label>
+          <select id="ex-muscle" value={form.muscleGroup} onChange={(e) => handleChange("muscleGroup", e.target.value)} className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
+            <option value="">Select...</option>
+            {MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+          {errors.muscleGroup && <p className="text-xs text-red-500">{errors.muscleGroup}</p>}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="ex-equip" className="text-sm font-medium text-zinc-700">Equipment</label>
+          <select id="ex-equip" value={form.equipment} onChange={(e) => handleChange("equipment", e.target.value)} className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
+            <option value="">Select...</option>
+            {EQUIPMENT_OPTIONS.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
+          </select>
+          {errors.equipment && <p className="text-xs text-red-500">{errors.equipment}</p>}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="ex-diff" className="text-sm font-medium text-zinc-700">Difficulty</label>
+          <select id="ex-diff" value={form.difficulty} onChange={(e) => handleChange("difficulty", e.target.value)} className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
+            <option value="">Select...</option>
+            {DIFFICULTIES.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+          {errors.difficulty && <p className="text-xs text-red-500">{errors.difficulty}</p>}
+        </div>
+        <div className="sm:col-span-2 flex flex-col gap-1.5">
+          <label htmlFor="ex-instr" className="text-sm font-medium text-zinc-700">Instructions (one per line)</label>
+          <textarea id="ex-instr" value={form.instructions} onChange={(e) => handleChange("instructions", e.target.value)} rows={4} placeholder="Step 1&#10;Step 2&#10;Step 3" className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
+        </div>
+        <div className="sm:col-span-2 flex flex-col gap-1.5">
+          <label htmlFor="ex-mistakes" className="text-sm font-medium text-zinc-700">Common Mistakes (one per line)</label>
+          <textarea id="ex-mistakes" value={form.commonMistakes} onChange={(e) => handleChange("commonMistakes", e.target.value)} rows={3} placeholder="Mistake 1&#10;Mistake 2" className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
         </div>
       </div>
-
-      {/* Details */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <p className="mb-5 text-sm font-semibold text-zinc-700">Details</p>
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="instructions" className="text-sm font-medium text-zinc-700">
-              Instructions (one per line)
-            </label>
-            <textarea
-              id="instructions"
-              rows={5}
-              placeholder="Step 1...&#10;Step 2...&#10;Step 3..."
-              value={form.instructions}
-              onChange={(e) => handleChange("instructions", e.target.value)}
-              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="commonMistakes" className="text-sm font-medium text-zinc-700">
-              Common Mistakes (one per line)
-            </label>
-            <textarea
-              id="commonMistakes"
-              rows={3}
-              placeholder="Mistake 1...&#10;Mistake 2..."
-              value={form.commonMistakes}
-              onChange={(e) => handleChange("commonMistakes", e.target.value)}
-              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="alternatives" className="text-sm font-medium text-zinc-700">
-              Alternatives (comma-separated)
-            </label>
-            <input
-              id="alternatives"
-              type="text"
-              placeholder="e.g. Goblet Squat, Leg Press, Hack Squat"
-              value={form.alternatives}
-              onChange={(e) => handleChange("alternatives", e.target.value)}
-              className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-4">
-        <Button type="submit">
-          {mode === "edit" ? "Save Changes" : "Create Exercise"}
-        </Button>
-        <button
-          type="button"
-          onClick={() => router.push("/admin/exercises")}
-          className="text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900"
-        >
-          Cancel
-        </button>
-        {saved && (
-          <span className="text-sm font-medium text-emerald-600">
-            ✓ {mode === "edit" ? "Changes saved" : "Exercise created"}
-          </span>
-        )}
+      <div className="mt-5 flex gap-3">
+        <Button type="submit" disabled={saving}>{saving ? "Saving..." : mode === "edit" ? "Save Changes" : "Create Exercise"}</Button>
+        <button type="button" onClick={() => router.back()} className="text-sm font-medium text-zinc-500 hover:text-zinc-900">Cancel</button>
       </div>
     </form>
   );

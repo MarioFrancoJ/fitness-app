@@ -2,57 +2,105 @@
 
 import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
-import {
-  loadNotifications, addNotification, deleteNotification, getNotificationStats,
-  NOTIFICATION_TYPES, type Notification, type NotificationType, type NotificationPriority, type NotificationStats,
-} from "@/lib/notifications";
+import { createClient } from "@/lib/supabase/client";
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type NotificationType = "Workout Reminder" | "Nutrition Reminder" | "Meal Planner Reminder" | "Progress Check-In" | "Achievement" | "Recommendation" | "Subscription" | "System";
+type NotificationPriority = "Low" | "Medium" | "High" | "Critical";
+
+interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  priority: string;
+  status: string;
+  created_at: string;
+}
+
+const NOTIFICATION_TYPES: NotificationType[] = ["Workout Reminder", "Nutrition Reminder", "Meal Planner Reminder", "Progress Check-In", "Achievement", "Recommendation", "Subscription", "System"];
 const PRIORITIES: NotificationPriority[] = ["Low", "Medium", "High", "Critical"];
 
-function priorityBadge(p: NotificationPriority): string {
+function priorityBadge(p: string): string {
   switch (p) {
     case "Critical": return "bg-red-100 text-red-700";
-    case "High":     return "bg-orange-100 text-orange-700";
-    case "Medium":   return "bg-amber-100 text-amber-700";
-    case "Low":      return "bg-emerald-100 text-emerald-700";
+    case "High": return "bg-orange-100 text-orange-700";
+    case "Medium": return "bg-amber-100 text-amber-700";
+    default: return "bg-emerald-100 text-emerald-700";
   }
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function AdminNotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [stats, setStats] = useState<NotificationStats>({ totalSent: 0, unreadCount: 0, readRate: 0, archivedRate: 0, byType: {} as NotificationStats["byType"] });
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [formTitle, setFormTitle] = useState("");
   const [formMessage, setFormMessage] = useState("");
   const [formType, setFormType] = useState<NotificationType>("System");
   const [formPriority, setFormPriority] = useState<NotificationPriority>("Medium");
-  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
-    setNotifications(loadNotifications());
-    setStats(getNotificationStats());
-    setHydrated(true);
+    async function loadData() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("notifications")
+        .select("id, type, title, message, priority, status, created_at")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (data) setNotifications(data);
+      setLoading(false);
+    }
+    loadData();
   }, []);
 
   useEffect(() => {
     if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); }
   }, [toast]);
 
-  function refresh() { setNotifications(loadNotifications()); setStats(getNotificationStats()); }
-
-  function handleCreate(e: FormEvent) {
+  async function handleCreate(e: FormEvent) {
     e.preventDefault();
     if (!formTitle.trim()) return;
-    addNotification({ type: formType, title: formTitle.trim(), message: formMessage.trim(), priority: formPriority, actionUrl: null });
-    setFormTitle(""); setFormMessage(""); setShowForm(false);
-    refresh();
-    setToast("Notification broadcast sent");
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      const { data: inserted, error } = await supabase
+        .from("notifications")
+        .insert({ user_id: user.id, type: formType, title: formTitle.trim(), message: formMessage.trim(), priority: formPriority })
+        .select("id, type, title, message, priority, status, created_at")
+        .single();
+
+      if (!error && inserted) {
+        setNotifications((prev) => [inserted, ...prev]);
+        setFormTitle(""); setFormMessage(""); setShowForm(false);
+        setToast("Notification broadcast sent");
+      }
+    } catch (err) {
+      console.error("Failed to create notification:", err);
+    }
   }
 
-  function handleDelete(id: string) { deleteNotification(id); refresh(); }
+  async function handleDelete(id: string) {
+    const supabase = createClient();
+    const { error } = await supabase.from("notifications").delete().eq("id", id);
+    if (!error) setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }
 
-  if (!hydrated) return null;
+  // Stats
+  const totalSent = notifications.length;
+  const unreadCount = notifications.filter((n) => n.status === "Unread").length;
+  const readCount = notifications.filter((n) => n.status === "Read").length;
+  const readRate = totalSent > 0 ? Math.round((readCount / totalSent) * 100) : 0;
+
+  if (loading) {
+    return <div className="flex h-64 items-center justify-center"><div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" /></div>;
+  }
 
   return (
     <>
@@ -65,95 +113,34 @@ export default function AdminNotificationsPage() {
           <Button type="button" onClick={() => setShowForm(true)}>+ Broadcast</Button>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xl font-bold text-zinc-900">{stats.totalSent}</p>
-            <p className="text-xs text-zinc-400">Total Sent</p>
-          </div>
-          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xl font-bold text-blue-600">{stats.unreadCount}</p>
-            <p className="text-xs text-zinc-400">Unread</p>
-          </div>
-          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xl font-bold text-emerald-600">{stats.readRate}%</p>
-            <p className="text-xs text-zinc-400">Read Rate</p>
-          </div>
-          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xl font-bold text-zinc-500">{stats.archivedRate}%</p>
-            <p className="text-xs text-zinc-400">Archived Rate</p>
-          </div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-zinc-900">{totalSent}</p><p className="text-xs text-zinc-400">Total Sent</p></div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-blue-600">{unreadCount}</p><p className="text-xs text-zinc-400">Unread</p></div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-emerald-600">{readRate}%</p><p className="text-xs text-zinc-400">Read Rate</p></div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-zinc-500">{notifications.filter((n) => n.status === "Archived").length}</p><p className="text-xs text-zinc-400">Archived</p></div>
         </div>
 
-        {/* Create form */}
         {showForm && (
           <form onSubmit={handleCreate} className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
             <p className="mb-4 text-sm font-semibold text-zinc-700">Create System Notification</p>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2 flex flex-col gap-1.5">
-                <label htmlFor="notif-title" className="text-sm font-medium text-zinc-700">Title</label>
-                <input id="notif-title" type="text" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} placeholder="Notification title" required
-                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
-              </div>
-              <div className="sm:col-span-2 flex flex-col gap-1.5">
-                <label htmlFor="notif-msg" className="text-sm font-medium text-zinc-700">Message</label>
-                <textarea id="notif-msg" value={formMessage} onChange={(e) => setFormMessage(e.target.value)} placeholder="Notification content" rows={3}
-                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="notif-type" className="text-sm font-medium text-zinc-700">Type</label>
-                <select id="notif-type" value={formType} onChange={(e) => setFormType(e.target.value as NotificationType)}
-                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
-                  {NOTIFICATION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="notif-pri" className="text-sm font-medium text-zinc-700">Priority</label>
-                <select id="notif-pri" value={formPriority} onChange={(e) => setFormPriority(e.target.value as NotificationPriority)}
-                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
-                  {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
+              <div className="sm:col-span-2 flex flex-col gap-1.5"><label htmlFor="notif-title" className="text-sm font-medium text-zinc-700">Title</label><input id="notif-title" type="text" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} placeholder="Notification title" required className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" /></div>
+              <div className="sm:col-span-2 flex flex-col gap-1.5"><label htmlFor="notif-msg" className="text-sm font-medium text-zinc-700">Message</label><textarea id="notif-msg" value={formMessage} onChange={(e) => setFormMessage(e.target.value)} placeholder="Notification content" rows={3} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" /></div>
+              <div className="flex flex-col gap-1.5"><label htmlFor="notif-type" className="text-sm font-medium text-zinc-700">Type</label><select id="notif-type" value={formType} onChange={(e) => setFormType(e.target.value as NotificationType)} className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">{NOTIFICATION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+              <div className="flex flex-col gap-1.5"><label htmlFor="notif-pri" className="text-sm font-medium text-zinc-700">Priority</label><select id="notif-pri" value={formPriority} onChange={(e) => setFormPriority(e.target.value as NotificationPriority)} className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">{PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}</select></div>
             </div>
-            <div className="mt-4 flex gap-3">
-              <Button type="submit">Send Notification</Button>
-              <button type="button" onClick={() => setShowForm(false)} className="text-sm font-medium text-zinc-500 hover:text-zinc-900">Cancel</button>
-            </div>
+            <div className="mt-4 flex gap-3"><Button type="submit">Send Notification</Button><button type="button" onClick={() => setShowForm(false)} className="text-sm font-medium text-zinc-500 hover:text-zinc-900">Cancel</button></div>
           </form>
         )}
 
-        {/* Type breakdown */}
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="mb-3 text-sm font-semibold text-zinc-700">By Type</p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {NOTIFICATION_TYPES.map((t) => (
-              <div key={t} className="rounded-lg bg-zinc-50 p-3 text-center">
-                <p className="text-lg font-bold text-zinc-900">{stats.byType[t] || 0}</p>
-                <p className="text-[10px] text-zinc-400">{t}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent notifications table */}
         <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <div className="border-b border-zinc-100 px-5 py-3">
-            <p className="text-sm font-semibold text-zinc-700">Recent Notifications ({notifications.length})</p>
-          </div>
+          <div className="border-b border-zinc-100 px-5 py-3"><p className="text-sm font-semibold text-zinc-700">Recent Notifications ({notifications.length})</p></div>
           {notifications.length === 0 ? (
             <div className="flex h-32 items-center justify-center"><p className="text-sm text-zinc-400">No notifications yet.</p></div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-zinc-100 bg-zinc-50">
-                  <tr>
-                    <th className="px-5 py-2 text-xs font-semibold text-zinc-400">Title</th>
-                    <th className="px-5 py-2 text-xs font-semibold text-zinc-400">Type</th>
-                    <th className="px-5 py-2 text-xs font-semibold text-zinc-400">Priority</th>
-                    <th className="px-5 py-2 text-xs font-semibold text-zinc-400">Status</th>
-                    <th className="px-5 py-2 text-xs font-semibold text-zinc-400">Actions</th>
-                  </tr>
-                </thead>
+                <thead className="border-b border-zinc-100 bg-zinc-50"><tr><th className="px-5 py-2 text-xs font-semibold text-zinc-400">Title</th><th className="px-5 py-2 text-xs font-semibold text-zinc-400">Type</th><th className="px-5 py-2 text-xs font-semibold text-zinc-400">Priority</th><th className="px-5 py-2 text-xs font-semibold text-zinc-400">Status</th><th className="px-5 py-2 text-xs font-semibold text-zinc-400">Actions</th></tr></thead>
                 <tbody className="divide-y divide-zinc-50">
                   {notifications.slice(0, 20).map((n) => (
                     <tr key={n.id} className="hover:bg-zinc-50">
@@ -171,11 +158,7 @@ export default function AdminNotificationsPage() {
         </div>
       </div>
 
-      {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-          <p className="text-sm font-medium text-zinc-800">{toast}</p>
-        </div>
-      )}
+      {toast && (<div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg"><p className="text-sm font-medium text-zinc-800">{toast}</p></div>)}
     </>
   );
 }
