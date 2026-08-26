@@ -2,28 +2,111 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getAIService, loadFeatureFlags, getUsageStats, type AIFeatureFlags, type AIUsageStats } from "@/lib/ai";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface AIUsageStats {
+  dailyRequests: number;
+  monthlyRequests: number;
+  dailyTokens: number;
+  monthlyTokens: number;
+  estimatedMonthlyCost: number;
+}
+
+interface AIFeatureFlags {
+  aiCoach: boolean;
+  aiMealPlanner: boolean;
+  aiWorkoutGenerator: boolean;
+  aiInsights: boolean;
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AIDashboardPage() {
   const [flags, setFlags] = useState<AIFeatureFlags>({ aiCoach: true, aiMealPlanner: false, aiWorkoutGenerator: false, aiInsights: false });
   const [usage, setUsage] = useState<AIUsageStats>({ dailyRequests: 0, monthlyRequests: 0, dailyTokens: 0, monthlyTokens: 0, estimatedMonthlyCost: 0 });
   const [activeProvider, setActiveProvider] = useState("Rule-Based (Fallback)");
-  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setFlags(loadFeatureFlags());
-    setUsage(getUsageStats());
-    setActiveProvider(getAIService().getActiveProvider());
-    setHydrated(true);
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      // Load AI usage stats from ai_usage table
+      const today = new Date().toISOString().slice(0, 10);
+      const monthStart = today.slice(0, 7);
+
+      const { data: usageData } = await supabase
+        .from("ai_usage")
+        .select("tokens_used, estimated_cost, date")
+        .eq("user_id", user.id);
+
+      if (usageData) {
+        const dailyEntries = usageData.filter((u) => u.date === today);
+        const monthlyEntries = usageData.filter((u) => u.date.startsWith(monthStart));
+        setUsage({
+          dailyRequests: dailyEntries.length,
+          monthlyRequests: monthlyEntries.length,
+          dailyTokens: dailyEntries.reduce((s, u) => s + u.tokens_used, 0),
+          monthlyTokens: monthlyEntries.reduce((s, u) => s + u.tokens_used, 0),
+          estimatedMonthlyCost: monthlyEntries.reduce((s, u) => s + u.estimated_cost, 0),
+        });
+      }
+
+      // Load feature flags from platform_settings
+      const { data: flagsData } = await supabase
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "ai_feature_flags")
+        .maybeSingle();
+
+      if (flagsData?.value && typeof flagsData.value === "object") {
+        const v = flagsData.value as Record<string, boolean>;
+        setFlags({
+          aiCoach: v.aiCoach ?? true,
+          aiMealPlanner: v.aiMealPlanner ?? false,
+          aiWorkoutGenerator: v.aiWorkoutGenerator ?? false,
+          aiInsights: v.aiInsights ?? false,
+        });
+      }
+
+      // Check active provider from platform_settings
+      const { data: configData } = await supabase
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "ai_config")
+        .maybeSingle();
+
+      if (configData?.value && typeof configData.value === "object") {
+        const cfg = configData.value as Record<string, string>;
+        const provider = cfg.provider || "rule_based";
+        setActiveProvider(provider === "rule_based" ? "Rule-Based (Fallback)" : provider.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase()));
+      }
+
+      setLoading(false);
+    }
+    loadData();
   }, []);
 
-  if (!hydrated) return null;
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading AI dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   const features = [
     { key: "aiCoach" as const, label: "AI Coach", description: "Personalized fitness coaching and Q&A", enabled: flags.aiCoach, href: "/ai/chat" },
     { key: "aiMealPlanner" as const, label: "AI Meal Planner", description: "Generate meal plans based on your goals", enabled: flags.aiMealPlanner, href: "/meal-planner" },
     { key: "aiWorkoutGenerator" as const, label: "AI Workout Generator", description: "Create custom workout programs", enabled: flags.aiWorkoutGenerator, href: "/workouts/new" },
-    { key: "aiInsights" as const, label: "AI Insights", description: "Deep analysis of your progress data", enabled: flags.aiInsights, href: "/recommendations" },
+    { key: "aiInsights" as const, label: "AI Insights", description: "Deep analysis of your progress data", enabled: flags.aiInsights, href: "/ai-coach" },
   ];
 
   return (
@@ -112,9 +195,9 @@ export default function AIDashboardPage() {
           <p className="text-sm font-semibold text-zinc-900">AI Settings</p>
           <p className="text-xs text-zinc-400">Configure preferences</p>
         </Link>
-        <Link href="/recommendations" className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
-          <p className="text-sm font-semibold text-zinc-900">Recommendations</p>
-          <p className="text-xs text-zinc-400">Smart suggestions</p>
+        <Link href="/ai-coach" className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+          <p className="text-sm font-semibold text-zinc-900">AI Coach</p>
+          <p className="text-xs text-zinc-400">Personalized recommendations</p>
         </Link>
       </div>
     </div>

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import type { Locale } from "@/lib/i18n/config";
 import LanguageSwitcher from "./LanguageSwitcher";
 import NotificationPanel from "./NotificationPanel";
-import { getUnreadCount, generateReminders } from "@/lib/notifications";
 import { createClient } from "@/lib/supabase/client";
 
 // ── Inline SVG icons ──────────────────────────────────────────────────────────
@@ -39,17 +38,25 @@ export default function Topbar({ locale }: TopbarProps) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   useEffect(() => {
-    generateReminders();
-    setUnread(getUnreadCount());
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    // Get user name from Supabase session
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        const name = user.user_metadata?.name || user.email || "";
-        setUserInitial(name.charAt(0).toUpperCase() || "U");
-      }
-    });
+      // Get user initial
+      const name = user.user_metadata?.name || user.email || "";
+      setUserInitial(name.charAt(0).toUpperCase() || "U");
+
+      // Get unread count from Supabase
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "Unread");
+
+      setUnread(count || 0);
+    }
+    loadData();
   }, []);
 
   function toggleNotifications() {
@@ -99,46 +106,27 @@ export default function Topbar({ locale }: TopbarProps) {
             aria-expanded={notificationsOpen}
             className={[
               "relative rounded-lg p-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
-              notificationsOpen
-                ? "bg-zinc-100 text-zinc-900"
-                : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900",
+              notificationsOpen ? "bg-zinc-100 text-zinc-900" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900",
             ].join(" ")}
           >
             <IconBell />
             {unread > 0 && (
-              <span
-                aria-label={`${unread} unread`}
-                className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white"
-              >
+              <span aria-label={`${unread} unread`} className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
                 {unread > 9 ? "9+" : unread}
               </span>
             )}
           </button>
 
-          {/* Notification Panel (overlay) */}
-          <NotificationPanel
-            isOpen={notificationsOpen}
-            onClose={closeNotifications}
-            onUnreadCountChange={handleUnreadCountChange}
-          />
+          <NotificationPanel isOpen={notificationsOpen} onClose={closeNotifications} onUnreadCountChange={handleUnreadCountChange} />
         </div>
 
         {/* User avatar */}
-        <button
-          type="button"
-          aria-label="User menu"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2"
-        >
+        <button type="button" aria-label="User menu" className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2">
           {userInitial}
         </button>
 
         {/* Logout */}
-        <button
-          type="button"
-          onClick={handleLogout}
-          aria-label="Sign out"
-          className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
-        >
+        <button type="button" onClick={handleLogout} aria-label="Sign out" className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900">
           Sign out
         </button>
       </div>

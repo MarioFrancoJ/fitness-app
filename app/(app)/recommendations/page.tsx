@@ -1,17 +1,24 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  generateAndSaveRecommendations,
-  loadRecommendations,
-  updateRecommendationStatus,
-  getWeeklySummary,
-  type Recommendation,
-  type RecommendationCategory,
-  type RecommendationPriority,
-  type RecommendationStatus,
-  type WeeklySummary,
-} from "@/lib/recommendation-engine";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type RecommendationCategory = "Nutrition" | "Training" | "Recovery" | "Weight Management" | "Consistency" | "Motivation" | "Goal Achievement";
+type RecommendationPriority = "Low" | "Medium" | "High" | "Critical";
+type RecommendationStatus = "New" | "Viewed" | "Dismissed" | "Completed";
+type FilterTab = "active" | "completed" | "dismissed";
+
+interface Recommendation {
+  id: string;
+  category: RecommendationCategory;
+  priority: RecommendationPriority;
+  title: string;
+  description: string;
+  status: RecommendationStatus;
+  generatedDate: string;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -45,59 +52,59 @@ function categoryIcon(c: RecommendationCategory): string {
   }
 }
 
-type FilterTab = "active" | "completed" | "dismissed";
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RecommendationsPage() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [summary, setSummary] = useState<WeeklySummary>({ topRecommendations: [], improvements: [], risks: [] });
   const [filter, setFilter] = useState<FilterTab>("active");
-  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
 
   const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
-    generateAndSaveRecommendations();
-    setRecommendations(loadRecommendations());
-    setSummary(getWeeklySummary());
-    setHydrated(true);
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      const { data } = await supabase
+        .from("recommendations")
+        .select("id, category, priority, title, description, status, generated_date")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (data) {
+        setRecommendations(data.map((r) => ({
+          id: r.id,
+          category: r.category as RecommendationCategory,
+          priority: r.priority as RecommendationPriority,
+          title: r.title,
+          description: r.description,
+          status: r.status as RecommendationStatus,
+          generatedDate: r.generated_date,
+        })));
+      }
+
+      setLoading(false);
+    }
+    loadData();
   }, []);
 
   useEffect(() => {
-    if (toast) {
-      const t = setTimeout(dismissToast, 3000);
-      return () => clearTimeout(t);
-    }
+    if (toast) { const t = setTimeout(dismissToast, 3000); return () => clearTimeout(t); }
   }, [toast, dismissToast]);
 
-  function refresh() {
-    setRecommendations(loadRecommendations());
-    setSummary(getWeeklySummary());
-  }
-
-  function handleMarkViewed(id: string) {
-    updateRecommendationStatus(id, "Viewed");
-    refresh();
-  }
-
-  function handleDismiss(id: string) {
-    updateRecommendationStatus(id, "Dismissed");
-    refresh();
-    setToast("Recommendation dismissed");
-  }
-
-  function handleComplete(id: string) {
-    updateRecommendationStatus(id, "Completed");
-    refresh();
-    setToast("Marked as completed!");
-  }
-
-  function handleRegenerate() {
-    generateAndSaveRecommendations();
-    refresh();
-    setToast("Recommendations refreshed");
+  async function handleUpdateStatus(id: string, status: RecommendationStatus) {
+    try {
+      const supabase = createClient();
+      await supabase.from("recommendations").update({ status }).eq("id", id);
+      setRecommendations((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+      if (status === "Completed") setToast("Marked as completed!");
+      if (status === "Dismissed") setToast("Recommendation dismissed");
+    } catch (err) {
+      console.error("Failed to update recommendation:", err);
+    }
   }
 
   // Filtered lists
@@ -105,27 +112,26 @@ export default function RecommendationsPage() {
   const completed = recommendations.filter((r) => r.status === "Completed");
   const dismissed = recommendations.filter((r) => r.status === "Dismissed");
   const critical = active.filter((r) => r.priority === "Critical");
-
   const displayed = filter === "active" ? active : filter === "completed" ? completed : dismissed;
 
-  if (!hydrated) return null;
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading recommendations...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
       <div className="flex flex-col gap-6">
         {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Recommendations</h1>
-            <p className="mt-1 text-sm text-zinc-500">Personalized guidance based on your data and behavior.</p>
-          </div>
-          <button type="button" onClick={handleRegenerate}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300">
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
-              <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H4.28a.75.75 0 0 0-.75.75v3.955a.75.75 0 0 0 1.5 0v-2.134l.235.234A7 7 0 0 0 17 10a.75.75 0 0 0-1.5 0c0 .51-.07 1.003-.188 1.424ZM4.688 8.576a5.5 5.5 0 0 1 9.201-2.466l.312.311h-2.433a.75.75 0 0 0 0 1.5h3.952a.75.75 0 0 0 .75-.75V3.216a.75.75 0 0 0-1.5 0v2.134l-.235-.234A7 7 0 0 0 3 10a.75.75 0 0 0 1.5 0c0-.51.07-1.003.188-1.424Z" clipRule="evenodd" />
-            </svg>
-            Refresh
-          </button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Recommendations</h1>
+          <p className="mt-1 text-sm text-zinc-500">Personalized guidance based on your data and behavior.</p>
         </div>
 
         {/* Stats cards */}
@@ -148,36 +154,6 @@ export default function RecommendationsPage() {
           </div>
         </div>
 
-        {/* Weekly Summary */}
-        {(summary.improvements.length > 0 || summary.risks.length > 0) && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {summary.risks.length > 0 && (
-              <div className="rounded-xl border border-red-100 bg-red-50 p-5">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-red-400">Biggest Risks</p>
-                <ul className="flex flex-col gap-1.5">
-                  {summary.risks.map((r, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-red-800">
-                      <span className="mt-0.5 text-red-400">&#9679;</span>{r}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {summary.improvements.length > 0 && (
-              <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-5">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-emerald-400">Improvements</p>
-                <ul className="flex flex-col gap-1.5">
-                  {summary.improvements.map((imp, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-emerald-800">
-                      <span className="mt-0.5 text-emerald-400">&#10003;</span>{imp}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Tabs */}
         <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-0.5 w-fit">
           {([["active", "Active"], ["completed", "Completed"], ["dismissed", "Dismissed"]] as [FilterTab, string][]).map(([key, label]) => (
@@ -199,7 +175,7 @@ export default function RecommendationsPage() {
           <div className="flex flex-col gap-3">
             {displayed.map((rec) => (
               <div key={rec.id} className={`rounded-xl border-l-4 border border-zinc-200 p-5 shadow-sm ${priorityColor(rec.priority)}`}
-                onClick={() => rec.status === "New" && handleMarkViewed(rec.id)}>
+                onClick={() => rec.status === "New" && handleUpdateStatus(rec.id, "Viewed")}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <span className="mt-0.5 text-lg">{categoryIcon(rec.category)}</span>
@@ -217,14 +193,13 @@ export default function RecommendationsPage() {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   {filter === "active" && (
                     <div className="flex shrink-0 gap-1">
-                      <button type="button" onClick={(e) => { e.stopPropagation(); handleComplete(rec.id); }}
+                      <button type="button" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(rec.id, "Completed"); }}
                         className="rounded-md bg-emerald-100 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-200">
                         Complete
                       </button>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); handleDismiss(rec.id); }}
+                      <button type="button" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(rec.id, "Dismissed"); }}
                         className="rounded-md bg-zinc-100 px-2.5 py-1 text-[10px] font-semibold text-zinc-500 hover:bg-zinc-200">
                         Dismiss
                       </button>
@@ -237,7 +212,6 @@ export default function RecommendationsPage() {
         )}
       </div>
 
-      {/* Toast */}
       {toast && (
         <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
           <p className="text-sm font-medium text-zinc-800">{toast}</p>

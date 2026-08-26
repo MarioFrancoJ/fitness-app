@@ -1,26 +1,107 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { loadAIConfig, loadFeatureFlags, getUsageStats, type AIUsageStats } from "@/lib/ai";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface AIUsageStats {
+  dailyRequests: number;
+  monthlyRequests: number;
+  dailyTokens: number;
+  monthlyTokens: number;
+  estimatedMonthlyCost: number;
+}
+
+interface AIFeatureFlags {
+  aiCoach: boolean;
+  aiMealPlanner: boolean;
+  aiWorkoutGenerator: boolean;
+  aiInsights: boolean;
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AISettingsPage() {
   const [usage, setUsage] = useState<AIUsageStats>({ dailyRequests: 0, monthlyRequests: 0, dailyTokens: 0, monthlyTokens: 0, estimatedMonthlyCost: 0 });
-  const [provider, setProvider] = useState("");
-  const [model, setModel] = useState("");
-  const [flags, setFlags] = useState({ aiCoach: true, aiMealPlanner: false, aiWorkoutGenerator: false, aiInsights: false });
-  const [hydrated, setHydrated] = useState(false);
+  const [provider, setProvider] = useState("rule_based");
+  const [model, setModel] = useState("gpt-4o-mini");
+  const [flags, setFlags] = useState<AIFeatureFlags>({ aiCoach: true, aiMealPlanner: false, aiWorkoutGenerator: false, aiInsights: false });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const config = loadAIConfig();
-    setProvider(config.provider);
-    setModel(config.model);
-    setFlags(loadFeatureFlags());
-    setUsage(getUsageStats());
-    setHydrated(true);
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      // Load AI config from platform_settings
+      const { data: configData } = await supabase
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "ai_config")
+        .maybeSingle();
+
+      if (configData?.value && typeof configData.value === "object") {
+        const cfg = configData.value as Record<string, string>;
+        setProvider(cfg.provider || "rule_based");
+        setModel(cfg.model || "gpt-4o-mini");
+      }
+
+      // Load feature flags
+      const { data: flagsData } = await supabase
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "ai_feature_flags")
+        .maybeSingle();
+
+      if (flagsData?.value && typeof flagsData.value === "object") {
+        const v = flagsData.value as Record<string, boolean>;
+        setFlags({
+          aiCoach: v.aiCoach ?? true,
+          aiMealPlanner: v.aiMealPlanner ?? false,
+          aiWorkoutGenerator: v.aiWorkoutGenerator ?? false,
+          aiInsights: v.aiInsights ?? false,
+        });
+      }
+
+      // Load usage stats
+      const today = new Date().toISOString().slice(0, 10);
+      const monthStart = today.slice(0, 7);
+
+      const { data: usageData } = await supabase
+        .from("ai_usage")
+        .select("tokens_used, estimated_cost, date")
+        .eq("user_id", user.id);
+
+      if (usageData) {
+        const dailyEntries = usageData.filter((u) => u.date === today);
+        const monthlyEntries = usageData.filter((u) => u.date.startsWith(monthStart));
+        setUsage({
+          dailyRequests: dailyEntries.length,
+          monthlyRequests: monthlyEntries.length,
+          dailyTokens: dailyEntries.reduce((s, u) => s + u.tokens_used, 0),
+          monthlyTokens: monthlyEntries.reduce((s, u) => s + u.tokens_used, 0),
+          estimatedMonthlyCost: monthlyEntries.reduce((s, u) => s + u.estimated_cost, 0),
+        });
+      }
+
+      setLoading(false);
+    }
+    loadData();
   }, []);
 
-  if (!hydrated) return null;
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading AI settings...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

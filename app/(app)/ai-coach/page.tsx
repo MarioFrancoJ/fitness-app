@@ -2,8 +2,27 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { generateRecommendations, saveCheckIn, getTodayCheckIn, type Recommendation, type DailyCheckIn, type RecommendationCategory } from "@/lib/ai-coach";
-import { getTrainingStats } from "@/lib/training-store";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type RecommendationCategory = "Nutrition" | "Training" | "Recovery" | "Motivation" | "Consistency";
+
+interface Recommendation {
+  id: string;
+  category: RecommendationCategory;
+  priority: "high" | "medium" | "low";
+  title: string;
+  message: string;
+}
+
+interface DailyCheckIn {
+  date: string;
+  energyLevel: number;
+  sleepQuality: number;
+  stressLevel: number;
+  motivationLevel: number;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -35,6 +54,12 @@ function priorityBorder(p: "high" | "medium" | "low"): string {
   }
 }
 
+function mapPriority(p: string): "high" | "medium" | "low" {
+  if (p === "High" || p === "Critical") return "high";
+  if (p === "Medium") return "medium";
+  return "low";
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AiCoachPage() {
@@ -46,30 +71,95 @@ export default function AiCoachPage() {
   const [motivation, setMotivation] = useState(7);
   const [checkInSaved, setCheckInSaved] = useState(false);
   const [stats, setStats] = useState({ workoutsThisWeek: 0, currentStreak: 0 });
-  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
 
   const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
-    const recs = generateRecommendations();
-    setRecommendations(recs);
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-    const existing = getTodayCheckIn();
-    if (existing) {
-      setCheckIn(existing);
-      setEnergy(existing.energyLevel);
-      setSleep(existing.sleepQuality);
-      setStress(existing.stressLevel);
-      setMotivation(existing.motivationLevel);
-      setCheckInSaved(true);
+      const today = new Date().toISOString().slice(0, 10);
+
+      // Load today's check-in
+      const { data: checkInData } = await supabase
+        .from("daily_checkins")
+        .select("date, energy_level, sleep_quality, stress_level, motivation_level")
+        .eq("user_id", user.id)
+        .eq("date", today)
+        .maybeSingle();
+
+      if (checkInData) {
+        const ci: DailyCheckIn = {
+          date: checkInData.date,
+          energyLevel: checkInData.energy_level,
+          sleepQuality: checkInData.sleep_quality,
+          stressLevel: checkInData.stress_level,
+          motivationLevel: checkInData.motivation_level,
+        };
+        setCheckIn(ci);
+        setEnergy(ci.energyLevel);
+        setSleep(ci.sleepQuality);
+        setStress(ci.stressLevel);
+        setMotivation(ci.motivationLevel);
+        setCheckInSaved(true);
+      }
+
+      // Load recommendations (active ones)
+      const { data: recsData } = await supabase
+        .from("recommendations")
+        .select("id, category, priority, title, description")
+        .eq("user_id", user.id)
+        .in("status", ["New", "Viewed"])
+        .order("created_at", { ascending: false })
+        .limit(6);
+
+      if (recsData) {
+        setRecommendations(recsData.map((r) => ({
+          id: r.id,
+          category: r.category as RecommendationCategory,
+          priority: mapPriority(r.priority),
+          title: r.title,
+          message: r.description,
+        })));
+      }
+
+      // Load training stats (workouts this week + streak)
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekStart = weekAgo.toISOString().slice(0, 10);
+
+      const { data: sessionsData } = await supabase
+        .from("training_sessions")
+        .select("date, status")
+        .eq("user_id", user.id)
+        .eq("status", "Completed")
+        .order("date", { ascending: false })
+        .limit(60);
+
+      if (sessionsData) {
+        const thisWeek = sessionsData.filter((s) => s.date >= weekStart);
+        setStats((prev) => ({ ...prev, workoutsThisWeek: thisWeek.length }));
+
+        // Calculate streak
+        let streak = 0;
+        const dates = new Set(sessionsData.map((s) => s.date));
+        const d = new Date();
+        for (let i = 0; i < 60; i++) {
+          const dateStr = d.toISOString().slice(0, 10);
+          if (dates.has(dateStr)) { streak++; }
+          else if (i > 0) break; // Allow today to not have workout yet
+          d.setDate(d.getDate() - 1);
+        }
+        setStats((prev) => ({ ...prev, currentStreak: streak }));
+      }
+
+      setLoading(false);
     }
-
-    try {
-      setStats(getTrainingStats());
-    } catch {}
-
-    setHydrated(true);
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -79,17 +169,46 @@ export default function AiCoachPage() {
     }
   }, [toast, dismissToast]);
 
-  function handleCheckInSave() {
+  async function handleCheckInSave() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
     const today = new Date().toISOString().slice(0, 10);
-    const data: DailyCheckIn = { date: today, energyLevel: energy, sleepQuality: sleep, stressLevel: stress, motivationLevel: motivation };
-    saveCheckIn(data);
-    setCheckIn(data);
-    setCheckInSaved(true);
-    setToast("Check-in saved! Recommendations updated.");
-    setRecommendations(generateRecommendations());
+
+    try {
+      if (checkIn) {
+        // Update existing
+        await supabase
+          .from("daily_checkins")
+          .update({ energy_level: energy, sleep_quality: sleep, stress_level: stress, motivation_level: motivation })
+          .eq("user_id", user.id)
+          .eq("date", today);
+      } else {
+        // Insert new
+        await supabase
+          .from("daily_checkins")
+          .insert({ user_id: user.id, date: today, energy_level: energy, sleep_quality: sleep, stress_level: stress, motivation_level: motivation });
+      }
+
+      setCheckIn({ date: today, energyLevel: energy, sleepQuality: sleep, stressLevel: stress, motivationLevel: motivation });
+      setCheckInSaved(true);
+      setToast("Check-in saved!");
+    } catch (err) {
+      console.error("Failed to save check-in:", err);
+    }
   }
 
-  if (!hydrated) return null;
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading AI Coach...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Today's focus: highest priority recommendation
   const todaysFocus = recommendations.find((r) => r.priority === "high") || recommendations[0];
@@ -156,18 +275,24 @@ export default function AiCoachPage() {
         {/* Recommendations */}
         <div>
           <p className="mb-3 text-sm font-semibold text-zinc-900">Recommendations</p>
-          <div className="flex flex-col gap-3">
-            {recommendations.map((rec) => (
-              <div key={rec.id} className={`rounded-xl border border-zinc-200 bg-white p-5 shadow-sm ${priorityBorder(rec.priority)}`}>
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="text-base">{categoryIcon(rec.category)}</span>
-                  <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${categoryColor(rec.category)}`}>{rec.category}</span>
+          {recommendations.length === 0 ? (
+            <div className="flex h-32 items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-sm">
+              <p className="text-sm text-zinc-400">No recommendations yet. Complete a check-in and train consistently to get personalized tips.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {recommendations.map((rec) => (
+                <div key={rec.id} className={`rounded-xl border border-zinc-200 bg-white p-5 shadow-sm ${priorityBorder(rec.priority)}`}>
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="text-base">{categoryIcon(rec.category)}</span>
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${categoryColor(rec.category)}`}>{rec.category}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-zinc-900">{rec.title}</p>
+                  <p className="mt-1 text-xs text-zinc-500">{rec.message}</p>
                 </div>
-                <p className="text-sm font-semibold text-zinc-900">{rec.title}</p>
-                <p className="mt-1 text-xs text-zinc-500">{rec.message}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

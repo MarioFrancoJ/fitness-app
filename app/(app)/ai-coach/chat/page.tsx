@@ -2,79 +2,147 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { loadChatHistory, saveChatHistory, getCoachResponse, type ChatMessage } from "@/lib/ai-coach";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface ChatMsg {
+  id: string;
+  role: "user" | "coach";
+  content: string;
+  timestamp: string;
+}
+
+// ── Rule-based coach responses ────────────────────────────────────────────────
+
+function getCoachResponse(input: string): string {
+  const lower = input.toLowerCase();
+
+  if (lower.includes("eat") || lower.includes("nutrition") || lower.includes("food") || lower.includes("diet")) {
+    return "Focus on whole foods and hit your protein target. Aim for lean proteins at every meal, plenty of vegetables, and complex carbs around your workouts. Need a specific meal suggestion?";
+  }
+  if (lower.includes("workout") || lower.includes("train") || lower.includes("exercise")) {
+    return "If you haven't trained in a few days, start with your weakest muscle group or a compound movement session. Progressive overload is key — try adding 1 rep or 2.5kg from last time.";
+  }
+  if (lower.includes("tired") || lower.includes("exhausted") || lower.includes("energy")) {
+    return "Low energy can come from poor sleep, undereating, or overtraining. Check: Are you sleeping 7-8 hours? Eating enough carbs? Taking rest days? Sometimes a light walk or stretching session is better than pushing through.";
+  }
+  if (lower.includes("motivat") || lower.includes("lazy") || lower.includes("don't want")) {
+    return "Motivation is temporary — discipline is what builds results. On tough days, commit to just 10 minutes. Once you start, you usually finish. Remember: showing up is 90% of the battle.";
+  }
+  if (lower.includes("weight") || lower.includes("fat") || lower.includes("lose") || lower.includes("gain")) {
+    return "For weight management, track your weekly average weight rather than daily fluctuations. A 300-500 calorie deficit for fat loss or 200-300 surplus for muscle gain is sustainable. Patience is key!";
+  }
+  if (lower.includes("sleep") || lower.includes("rest") || lower.includes("recover")) {
+    return "Sleep is your #1 recovery tool. Try: consistent sleep/wake times, no screens 30 min before bed, cool dark room, magnesium supplement. Aim for 7-9 hours.";
+  }
+  if (lower.includes("sore") || lower.includes("pain") || lower.includes("injury")) {
+    return "Muscle soreness (DOMS) is normal after new exercises. If pain is sharp or in joints, stop and rest. Light movement, foam rolling, and adequate protein help recovery. Persistent pain needs medical attention.";
+  }
+
+  return "Great question! My general advice: stay consistent with training (3-4x/week), hit your protein goals, prioritize sleep, and track your progress. What specific area would you like help with — nutrition, training, or recovery?";
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AiCoachChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
-  const [hydrated, setHydrated] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const history = loadChatHistory();
-    if (history.length === 0) {
-      // Welcome message
-      const welcome: ChatMessage = {
-        id: "welcome",
-        role: "coach",
-        content: "Hey! I'm your AI fitness coach. Ask me anything about training, nutrition, recovery, or motivation. I'm here to help!",
-        timestamp: new Date().toISOString(),
-      };
-      setMessages([welcome]);
-      saveChatHistory([welcome]);
-    } else {
-      setMessages(history);
+    async function loadChat() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setInitialLoading(false); return; }
+
+      // Load chat history — use a filter to distinguish from ai/chat (coach role messages here)
+      const { data } = await supabase
+        .from("ai_chat_messages")
+        .select("id, role, content, timestamp")
+        .eq("user_id", user.id)
+        .order("timestamp", { ascending: true });
+
+      if (data && data.length > 0) {
+        setMessages(data.map((m) => ({ id: m.id, role: m.role as "user" | "coach", content: m.content, timestamp: m.timestamp })));
+      } else {
+        const welcome: ChatMsg = { id: "welcome", role: "coach", content: "Hey! I'm your AI fitness coach. Ask me anything about training, nutrition, recovery, or motivation. I'm here to help!", timestamp: new Date().toISOString() };
+        setMessages([welcome]);
+        await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content });
+      }
+
+      setInitialLoading(false);
     }
-    setHydrated(true);
+    loadChat();
   }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  function handleSend() {
+  async function handleSend() {
     if (!input.trim()) return;
+    const userContent = input.trim();
 
-    const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: input.trim(),
-      timestamp: new Date().toISOString(),
-    };
-
-    const response = getCoachResponse(input.trim());
-    const coachMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "coach",
-      content: response,
-      timestamp: new Date().toISOString(),
-    };
+    const userMsg: ChatMsg = { id: crypto.randomUUID(), role: "user", content: userContent, timestamp: new Date().toISOString() };
+    const response = getCoachResponse(userContent);
+    const coachMsg: ChatMsg = { id: crypto.randomUUID(), role: "coach", content: response, timestamp: new Date().toISOString() };
 
     const updated = [...messages, userMsg, coachMsg];
     setMessages(updated);
-    saveChatHistory(updated);
     setInput("");
-  }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+    // Persist to Supabase
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("ai_chat_messages").insert([
+          { user_id: user.id, role: "user", content: userContent },
+          { user_id: user.id, role: "coach", content: response },
+        ]);
+      }
+    } catch (err) {
+      console.error("Failed to save chat:", err);
     }
   }
 
-  function handleClearChat() {
-    const welcome: ChatMessage = {
-      id: "welcome",
-      role: "coach",
-      content: "Chat cleared! How can I help you today?",
-      timestamp: new Date().toISOString(),
-    };
-    setMessages([welcome]);
-    saveChatHistory([welcome]);
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
-  if (!hydrated) return null;
+  async function handleClearChat() {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("ai_chat_messages").delete().eq("user_id", user.id);
+      }
+    } catch {}
+
+    const welcome: ChatMsg = { id: "welcome", role: "coach", content: "Chat cleared! How can I help you today?", timestamp: new Date().toISOString() };
+    setMessages([welcome]);
+
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content });
+      }
+    } catch {}
+  }
+
+  if (initialLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading chat...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[calc(100vh-7rem)] flex-col">

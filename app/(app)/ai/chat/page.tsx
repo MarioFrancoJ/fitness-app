@@ -2,49 +2,81 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { getAIService, buildAIContext, buildChatPrompt, type AIMessage } from "@/lib/ai";
+import { createClient } from "@/lib/supabase/client";
 
-const CHAT_KEY = "fitnessapp_ai_chat_history";
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ChatMsg {
   id: string;
-  role: "user" | "assistant";
+  role: "user" | "coach";
   content: string;
   timestamp: string;
-}
-
-function loadChat(): ChatMsg[] {
-  try {
-    const raw = localStorage.getItem(CHAT_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-}
-
-function saveChat(msgs: ChatMsg[]) {
-  localStorage.setItem(CHAT_KEY, JSON.stringify(msgs));
 }
 
 function timeStr(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+// ── Simple rule-based responses (fallback when no external AI) ────────────────
+
+function getAIResponse(input: string): string {
+  const lower = input.toLowerCase();
+
+  if (lower.includes("eat") || lower.includes("nutrition") || lower.includes("food") || lower.includes("diet") || lower.includes("meal")) {
+    return "For optimal results, aim to hit your protein target first (around 1.6-2.2g per kg of bodyweight), then fill remaining calories with carbs and fats based on your activity level. Track your meals consistently to stay accountable.";
+  }
+  if (lower.includes("workout") || lower.includes("train") || lower.includes("exercise") || lower.includes("routine")) {
+    return "A good training split depends on your schedule. For 3-4 days per week, try a Push/Pull/Legs or Upper/Lower split. Focus on progressive overload — gradually increasing weight, reps, or sets over time.";
+  }
+  if (lower.includes("progress") || lower.includes("plateau") || lower.includes("stuck") || lower.includes("results")) {
+    return "Plateaus are normal! Try adjusting your training volume, deload for a week, or reassess your calorie intake. Small changes in sleep quality and stress management can also make a big difference.";
+  }
+  if (lower.includes("motivation") || lower.includes("tired") || lower.includes("lazy") || lower.includes("quit")) {
+    return "Remember why you started. On low-motivation days, commit to just showing up — even a 15-minute session maintains your habit. Consistency beats intensity every time.";
+  }
+  if (lower.includes("recovery") || lower.includes("rest") || lower.includes("sleep") || lower.includes("sore")) {
+    return "Recovery is when growth happens. Aim for 7-9 hours of sleep, stay hydrated, and consider light mobility work on rest days. If you're constantly sore, you may be doing too much volume.";
+  }
+  if (lower.includes("weight") || lower.includes("fat") || lower.includes("lose") || lower.includes("gain")) {
+    return "Weight management comes down to energy balance. For fat loss, aim for a 300-500 calorie deficit. For muscle gain, a 200-300 surplus. Weigh yourself daily and track the weekly average for accurate trends.";
+  }
+
+  return "That's a great question! Based on general fitness principles, I'd recommend focusing on consistency with your training and nutrition. Track your progress, adjust when needed, and don't forget recovery. Would you like me to help with something more specific?";
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function AIChatPage() {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const history = loadChat();
-    if (history.length === 0) {
-      const welcome: ChatMsg = { id: "welcome", role: "assistant", content: "Hey! I'm your AI fitness coach. I have access to your profile, nutrition, training, and progress data — ask me anything and I'll give you personalized advice.", timestamp: new Date().toISOString() };
-      setMessages([welcome]);
-      saveChat([welcome]);
-    } else {
-      setMessages(history);
+    async function loadChat() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setInitialLoading(false); return; }
+
+      const { data } = await supabase
+        .from("ai_chat_messages")
+        .select("id, role, content, timestamp")
+        .eq("user_id", user.id)
+        .order("timestamp", { ascending: true });
+
+      if (data && data.length > 0) {
+        setMessages(data.map((m) => ({ id: m.id, role: m.role as "user" | "coach", content: m.content, timestamp: m.timestamp })));
+      } else {
+        // Create welcome message
+        const welcome: ChatMsg = { id: "welcome", role: "coach", content: "Hey! I'm your AI fitness coach. I have access to your profile, nutrition, training, and progress data — ask me anything and I'll give you personalized advice.", timestamp: new Date().toISOString() };
+        setMessages([welcome]);
+        await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content });
+      }
+
+      setInitialLoading(false);
     }
-    setHydrated(true);
+    loadChat();
   }, []);
 
   useEffect(() => {
@@ -53,33 +85,32 @@ export default function AIChatPage() {
 
   async function handleSend() {
     if (!input.trim() || loading) return;
-    const userMsg: ChatMsg = { id: crypto.randomUUID(), role: "user", content: input.trim(), timestamp: new Date().toISOString() };
+    const userContent = input.trim();
+    const userMsg: ChatMsg = { id: crypto.randomUUID(), role: "user", content: userContent, timestamp: new Date().toISOString() };
     const updated = [...messages, userMsg];
     setMessages(updated);
     setInput("");
     setLoading(true);
 
     try {
-      // Build context from user data
-      const context = buildAIContext();
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-      // Build prompt with history
-      const aiHistory: AIMessage[] = messages.slice(-8).map((m) => ({ role: m.role === "assistant" ? "assistant" as const : "user" as const, content: m.content }));
-      const promptMessages = buildChatPrompt(aiHistory, userMsg.content, context);
+      // Save user message
+      await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "user", content: userContent });
 
-      // Call AI service
-      const service = getAIService();
-      const response = await service.complete({ messages: promptMessages, context });
+      // Generate response (rule-based fallback)
+      const responseContent = getAIResponse(userContent);
+      const assistantMsg: ChatMsg = { id: crypto.randomUUID(), role: "coach", content: responseContent, timestamp: new Date().toISOString() };
 
-      const assistantMsg: ChatMsg = { id: crypto.randomUUID(), role: "assistant", content: response.content, timestamp: new Date().toISOString() };
-      const final = [...updated, assistantMsg];
-      setMessages(final);
-      saveChat(final);
+      // Save coach response
+      await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: responseContent });
+
+      setMessages([...updated, assistantMsg]);
     } catch {
-      const errorMsg: ChatMsg = { id: crypto.randomUUID(), role: "assistant", content: "Sorry, I encountered an error. Please try again.", timestamp: new Date().toISOString() };
-      const final = [...updated, errorMsg];
-      setMessages(final);
-      saveChat(final);
+      const errorMsg: ChatMsg = { id: crypto.randomUUID(), role: "coach", content: "Sorry, I encountered an error. Please try again.", timestamp: new Date().toISOString() };
+      setMessages([...updated, errorMsg]);
     }
 
     setLoading(false);
@@ -89,13 +120,27 @@ export default function AIChatPage() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
-  function handleClear() {
-    const welcome: ChatMsg = { id: "welcome", role: "assistant", content: "Chat cleared! How can I help you today?", timestamp: new Date().toISOString() };
+  async function handleClear() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.from("ai_chat_messages").delete().eq("user_id", user.id);
+    const welcome: ChatMsg = { id: "welcome", role: "coach", content: "Chat cleared! How can I help you today?", timestamp: new Date().toISOString() };
+    await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content });
     setMessages([welcome]);
-    saveChat([welcome]);
   }
 
-  if (!hydrated) return null;
+  if (initialLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading chat...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[calc(100vh-7rem)] flex-col">
@@ -121,7 +166,7 @@ export default function AIChatPage() {
               <div className={["max-w-[80%] rounded-2xl px-4 py-3",
                 msg.role === "user" ? "bg-zinc-900 text-white" : "border border-zinc-200 bg-white text-zinc-800 shadow-sm",
               ].join(" ")}>
-                {msg.role === "assistant" && (
+                {msg.role === "coach" && (
                   <div className="mb-1 flex items-center gap-1.5">
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-blue-100 text-[10px]">AI</span>
                     <span className="text-[10px] font-semibold text-zinc-400">Coach</span>
