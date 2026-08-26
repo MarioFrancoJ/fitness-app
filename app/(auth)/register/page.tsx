@@ -30,23 +30,23 @@ export default function RegisterPage() {
 
     // Validation
     if (!name.trim()) {
-      setError("El nombre es obligatorio.");
+      setError("Full name is required.");
       return;
     }
     if (!email.trim()) {
-      setError("El correo es obligatorio.");
+      setError("Email is required.");
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Ingresa un correo válido.");
+      setError("Please enter a valid email address.");
       return;
     }
     if (password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres.");
+      setError("Password must be at least 8 characters.");
       return;
     }
     if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden.");
+      setError("Passwords do not match.");
       return;
     }
 
@@ -68,7 +68,7 @@ export default function RegisterPage() {
     if (authError) {
       setError(
         authError.message.includes("already registered")
-          ? "Este correo ya está registrado."
+          ? "This email is already registered."
           : authError.message
       );
       setLoading(false);
@@ -102,10 +102,10 @@ export default function RegisterPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-          Crea tu cuenta
+          Create your account
         </h1>
         <p className="mt-1.5 text-sm text-zinc-500">
-          Comienza tu transformación hoy. Es gratis.
+          Start your transformation today. It&apos;s free.
         </p>
       </div>
 
@@ -119,111 +119,47 @@ export default function RegisterPage() {
 
         {/* Name */}
         <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="name"
-            className="text-sm font-medium text-zinc-700"
-          >
-            Nombre completo
-          </label>
-          <input
-            id="name"
-            type="text"
-            placeholder="Mario Franco"
-            autoComplete="name"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              if (error) setError("");
-            }}
-            className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
-          />
+          <label htmlFor="name" className="text-sm font-medium text-zinc-700">Full name</label>
+          <input id="name" type="text" placeholder="John Doe" autoComplete="name" value={name}
+            onChange={(e) => { setName(e.target.value); if (error) setError(""); }}
+            className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500" />
         </div>
 
         {/* Email */}
         <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="email"
-            className="text-sm font-medium text-zinc-700"
-          >
-            Correo electrónico
-          </label>
-          <input
-            id="email"
-            type="email"
-            placeholder="tu@ejemplo.com"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              if (error) setError("");
-            }}
-            className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
-          />
+          <label htmlFor="email" className="text-sm font-medium text-zinc-700">Email</label>
+          <input id="email" type="email" placeholder="you@example.com" autoComplete="email" value={email}
+            onChange={(e) => { setEmail(e.target.value); if (error) setError(""); }}
+            className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500" />
         </div>
 
         {/* Password */}
         <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="password"
-            className="text-sm font-medium text-zinc-700"
-          >
-            Contraseña
-          </label>
-          <input
-            id="password"
-            type="password"
-            placeholder="Mínimo 8 caracteres"
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              if (error) setError("");
-            }}
-            className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
-          />
+          <label htmlFor="password" className="text-sm font-medium text-zinc-700">Password</label>
+          <input id="password" type="password" placeholder="Minimum 8 characters" autoComplete="new-password" value={password}
+            onChange={(e) => { setPassword(e.target.value); if (error) setError(""); }}
+            className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500" />
         </div>
 
         {/* Confirm Password */}
         <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="confirmPassword"
-            className="text-sm font-medium text-zinc-700"
-          >
-            Confirmar contraseña
-          </label>
-          <input
-            id="confirmPassword"
-            type="password"
-            placeholder="Repite tu contraseña"
-            autoComplete="new-password"
-            value={confirmPassword}
-            onChange={(e) => {
-              setConfirmPassword(e.target.value);
-              if (error) setError("");
-            }}
-            className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
-          />
+          <label htmlFor="confirmPassword" className="text-sm font-medium text-zinc-700">Confirm password</label>
+          <input id="confirmPassword" type="password" placeholder="Repeat your password" autoComplete="new-password" value={confirmPassword}
+            onChange={(e) => { setConfirmPassword(e.target.value); if (error) setError(""); }}
+            className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500" />
         </div>
 
         {/* Submit */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-1 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {loading ? "Creando cuenta…" : "Crear Cuenta"}
+        <button type="submit" disabled={loading}
+          className="mt-1 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50">
+          {loading ? "Creating account…" : "Create Account"}
         </button>
       </form>
 
       {/* Footer */}
       <p className="mt-6 text-center text-sm text-zinc-500">
-        ¿Ya tienes cuenta?{" "}
-        <Link
-          href="/login"
-          className="font-semibold text-zinc-900 hover:text-zinc-600"
-        >
-          Iniciar sesión
-        </Link>
+        Already have an account?{" "}
+        <Link href="/login" className="font-semibold text-zinc-900 hover:text-zinc-600">Sign in</Link>
       </p>
     </div>
   );

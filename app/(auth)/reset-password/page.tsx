@@ -26,20 +26,18 @@ export default function ResetPasswordPage() {
     setError("");
 
     if (password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres.");
+      setError("Password must be at least 8 characters.");
       return;
     }
     if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden.");
+      setError("Passwords do not match.");
       return;
     }
 
     setLoading(true);
 
     const supabase = createClient();
-    const { error: updateError } = await supabase.auth.updateUser({
-      password,
-    });
+    const { error: updateError } = await supabase.auth.updateUser({ password });
 
     if (updateError) {
       setError(updateError.message);
@@ -50,7 +48,6 @@ export default function ResetPasswordPage() {
     setSuccess(true);
     setLoading(false);
 
-    // Redirect to dashboard after 2 seconds
     setTimeout(() => {
       router.push("/dashboard");
       router.refresh();
@@ -62,26 +59,12 @@ export default function ResetPasswordPage() {
       <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
         <div className="text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-            <svg
-              className="h-6 w-6 text-green-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="m4.5 12.75 6 6 9-13.5"
-              />
+            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-zinc-900">
-            Contraseña actualizada
-          </h2>
-          <p className="mt-2 text-sm text-zinc-500">
-            Tu contraseña ha sido cambiada exitosamente. Redirigiendo…
-          </p>
+          <h2 className="text-lg font-semibold text-zinc-900">Password updated</h2>
+          <p className="mt-2 text-sm text-zinc-500">Your password has been changed successfully. Redirecting…</p>
         </div>
       </div>
     );
@@ -89,75 +72,31 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-      {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-          Nueva contraseña
-        </h1>
-        <p className="mt-1.5 text-sm text-zinc-500">
-          Ingresa tu nueva contraseña. Debe tener al menos 8 caracteres.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">New password</h1>
+        <p className="mt-1.5 text-sm text-zinc-500">Enter your new password. It must be at least 8 characters.</p>
       </div>
 
       <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
-        {/* Error */}
-        {error && (
-          <div className="rounded-lg bg-red-50 px-4 py-3" role="alert">
-            <p className="text-sm font-medium text-red-700">{error}</p>
-          </div>
-        )}
+        {error && (<div className="rounded-lg bg-red-50 px-4 py-3" role="alert"><p className="text-sm font-medium text-red-700">{error}</p></div>)}
 
-        {/* New Password */}
         <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="password"
-            className="text-sm font-medium text-zinc-700"
-          >
-            Nueva contraseña
-          </label>
-          <input
-            id="password"
-            type="password"
-            placeholder="Mínimo 8 caracteres"
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              if (error) setError("");
-            }}
-            className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
-          />
+          <label htmlFor="password" className="text-sm font-medium text-zinc-700">New password</label>
+          <input id="password" type="password" placeholder="Minimum 8 characters" autoComplete="new-password" value={password}
+            onChange={(e) => { setPassword(e.target.value); if (error) setError(""); }}
+            className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500" />
         </div>
 
-        {/* Confirm */}
         <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="confirmPassword"
-            className="text-sm font-medium text-zinc-700"
-          >
-            Confirmar contraseña
-          </label>
-          <input
-            id="confirmPassword"
-            type="password"
-            placeholder="Repite tu contraseña"
-            autoComplete="new-password"
-            value={confirmPassword}
-            onChange={(e) => {
-              setConfirmPassword(e.target.value);
-              if (error) setError("");
-            }}
-            className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
-          />
+          <label htmlFor="confirmPassword" className="text-sm font-medium text-zinc-700">Confirm password</label>
+          <input id="confirmPassword" type="password" placeholder="Repeat your password" autoComplete="new-password" value={confirmPassword}
+            onChange={(e) => { setConfirmPassword(e.target.value); if (error) setError(""); }}
+            className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500" />
         </div>
 
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-1 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {loading ? "Actualizando…" : "Actualizar contraseña"}
+        <button type="submit" disabled={loading}
+          className="mt-1 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50">
+          {loading ? "Updating…" : "Update password"}
         </button>
       </form>
     </div>

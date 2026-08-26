@@ -30,7 +30,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen items-center justify-center bg-zinc-50">
         <div className="flex flex-col items-center gap-3">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
-          <p className="text-sm text-zinc-400">Cargando...</p>
+          <p className="text-sm text-zinc-400">Loading...</p>
         </div>
       </div>
     );

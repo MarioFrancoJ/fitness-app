@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Locale } from "@/lib/i18n/config";
 import LanguageSwitcher from "./LanguageSwitcher";
 import NotificationPanel from "./NotificationPanel";
+import SearchPanel from "./SearchPanel";
 import { createClient } from "@/lib/supabase/client";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
   const [unread, setUnread] = useState(0);
   const [userInitial, setUserInitial] = useState("U");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -64,7 +66,17 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
       setUnread(count || 0);
     }
     loadData();
-  }, []);
+
+    // Keyboard shortcut: "/" to open search
+    function handleSlash(e: KeyboardEvent) {
+      if (e.key === "/" && !searchOpen && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    }
+    document.addEventListener("keydown", handleSlash);
+    return () => document.removeEventListener("keydown", handleSlash);
+  }, [searchOpen]);
 
   function toggleNotifications() {
     setNotificationsOpen((prev) => !prev);
@@ -98,17 +110,32 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
           <IconMenu />
         </button>
 
-        {/* Search */}
-        <div className="relative hidden w-64 sm:block">
-          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+        {/* Search trigger */}
+        <div className="relative hidden sm:block">
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            className="flex h-9 w-64 items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 pl-3 pr-3 text-sm text-zinc-400 transition-colors hover:border-zinc-300 hover:bg-white"
+          >
             <IconSearch />
-          </span>
-          <input
-            type="search"
-            placeholder="Search..."
-            aria-label="Search"
-            className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-          />
+            <span>Search...</span>
+            <kbd className="ml-auto rounded border border-zinc-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-zinc-400">/</kbd>
+          </button>
+          <SearchPanel open={searchOpen} onClose={() => setSearchOpen(false)} />
+        </div>
+
+        {/* Mobile search button */}
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          aria-label="Search"
+          className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 sm:hidden"
+        >
+          <IconSearch />
+        </button>
+        {/* Mobile search panel */}
+        <div className="sm:hidden">
+          <SearchPanel open={searchOpen} onClose={() => setSearchOpen(false)} />
         </div>
       </div>
 
