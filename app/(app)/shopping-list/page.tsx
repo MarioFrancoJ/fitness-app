@@ -2,125 +2,32 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { loadRecipes } from "@/lib/recipes-store";
-import { loadIngredients } from "@/lib/ingredients-store";
-import type { Recipe } from "@/data/recipes";
-import type { Ingredient, IngredientCategory } from "@/data/ingredients-seed";
-import { INGREDIENT_CATEGORIES } from "@/data/ingredients-seed";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ShoppingItem {
   id: string;
-  ingredientId: string;
   ingredientName: string;
-  category: IngredientCategory;
+  category: string;
   quantity: number;
   unit: string;
   purchased: boolean;
-  estimatedCost: number | null;
 }
 
 type FilterMode = "all" | "pending" | "purchased";
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const WEEKLY_PLAN_KEY = "fitnessapp_weekly_meal_plan";
-const SHOPPING_LIST_KEY = "fitnessapp_smart_shopping_list";
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function loadWeeklyPlan(): Record<string, Record<string, string | null>> | null {
-  try {
-    const raw = localStorage.getItem(WEEKLY_PLAN_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw);
-    return data.plan ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function loadSavedList(): ShoppingItem[] {
-  try {
-    const raw = localStorage.getItem(SHOPPING_LIST_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveList(items: ShoppingItem[]) {
-  localStorage.setItem(SHOPPING_LIST_KEY, JSON.stringify(items));
-}
-
-/**
- * Aggregate ingredients from all recipes in the weekly meal plan.
- * Combines duplicates by summing quantities.
- */
-function generateFromMealPlan(
-  plan: Record<string, Record<string, string | null>>,
-  recipes: Recipe[],
-  ingredients: Ingredient[]
-): ShoppingItem[] {
-  // Collect all recipe IDs (may repeat)
-  const recipeIds: string[] = [];
-  for (const day of Object.values(plan)) {
-    for (const slotId of Object.values(day)) {
-      if (slotId) recipeIds.push(slotId);
-    }
-  }
-
-  // Count occurrences of each recipe
-  const recipeCounts: Record<string, number> = {};
-  for (const id of recipeIds) {
-    recipeCounts[id] = (recipeCounts[id] || 0) + 1;
-  }
-
-  // Aggregate ingredients
-  const map = new Map<string, { qty: number; unit: string; ingredientId: string; name: string; category: IngredientCategory }>();
-
-  for (const [recipeId, count] of Object.entries(recipeCounts)) {
-    const recipe = recipes.find((r) => r.id === recipeId);
-    if (!recipe) continue;
-
-    for (const ri of recipe.ingredients) {
-      const key = ri.ingredientId || ri.name.toLowerCase();
-      const existing = map.get(key);
-      const ing = ingredients.find((i) => i.id === ri.ingredientId);
-      const category: IngredientCategory = ing?.category ?? "Other";
-
-      if (existing) {
-        existing.qty += ri.quantity * count;
-      } else {
-        map.set(key, {
-          qty: ri.quantity * count,
-          unit: ri.unit,
-          ingredientId: ri.ingredientId || "",
-          name: ri.name,
-          category,
-        });
-      }
-    }
-  }
-
-  // Convert to ShoppingItem array
-  const items: ShoppingItem[] = [];
-  let idx = 0;
-  for (const [, { qty, unit, ingredientId, name, category }] of map) {
-    items.push({
-      id: `si-${idx++}`,
-      ingredientId,
-      ingredientName: name,
-      category,
-      quantity: Math.round(qty * 100) / 100,
-      unit,
-      purchased: false,
-      estimatedCost: null, // No price data yet
-    });
-  }
-
-  return items.sort((a, b) => a.category.localeCompare(b.category) || a.ingredientName.localeCompare(b.ingredientName));
+function getWeekDates(): { start: string; end: string } {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + mondayOffset);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) };
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -184,85 +91,250 @@ function StatCard({ label, value, color = "text-zinc-900" }: { label: string; va
 
 export default function ShoppingListPage() {
   const [items, setItems] = useState<ShoppingItem[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [listId, setListId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [hasMealPlan, setHasMealPlan] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterMode>("all");
-  const [categoryFilter, setCategoryFilter] = useState<"All" | IngredientCategory>("All");
+  const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [search, setSearch] = useState("");
 
   const dismissToast = useCallback(() => setToast(null), []);
 
+  // ── Load from Supabase ──────────────────────────────────────────────────────
+
   useEffect(() => {
-    const plan = loadWeeklyPlan();
-    setHasMealPlan(plan !== null && Object.keys(plan).length > 0);
+    async function loadData() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-    // Load saved list or generate fresh
-    const saved = loadSavedList();
-    if (saved.length > 0) {
-      setItems(saved);
-    } else if (plan) {
-      const recipes = loadRecipes();
-      const ingredients = loadIngredients();
-      const generated = generateFromMealPlan(plan, recipes, ingredients);
-      setItems(generated);
-      saveList(generated);
+      // Check if a meal plan exists for current week
+      const { start, end } = getWeekDates();
+      const { data: planData } = await supabase
+        .from("meal_plans")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("week_start_date", start)
+        .eq("week_end_date", end)
+        .maybeSingle();
+
+      setHasMealPlan(!!planData);
+
+      // Load saved shopping list (most recent for this user)
+      const { data: listData } = await supabase
+        .from("shopping_lists")
+        .select("id, items")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (listData) {
+        setListId(listData.id);
+        const storedItems = (listData.items as any[]) || [];
+        setItems(storedItems.map((item: any) => ({
+          id: item.id || crypto.randomUUID(),
+          ingredientName: item.ingredientName || item.name || "",
+          category: item.category || "Other",
+          quantity: item.quantity || 0,
+          unit: item.unit || "",
+          purchased: item.purchased || false,
+        })));
+      }
+
+      setLoading(false);
     }
-
-    setHydrated(true);
+    loadData();
   }, []);
 
-  // Persist on change
-  useEffect(() => {
-    if (hydrated && items.length > 0) {
-      saveList(items);
+  // ── Persist to Supabase ─────────────────────────────────────────────────────
+
+  async function saveItems(updatedItems: ShoppingItem[]) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    setSaving(true);
+
+    try {
+      if (listId) {
+        const { error } = await supabase
+          .from("shopping_lists")
+          .update({ items: updatedItems as any })
+          .eq("id", listId);
+        if (error) console.error("Failed to update shopping list:", error.message);
+      } else {
+        const { data: inserted, error } = await supabase
+          .from("shopping_lists")
+          .insert({
+            user_id: user.id,
+            items: updatedItems as any,
+          })
+          .select("id")
+          .single();
+
+        if (error) {
+          console.error("Failed to create shopping list:", error.message);
+        } else if (inserted) {
+          setListId(inserted.id);
+        }
+      }
+    } catch (err) {
+      console.error("Shopping list save error:", err);
     }
-  }, [items, hydrated]);
 
-  // ── Actions ────────────────────────────────────────────────────────────────
+    setSaving(false);
+  }
 
-  function handleGenerate() {
-    const plan = loadWeeklyPlan();
-    if (!plan) {
-      setToast("No meal plan found");
+  // ── Generate from Meal Plan ─────────────────────────────────────────────────
+
+  async function handleGenerate() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Load current week's meal plan
+    const { start, end } = getWeekDates();
+    const { data: planData } = await supabase
+      .from("meal_plans")
+      .select("plan_data")
+      .eq("user_id", user.id)
+      .eq("week_start_date", start)
+      .eq("week_end_date", end)
+      .maybeSingle();
+
+    if (!planData || !planData.plan_data) {
+      setToast("No meal plan found for this week");
       return;
     }
-    const recipes = loadRecipes();
-    const ingredients = loadIngredients();
-    const generated = generateFromMealPlan(plan, recipes, ingredients);
+
+    // Extract recipe IDs from plan
+    const plan = planData.plan_data as Record<string, Record<string, string | null>>;
+    const recipeCounts: Record<string, number> = {};
+
+    for (const day of Object.values(plan)) {
+      for (const id of Object.values(day)) {
+        if (id) {
+          recipeCounts[id] = (recipeCounts[id] || 0) + 1;
+        }
+      }
+    }
+
+    const recipeIds = Object.keys(recipeCounts);
+    if (recipeIds.length === 0) {
+      setToast("Your meal plan is empty. Add recipes first.");
+      return;
+    }
+
+    // Load recipe ingredients from Supabase
+    const { data: recipesData, error: recipesErr } = await supabase
+      .from("recipes")
+      .select(`
+        id,
+        recipe_ingredients (
+          name,
+          quantity,
+          unit
+        )
+      `)
+      .in("id", recipeIds);
+
+    if (recipesErr || !recipesData || recipesData.length === 0) {
+      setToast("Could not load recipe ingredients");
+      return;
+    }
+
+    // Aggregate ingredients
+    const ingredientMap: Record<string, { qty: number; unit: string }> = {};
+
+    for (const recipe of recipesData) {
+      const count = recipeCounts[recipe.id] || 1;
+      for (const ing of (recipe.recipe_ingredients || [])) {
+        const key = ing.name.toLowerCase();
+        if (ingredientMap[key]) {
+          ingredientMap[key].qty += (ing.quantity || 0) * count;
+        } else {
+          ingredientMap[key] = { qty: (ing.quantity || 0) * count, unit: ing.unit || "" };
+        }
+      }
+    }
+
+    // Convert to ShoppingItem array
+    const generated: ShoppingItem[] = Object.entries(ingredientMap)
+      .map(([name, { qty, unit }]) => ({
+        id: crypto.randomUUID(),
+        ingredientName: name.charAt(0).toUpperCase() + name.slice(1),
+        category: "General",
+        quantity: Math.round(qty * 100) / 100,
+        unit,
+        purchased: false,
+      }))
+      .sort((a, b) => a.ingredientName.localeCompare(b.ingredientName));
+
     setItems(generated);
-    saveList(generated);
+    setHasMealPlan(true);
+    await saveItems(generated);
     setToast("Shopping list generated from meal plan!");
   }
 
-  function handleClear() {
+  // ── Actions ────────────────────────────────────────────────────────────────
+
+  async function handleClear() {
     setItems([]);
-    localStorage.removeItem(SHOPPING_LIST_KEY);
+    await saveItems([]);
     setToast("Shopping list cleared");
   }
 
-  function handleResetPurchased() {
-    setItems((prev) => prev.map((i) => ({ ...i, purchased: false })));
+  async function handleResetPurchased() {
+    const updated = items.map((i) => ({ ...i, purchased: false }));
+    setItems(updated);
+    await saveItems(updated);
     setToast("All items marked as pending");
   }
 
-  function togglePurchased(id: string) {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, purchased: !i.purchased } : i)));
+  async function togglePurchased(id: string) {
+    const updated = items.map((i) => (i.id === id ? { ...i, purchased: !i.purchased } : i));
+    setItems(updated);
+    await saveItems(updated);
   }
 
-  function deleteItem(id: string) {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+  async function deleteItem(id: string) {
+    const updated = items.filter((i) => i.id !== id);
+    setItems(updated);
+    await saveItems(updated);
+  }
+
+  function handleExportCSV() {
+    if (items.length === 0) {
+      setToast("No items to export");
+      return;
+    }
+    const header = "Ingredient,Category,Quantity,Unit,Status\n";
+    const rows = items.map((i) =>
+      `"${i.ingredientName}","${i.category}",${i.quantity},"${i.unit}","${i.purchased ? "Purchased" : "Pending"}"`
+    ).join("\n");
+    const blob = new Blob([header + rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "shopping-list.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    setToast("CSV exported!");
   }
 
   function handleExportPDF() {
     setToast("PDF export coming soon!");
   }
 
-  function handleExportCSV() {
-    setToast("CSV export coming soon!");
-  }
-
   // ── Derived ────────────────────────────────────────────────────────────────
+
+  const categories = useMemo(() => {
+    const cats = new Set(items.map((i) => i.category));
+    return Array.from(cats).sort();
+  }, [items]);
 
   const filteredItems = useMemo(() => {
     return items.filter((i) => {
@@ -276,8 +348,6 @@ export default function ShoppingListPage() {
   const totalItems = items.length;
   const purchasedItems = items.filter((i) => i.purchased).length;
   const remainingItems = totalItems - purchasedItems;
-  const estimatedCost = items.reduce((sum, i) => sum + (i.estimatedCost ?? 0), 0);
-  const hasCostData = items.some((i) => i.estimatedCost !== null && i.estimatedCost > 0);
 
   const statusFilters: { label: string; value: FilterMode }[] = [
     { label: "All", value: "all" },
@@ -285,7 +355,18 @@ export default function ShoppingListPage() {
     { label: "Purchased", value: "purchased" },
   ];
 
-  if (!hydrated) return null;
+  // ── Loading ────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading shopping list...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -296,6 +377,7 @@ export default function ShoppingListPage() {
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Shopping List</h1>
             <p className="mt-1 text-sm text-zinc-500">
               Auto-generated from your weekly meal plan recipes.
+              {saving && <span className="ml-2 text-xs text-zinc-400">(Saving...)</span>}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -319,11 +401,10 @@ export default function ShoppingListPage() {
         ) : (
           <>
             {/* ── Dashboard Cards ── */}
-            <div className={`grid gap-3 ${hasCostData ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+            <div className="grid gap-3 grid-cols-3">
               <StatCard label="Total Items" value={totalItems} />
               <StatCard label="Purchased" value={purchasedItems} color="text-emerald-600" />
               <StatCard label="Remaining" value={remainingItems} color="text-amber-600" />
-              {hasCostData && <StatCard label="Estimated Cost" value={`$${estimatedCost.toFixed(2)}`} />}
             </div>
 
             {/* ── Filters & Search ── */}
@@ -362,17 +443,19 @@ export default function ShoppingListPage() {
               </div>
 
               {/* Category filter */}
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value as "All" | IngredientCategory)}
-                aria-label="Filter by category"
-                className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-              >
-                <option value="All">All Categories</option>
-                {INGREDIENT_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+              {categories.length > 1 && (
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  aria-label="Filter by category"
+                  className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                >
+                  <option value="All">All Categories</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              )}
 
               {/* Export buttons */}
               <div className="ml-auto flex gap-2">
