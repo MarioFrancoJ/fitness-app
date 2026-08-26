@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import PageLoader from "@/components/ui/PageLoader";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -196,12 +197,7 @@ export default function WorkoutDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
-          <p className="text-sm text-zinc-400">Loading workout...</p>
-        </div>
-      </div>
+      <PageLoader text="Loading workout..." />
     );
   }
 

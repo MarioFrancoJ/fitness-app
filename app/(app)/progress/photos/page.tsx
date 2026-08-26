@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import PageLoader from "@/components/ui/PageLoader";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -72,7 +73,7 @@ export default function ProgressPhotosPage() {
   ], [stats]);
 
   if (loading) {
-    return <div className="flex h-64 items-center justify-center"><div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" /></div>;
+    return <PageLoader />;
   }
 
   return (

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import PageLoader from "@/components/ui/PageLoader";
 
 interface NotificationItem {
   id: string;
@@ -185,11 +186,7 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter((n) => n.status === "Unread").length;
 
   if (loading) {
-    return (
-      <div className="flex h-48 items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (

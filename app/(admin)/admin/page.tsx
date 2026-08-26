@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import PageLoader from "@/components/ui/PageLoader";
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState({ totalUsers: 0, activeUsers: 0, newUsersThisMonth: 0, totalWorkouts: 0, totalMeals: 0, totalRecipes: 0, totalExercises: 0 });
@@ -42,7 +43,7 @@ export default function AdminDashboardPage() {
   }, []);
 
   if (loading) {
-    return <div className="flex h-64 items-center justify-center"><div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" /></div>;
+    return <PageLoader />;
   }
 
   const statCards = [

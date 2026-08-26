@@ -4,6 +4,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import PageLoader from "@/components/ui/PageLoader";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -102,7 +103,7 @@ export default function AdminNotificationsPage() {
   const readRate = totalSent > 0 ? Math.round((readCount / totalSent) * 100) : 0;
 
   if (loading) {
-    return <div className="flex h-64 items-center justify-center"><div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" /></div>;
+    return <PageLoader />;
   }
 
   return (

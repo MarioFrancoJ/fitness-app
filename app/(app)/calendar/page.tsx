@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import EventModal, { type CalendarEvent, type EventFormData } from "@/components/calendar/EventModal";
+import PageLoader from "@/components/ui/PageLoader";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -242,12 +243,7 @@ export default function CalendarPage() {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
-          <p className="text-sm text-zinc-400">Loading calendar...</p>
-        </div>
-      </div>
+      <PageLoader text="Loading calendar..." />
     );
   }
 
