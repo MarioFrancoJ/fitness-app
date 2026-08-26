@@ -1,10 +1,12 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -58,7 +60,6 @@ export default function AdminAIPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // AI Config
@@ -110,7 +111,6 @@ export default function AdminAIPage() {
     loadData();
   }, []);
 
-  useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); } }, [toast]);
 
   // ── AI Config persistence ───────────────────────────────────────────────────
 
@@ -161,7 +161,7 @@ export default function AdminAIPage() {
   async function handleDeleteRule(id: string) {
     const supabase = createClient();
     const { error } = await supabase.from("recommendation_rules").delete().eq("id", id);
-    if (!error) { setRules((prev) => prev.filter((r) => r.id !== id)); setToast("Rule deleted"); }
+    if (!error) { setRules((prev) => prev.filter((r) => r.id !== id)); showToast("Rule deleted"); }
     setDeleteTarget(null);
   }
 
@@ -176,10 +176,10 @@ export default function AdminAIPage() {
       if (editId) {
         await supabase.from("recommendation_rules").update({ name: formName.trim(), category: formCategory, description: formDescription.trim(), priority: formPriority }).eq("id", editId);
         setRules((prev) => prev.map((r) => (r.id === editId ? { ...r, name: formName.trim(), category: formCategory, description: formDescription.trim(), priority: formPriority } : r)));
-        setToast("Rule updated");
+        showToast("Rule updated");
       } else {
         const { data: inserted, error } = await supabase.from("recommendation_rules").insert({ name: formName.trim(), category: formCategory, description: formDescription.trim(), priority: formPriority, enabled: true, evaluator_type: "rule-based" }).select("*").single();
-        if (!error && inserted) { setRules((prev) => [...prev, inserted as RuleDefinition]); setToast("Rule created"); }
+        if (!error && inserted) { setRules((prev) => [...prev, inserted as RuleDefinition]); showToast("Rule created"); }
       }
       resetForm();
     } catch { setFormError("Failed to save."); }
@@ -278,7 +278,6 @@ export default function AdminAIPage() {
           )}
         </div>
       </div>
-      {toast && (<div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg"><p className="text-sm font-medium text-zinc-800">{toast}</p></div>)}
 
       <ConfirmDialog
         open={!!deleteTarget}

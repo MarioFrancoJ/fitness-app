@@ -1,10 +1,12 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -67,9 +69,7 @@ export default function WorkoutDetailPage() {
   const router = useRouter();
   const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<string | null>(null);
 
-  const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     async function loadWorkout() {
@@ -115,13 +115,6 @@ export default function WorkoutDetailPage() {
 
     loadWorkout();
   }, [params.id]);
-
-  useEffect(() => {
-    if (toast) {
-      const t = setTimeout(dismissToast, 3000);
-      return () => clearTimeout(t);
-    }
-  }, [toast, dismissToast]);
 
   // ── Delete ────────────────────────────────────────────────────────────────
 
@@ -189,7 +182,7 @@ export default function WorkoutDetailPage() {
       }
     }
 
-    setToast("Workout duplicated!");
+    showToast("Workout duplicated!");
     router.push(`/workouts/${newWorkout.id}`);
   }
 
@@ -277,12 +270,6 @@ export default function WorkoutDetailPage() {
           ))}
         </div>
       </div>
-
-      {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-          <p className="text-sm font-medium text-zinc-800">✓ {toast}</p>
-        </div>
-      )}
     </>
   );
 }

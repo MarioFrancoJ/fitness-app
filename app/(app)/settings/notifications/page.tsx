@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,12 +45,11 @@ function Toggle({ enabled, onToggle, label, description }: { enabled: boolean; o
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function NotificationPreferencesPage() {
+  const { success: showToast } = useToast();
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
 
-  const dismissToast = useCallback(() => setToast(null), []);
 
   // ── Load from Supabase ────────────────────────────────────────────────────
 
@@ -94,10 +94,6 @@ export default function NotificationPreferencesPage() {
     loadPrefs();
   }, []);
 
-  useEffect(() => {
-    if (toast) { const t = setTimeout(dismissToast, 3000); return () => clearTimeout(t); }
-  }, [toast, dismissToast]);
-
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   function toggle(key: keyof Omit<NotificationPreferences, "reminderFrequency">) {
@@ -135,9 +131,9 @@ export default function NotificationPreferencesPage() {
       );
 
     if (error) {
-      setToast("Error saving preferences");
+      showToast("Error saving preferences");
     } else {
-      setToast("Preferences saved!");
+      showToast("Preferences saved!");
     }
 
     setSaving(false);
@@ -213,12 +209,6 @@ export default function NotificationPreferencesPage() {
           {saving ? "Saving..." : "Save Preferences"}
         </button>
       </div>
-
-      {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-          <p className="text-sm font-medium text-zinc-800">✓ {toast}</p>
-        </div>
-      )}
     </>
   );
 }

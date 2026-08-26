@@ -2,15 +2,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useToast } from "@/components/ui/Toast";
 import {
   validateBackup, restoreFromBackup, deleteAllUserData, resetAccountData, exportAndDownload,
   getStorageStats, formatBytes, ALL_CATEGORIES, CATEGORY_LABELS, type ExportCategory, type ValidationResult, type StorageStats,
 } from "@/lib/data-export";
 
 export default function DataManagementPage() {
+  const { success: showToast } = useToast();
   const [stats, setStats] = useState<StorageStats>({ totalRecords: 0, estimatedBytes: 0, backupCount: 0, lastBackupDate: null });
   const [hydrated, setHydrated] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [importContent, setImportContent] = useState<string | null>(null);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
@@ -18,16 +19,11 @@ export default function DataManagementPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     setStats(getStorageStats());
     setHydrated(true);
   }, []);
-
-  useEffect(() => {
-    if (toast) { const t = setTimeout(dismissToast, 3000); return () => clearTimeout(t); }
-  }, [toast, dismissToast]);
 
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -45,33 +41,33 @@ export default function DataManagementPage() {
     if (!importContent) return;
     const result = restoreFromBackup(importContent, importMode);
     if (result.success) {
-      setToast(`Imported ${result.restored.length} data sources`);
+      showToast(`Imported ${result.restored.length} data sources`);
       setShowImport(false);
       setImportContent(null);
       setValidation(null);
       setStats(getStorageStats());
     } else {
-      setToast("Import failed");
+      showToast("Import failed");
     }
   }
 
   function handleDownloadAllData() {
     exportAndDownload({ categories: ALL_CATEGORIES, format: "json", dateFrom: null, dateTo: null });
-    setToast("All personal data downloaded");
+    showToast("All personal data downloaded");
   }
 
   function handleDeleteAll() {
     deleteAllUserData();
     setShowDeleteConfirm(false);
     setStats(getStorageStats());
-    setToast("All personal data deleted");
+    showToast("All personal data deleted");
   }
 
   function handleReset() {
     resetAccountData();
     setShowResetConfirm(false);
     setStats(getStorageStats());
-    setToast("Account data reset");
+    showToast("Account data reset");
   }
 
   if (!hydrated) return null;
@@ -222,12 +218,6 @@ export default function DataManagementPage() {
               <button type="button" onClick={() => setShowResetConfirm(false)} className="flex-1 rounded-lg border border-zinc-200 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50">Cancel</button>
             </div>
           </div>
-        </div>
-      )}
-
-      {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-          <p className="text-sm font-medium text-zinc-800">{toast}</p>
         </div>
       )}
     </>

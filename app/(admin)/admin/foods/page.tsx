@@ -1,10 +1,12 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,7 +45,6 @@ export default function AdminNotificationsPage() {
   const [formType, setFormType] = useState<NotificationType>("System");
   const [formPriority, setFormPriority] = useState<NotificationPriority>("Medium");
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   useEffect(() => {
@@ -59,10 +60,6 @@ export default function AdminNotificationsPage() {
     }
     loadData();
   }, []);
-
-  useEffect(() => {
-    if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); }
-  }, [toast]);
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -82,7 +79,7 @@ export default function AdminNotificationsPage() {
       if (!error && inserted) {
         setNotifications((prev) => [inserted, ...prev]);
         setFormTitle(""); setFormMessage(""); setShowForm(false);
-        setToast("Notification broadcast sent");
+        showToast("Notification broadcast sent");
       }
     } catch (err) {
       console.error("Failed to create notification:", err);
@@ -162,7 +159,6 @@ export default function AdminNotificationsPage() {
         </div>
       </div>
 
-      {toast && (<div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg"><p className="text-sm font-medium text-zinc-800">{toast}</p></div>)}
 
       <ConfirmDialog
         open={!!deleteTarget}

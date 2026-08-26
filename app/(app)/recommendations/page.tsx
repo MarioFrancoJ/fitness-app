@@ -1,8 +1,10 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -59,9 +61,7 @@ export default function RecommendationsPage() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [filter, setFilter] = useState<FilterTab>("active");
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<string | null>(null);
 
-  const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     async function loadData() {
@@ -92,17 +92,13 @@ export default function RecommendationsPage() {
     loadData();
   }, []);
 
-  useEffect(() => {
-    if (toast) { const t = setTimeout(dismissToast, 3000); return () => clearTimeout(t); }
-  }, [toast, dismissToast]);
-
   async function handleUpdateStatus(id: string, status: RecommendationStatus) {
     try {
       const supabase = createClient();
       await supabase.from("recommendations").update({ status }).eq("id", id);
       setRecommendations((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
-      if (status === "Completed") setToast("Marked as completed!");
-      if (status === "Dismissed") setToast("Recommendation dismissed");
+      if (status === "Completed") showToast("Marked as completed!");
+      if (status === "Dismissed") showToast("Recommendation dismissed");
     } catch (err) {
       console.error("Failed to update recommendation:", err);
     }
@@ -207,12 +203,6 @@ export default function RecommendationsPage() {
           </div>
         )}
       </div>
-
-      {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-          <p className="text-sm font-medium text-zinc-800">{toast}</p>
-        </div>
-      )}
     </>
   );
 }

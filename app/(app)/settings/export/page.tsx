@@ -1,27 +1,23 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/components/ui/Toast";
 import { ALL_CATEGORIES, CATEGORY_LABELS, exportAndDownload, getStorageStats, formatBytes, type ExportCategory, type ExportFormat, type StorageStats } from "@/lib/data-export";
 
 export default function ExportPage() {
+  const { success: showToast } = useToast();
   const [selectedCategories, setSelectedCategories] = useState<Set<ExportCategory>>(new Set(ALL_CATEGORIES));
   const [format, setFormat] = useState<ExportFormat>("json");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [stats, setStats] = useState<StorageStats>({ totalRecords: 0, estimatedBytes: 0, backupCount: 0, lastBackupDate: null });
   const [hydrated, setHydrated] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
 
-  const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     setStats(getStorageStats());
     setHydrated(true);
   }, []);
-
-  useEffect(() => {
-    if (toast) { const t = setTimeout(dismissToast, 3000); return () => clearTimeout(t); }
-  }, [toast, dismissToast]);
 
   function toggleCategory(cat: ExportCategory) {
     setSelectedCategories((prev) => {
@@ -35,19 +31,19 @@ export default function ExportPage() {
   function selectNone() { setSelectedCategories(new Set()); }
 
   function handleExport() {
-    if (selectedCategories.size === 0) { setToast("Select at least one category"); return; }
+    if (selectedCategories.size === 0) { showToast("Select at least one category"); return; }
     exportAndDownload({
       categories: Array.from(selectedCategories),
       format,
       dateFrom: dateFrom || null,
       dateTo: dateTo || null,
     });
-    setToast(`Data exported as ${format.toUpperCase()}`);
+    showToast(`Data exported as ${format.toUpperCase()}`);
   }
 
   function handleExportAll() {
     exportAndDownload({ categories: ALL_CATEGORIES, format: "json", dateFrom: null, dateTo: null });
-    setToast("All data exported as JSON");
+    showToast("All data exported as JSON");
   }
 
   if (!hydrated) return null;
@@ -149,12 +145,6 @@ export default function ExportPage() {
           <p className="text-xs text-zinc-500">PDF and Excel export will be available in a future update. Cloud storage integrations (Google Drive, Dropbox, OneDrive) coming soon.</p>
         </div>
       </div>
-
-      {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-          <p className="text-sm font-medium text-zinc-800">{toast}</p>
-        </div>
-      )}
     </>
   );
 }

@@ -1,9 +1,11 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -70,9 +72,7 @@ export default function SubscriptionPage() {
   const [sub, setSub] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState({ recipesCreated: 0, workoutPlansCreated: 0, progressPhotosUploaded: 0, historyDays: 0 });
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<string | null>(null);
 
-  const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     async function loadData() {
@@ -119,10 +119,6 @@ export default function SubscriptionPage() {
     loadData();
   }, []);
 
-  useEffect(() => {
-    if (toast) { const t = setTimeout(dismissToast, 3000); return () => clearTimeout(t); }
-  }, [toast, dismissToast]);
-
   async function handleUpgrade(plan: PlanType) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -141,7 +137,7 @@ export default function SubscriptionPage() {
         if (inserted) sub.id = inserted.id;
       }
       setSub({ ...sub, plan, status: "Active", startDate: now.toISOString().slice(0, 10), renewalDate: renewalDate.toISOString().slice(0, 10), expirationDate: null });
-      setToast("Upgraded to Premium!");
+      showToast("Upgraded to Premium!");
     } catch (err) { console.error("Upgrade failed:", err); }
   }
 
@@ -150,7 +146,7 @@ export default function SubscriptionPage() {
     const supabase = createClient();
     await supabase.from("subscriptions").update({ status: "Cancelled", expiration_date: sub.renewalDate }).eq("id", sub.id);
     setSub({ ...sub, status: "Cancelled", expirationDate: sub.renewalDate });
-    setToast("Subscription cancelled.");
+    showToast("Subscription cancelled.");
   }
 
   async function handleDowngrade() {
@@ -158,7 +154,7 @@ export default function SubscriptionPage() {
     const supabase = createClient();
     await supabase.from("subscriptions").update({ plan: "FREE", status: "Active", renewal_date: null, expiration_date: null }).eq("id", sub.id);
     setSub({ ...sub, plan: "FREE", status: "Active", renewalDate: null, expirationDate: null });
-    setToast("Downgraded to Free.");
+    showToast("Downgraded to Free.");
   }
 
   async function handleStartTrial() {
@@ -176,7 +172,7 @@ export default function SubscriptionPage() {
       await supabase.from("subscriptions").insert({ user_id: user.id, plan: "PREMIUM_MONTHLY", status: "Trial", start_date: now.toISOString().slice(0, 10), expiration_date: expiry.toISOString().slice(0, 10) });
     }
     setSub({ ...sub, plan: "PREMIUM_MONTHLY", status: "Trial", startDate: now.toISOString().slice(0, 10), renewalDate: null, expirationDate: expiry.toISOString().slice(0, 10) });
-    setToast("7-day Premium trial started!");
+    showToast("7-day Premium trial started!");
   }
 
   if (loading) {
@@ -249,12 +245,6 @@ export default function SubscriptionPage() {
           </div>
         )}
       </div>
-
-      {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-          <p className="text-sm font-medium text-zinc-800">{toast}</p>
-        </div>
-      )}
     </>
   );
 }

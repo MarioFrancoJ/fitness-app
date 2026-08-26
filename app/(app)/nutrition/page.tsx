@@ -1,7 +1,9 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback, useMemo, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -157,7 +159,6 @@ export default function NutritionPage() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [targets, setTargets] = useState<NutritionTargets>(DEFAULT_TARGETS);
   const [hydrated, setHydrated] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [historyFilter, setHistoryFilter] = useState<"today" | "week" | "month">("today");
@@ -174,7 +175,6 @@ export default function NutritionPage() {
   const [formTime, setFormTime] = useState(nowTime());
   const [formPhoto, setFormPhoto] = useState<string | null>(null);
 
-  const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     async function loadData() {
@@ -293,7 +293,7 @@ export default function NutritionPage() {
         calories: meal.calories, protein: meal.protein, carbs: meal.carbs, fat: meal.fat,
         date: meal.date, time: meal.time || null, photo_url: meal.photoUrl,
       }).eq("id", editingId);
-      setToast("Meal updated successfully!");
+      showToast("Meal updated successfully!");
     } else {
       // Insert in Supabase
       const supabase = createClient();
@@ -307,7 +307,7 @@ export default function NutritionPage() {
         if (inserted) meal.id = inserted.id;
       }
       updated = [meal, ...meals];
-      setToast("Meal added successfully!");
+      showToast("Meal added successfully!");
     }
 
     setMeals(updated);
@@ -320,7 +320,7 @@ export default function NutritionPage() {
     setMeals(updated);
     const supabase = createClient();
     supabase.from("meal_logs").delete().eq("id", id);
-    setToast("Meal deleted");
+    showToast("Meal deleted");
   }
 
   function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -736,7 +736,6 @@ export default function NutritionPage() {
       )}
 
       {/* Toast */}
-      {toast && <Toast message={toast} onClose={dismissToast} />}
     </>
   );
 }

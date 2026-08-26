@@ -1,9 +1,11 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -41,7 +43,6 @@ export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<PlatformSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -55,7 +56,6 @@ export default function AdminSettingsPage() {
     loadData();
   }, []);
 
-  useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); } }, [toast]);
 
   async function handleSave(e: FormEvent) {
     e.preventDefault();
@@ -69,8 +69,8 @@ export default function AdminSettingsPage() {
       } else {
         await supabase.from("platform_settings").insert({ key: "platform_settings", value: settings as any });
       }
-      setToast("Settings saved successfully!");
-    } catch { setToast("Failed to save settings."); }
+      showToast("Settings saved successfully!");
+    } catch { showToast("Failed to save settings."); }
     setSaving(false);
   }
 
@@ -149,7 +149,6 @@ export default function AdminSettingsPage() {
         </form>
       </div>
 
-      {toast && (<div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg"><p className="text-sm font-medium text-zinc-800">{toast}</p></div>)}
     </>
   );
 }

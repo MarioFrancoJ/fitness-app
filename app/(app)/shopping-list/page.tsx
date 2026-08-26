@@ -1,9 +1,11 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -96,12 +98,10 @@ export default function ShoppingListPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasMealPlan, setHasMealPlan] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterMode>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [search, setSearch] = useState("");
 
-  const dismissToast = useCallback(() => setToast(null), []);
 
   // ── Load from Supabase ──────────────────────────────────────────────────────
 
@@ -207,7 +207,7 @@ export default function ShoppingListPage() {
       .maybeSingle();
 
     if (!planData || !planData.plan_data) {
-      setToast("No meal plan found for this week");
+      showToast("No meal plan found for this week");
       return;
     }
 
@@ -225,7 +225,7 @@ export default function ShoppingListPage() {
 
     const recipeIds = Object.keys(recipeCounts);
     if (recipeIds.length === 0) {
-      setToast("Your meal plan is empty. Add recipes first.");
+      showToast("Your meal plan is empty. Add recipes first.");
       return;
     }
 
@@ -243,7 +243,7 @@ export default function ShoppingListPage() {
       .in("id", recipeIds);
 
     if (recipesErr || !recipesData || recipesData.length === 0) {
-      setToast("Could not load recipe ingredients");
+      showToast("Could not load recipe ingredients");
       return;
     }
 
@@ -277,7 +277,7 @@ export default function ShoppingListPage() {
     setItems(generated);
     setHasMealPlan(true);
     await saveItems(generated);
-    setToast("Shopping list generated from meal plan!");
+    showToast("Shopping list generated from meal plan!");
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -285,14 +285,14 @@ export default function ShoppingListPage() {
   async function handleClear() {
     setItems([]);
     await saveItems([]);
-    setToast("Shopping list cleared");
+    showToast("Shopping list cleared");
   }
 
   async function handleResetPurchased() {
     const updated = items.map((i) => ({ ...i, purchased: false }));
     setItems(updated);
     await saveItems(updated);
-    setToast("All items marked as pending");
+    showToast("All items marked as pending");
   }
 
   async function togglePurchased(id: string) {
@@ -309,7 +309,7 @@ export default function ShoppingListPage() {
 
   function handleExportCSV() {
     if (items.length === 0) {
-      setToast("No items to export");
+      showToast("No items to export");
       return;
     }
     const header = "Ingredient,Category,Quantity,Unit,Status\n";
@@ -323,11 +323,11 @@ export default function ShoppingListPage() {
     a.download = "shopping-list.csv";
     a.click();
     URL.revokeObjectURL(url);
-    setToast("CSV exported!");
+    showToast("CSV exported!");
   }
 
   function handleExportPDF() {
-    setToast("PDF export coming soon!");
+    showToast("PDF export coming soon!");
   }
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -578,7 +578,6 @@ export default function ShoppingListPage() {
       </div>
 
       {/* Toast */}
-      {toast && <Toast message={toast} onClose={dismissToast} />}
     </>
   );
 }

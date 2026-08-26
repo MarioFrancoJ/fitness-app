@@ -1,9 +1,11 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -73,9 +75,7 @@ export default function AiCoachPage() {
   const [checkInSaved, setCheckInSaved] = useState(false);
   const [stats, setStats] = useState({ workoutsThisWeek: 0, currentStreak: 0 });
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<string | null>(null);
 
-  const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     async function loadData() {
@@ -163,13 +163,6 @@ export default function AiCoachPage() {
     loadData();
   }, []);
 
-  useEffect(() => {
-    if (toast) {
-      const t = setTimeout(dismissToast, 3000);
-      return () => clearTimeout(t);
-    }
-  }, [toast, dismissToast]);
-
   async function handleCheckInSave() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -194,7 +187,7 @@ export default function AiCoachPage() {
 
       setCheckIn({ date: today, energyLevel: energy, sleepQuality: sleep, stressLevel: stress, motivationLevel: motivation });
       setCheckInSaved(true);
-      setToast("Check-in saved!");
+      showToast("Check-in saved!");
     } catch (err) {
       console.error("Failed to save check-in:", err);
     }
@@ -293,11 +286,6 @@ export default function AiCoachPage() {
       </div>
 
       {/* Toast */}
-      {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-          <p className="text-sm font-medium text-zinc-800">{toast}</p>
-        </div>
-      )}
     </>
   );
 }

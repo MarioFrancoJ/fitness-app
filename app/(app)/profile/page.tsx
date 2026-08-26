@@ -1,9 +1,11 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -282,10 +284,8 @@ export default function ProfilePage() {
   const [history, setHistory] = useState<MeasurementRecord[]>([]);
   const [editMode, setEditMode] = useState(false);
   const [hydrated, setHydrated] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
-  const dismissToast = useCallback(() => setToast(null), []);
 
   // Hydrate
   useEffect(() => {
@@ -344,7 +344,7 @@ export default function ProfilePage() {
     }
 
     setEditMode(false);
-    setToast("Profile saved successfully!");
+    showToast("Profile saved successfully!");
   }
 
   function handleCancel() {
@@ -714,7 +714,6 @@ export default function ProfilePage() {
       </div>
 
       {/* Toast */}
-      {toast && <Toast message={toast} onClose={dismissToast} />}
     </>
   );
 }

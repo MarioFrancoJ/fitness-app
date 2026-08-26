@@ -1,9 +1,11 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -75,7 +77,6 @@ export default function WorkoutsPage() {
   const [workouts, setWorkouts] = useState<WorkoutItem[]>([]);
   const [templates, setTemplates] = useState<WorkoutItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -206,8 +207,7 @@ export default function WorkoutsPage() {
 
     // Refresh list
     await loadData();
-    setToast("Template loaded as your workout!");
-    setTimeout(() => setToast(null), 3000);
+    showToast("Template loaded as your workout!");
   }
 
   // ── Delete Workout ────────────────────────────────────────────────────────
@@ -306,11 +306,6 @@ export default function WorkoutsPage() {
       )}
 
       {/* Toast */}
-      {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-          <p className="text-sm font-medium text-zinc-800">✓ {toast}</p>
-        </div>
-      )}
     </div>
   );
 }

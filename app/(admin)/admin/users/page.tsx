@@ -1,8 +1,10 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -49,7 +51,6 @@ export default function AdminUsersPage() {
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState<UserRole>("USER");
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -64,7 +65,6 @@ export default function AdminUsersPage() {
     loadData();
   }, []);
 
-  useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); } }, [toast]);
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -80,7 +80,7 @@ export default function AdminUsersPage() {
     const { error } = await supabase.from("users").update({ status }).eq("id", id);
     if (!error) {
       setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status } : u)));
-      setToast(`User ${status === "Suspended" ? "suspended" : status === "Active" ? "activated" : "deleted"}`);
+      showToast(`User ${status === "Suspended" ? "suspended" : status === "Active" ? "activated" : "deleted"}`);
     }
   }
 
@@ -94,7 +94,7 @@ export default function AdminUsersPage() {
     const { error } = await supabase.from("users").update({ name: editName, role: editRole }).eq("id", editingId);
     if (!error) {
       setUsers((prev) => prev.map((u) => (u.id === editingId ? { ...u, name: editName, role: editRole } : u)));
-      setToast("User updated");
+      showToast("User updated");
     }
     setEditingId(null);
   }
@@ -153,7 +153,6 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      {toast && (<div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg"><p className="text-sm font-medium text-zinc-800">{toast}</p></div>)}
     </>
   );
 }

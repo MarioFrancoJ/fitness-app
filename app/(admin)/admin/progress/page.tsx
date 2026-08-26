@@ -1,8 +1,10 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -40,7 +42,6 @@ export default function AdminSubscriptionsPage() {
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState<"All" | PlanType>("All");
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -55,14 +56,13 @@ export default function AdminSubscriptionsPage() {
     loadData();
   }, []);
 
-  useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); } }, [toast]);
 
   async function handleGrantPremium(subId: string) {
     const supabase = createClient();
     const { error } = await supabase.from("subscriptions").update({ plan: "PREMIUM_MONTHLY", status: "Active" }).eq("id", subId);
     if (!error) {
       setSubscriptions((prev) => prev.map((s) => (s.id === subId ? { ...s, plan: "PREMIUM_MONTHLY" as PlanType, status: "Active" as SubscriptionStatus } : s)));
-      setToast("Premium access granted");
+      showToast("Premium access granted");
     }
   }
 
@@ -71,7 +71,7 @@ export default function AdminSubscriptionsPage() {
     const { error } = await supabase.from("subscriptions").update({ plan: "FREE", status: "Active", renewal_date: null, expiration_date: null }).eq("id", subId);
     if (!error) {
       setSubscriptions((prev) => prev.map((s) => (s.id === subId ? { ...s, plan: "FREE" as PlanType, status: "Active" as SubscriptionStatus, renewal_date: null, expiration_date: null } : s)));
-      setToast("Premium access revoked");
+      showToast("Premium access revoked");
     }
   }
 
@@ -137,7 +137,6 @@ export default function AdminSubscriptionsPage() {
           </div>
         </div>
       </div>
-      {toast && (<div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg"><p className="text-sm font-medium text-zinc-800">{toast}</p></div>)}
     </>
   );
 }

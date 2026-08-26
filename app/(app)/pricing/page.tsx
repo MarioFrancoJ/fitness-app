@@ -1,9 +1,11 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -71,9 +73,7 @@ const FEATURE_COMPARISON: PlanFeature[] = [
 export default function PricingPage() {
   const [currentPlan, setCurrentPlan] = useState<PlanType>("FREE");
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<string | null>(null);
 
-  const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     async function loadSubscription() {
@@ -95,10 +95,6 @@ export default function PricingPage() {
     }
     loadSubscription();
   }, []);
-
-  useEffect(() => {
-    if (toast) { const t = setTimeout(dismissToast, 3000); return () => clearTimeout(t); }
-  }, [toast, dismissToast]);
 
   async function handleUpgrade(plan: PlanType) {
     const supabase = createClient();
@@ -142,10 +138,10 @@ export default function PricingPage() {
       }
 
       setCurrentPlan(plan);
-      setToast(plan === "FREE" ? "Switched to Free plan" : "Upgraded to Premium!");
+      showToast(plan === "FREE" ? "Switched to Free plan" : "Upgraded to Premium!");
     } catch (err) {
       console.error("Failed to update subscription:", err);
-      setToast("Failed to update plan. Please try again.");
+      showToast("Failed to update plan. Please try again.");
     }
   }
 
@@ -260,12 +256,6 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
-
-      {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-          <p className="text-sm font-medium text-zinc-800">{toast}</p>
-        </div>
-      )}
     </>
   );
 }

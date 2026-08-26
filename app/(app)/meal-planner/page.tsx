@@ -1,9 +1,11 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -145,13 +147,11 @@ export default function MealPlannerPage() {
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [savedPlans, setSavedPlans] = useState<MealPlanRow[]>([]);
   const [clipboardDay, setClipboardDay] = useState<Record<MealSlot, string | null> | null>(null);
 
-  const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     async function loadData() {
@@ -263,7 +263,7 @@ export default function MealPlannerPage() {
 
   function copyDay(day: Day) {
     setClipboardDay({ ...mealPlan.plan[day] });
-    setToast(`${day} copied to clipboard`);
+    showToast(`${day} copied to clipboard`);
   }
 
   function pasteDay(day: Day) {
@@ -273,7 +273,7 @@ export default function MealPlannerPage() {
       persistPlan(next.plan);
       return next;
     });
-    setToast(`Pasted to ${day}`);
+    showToast(`Pasted to ${day}`);
   }
 
   function clearDay(day: Day) {
@@ -282,14 +282,14 @@ export default function MealPlannerPage() {
       persistPlan(next.plan);
       return next;
     });
-    setToast(`${day} cleared`);
+    showToast(`${day} cleared`);
   }
 
   function clearWeek() {
     const cleared = emptyPlan();
     setMealPlan((prev) => ({ ...prev, plan: cleared }));
     persistPlan(cleared);
-    setToast("Week cleared");
+    showToast("Week cleared");
   }
 
   // ── Templates ──────────────────────────────────────────────────────────────
@@ -297,7 +297,7 @@ export default function MealPlannerPage() {
   function applyTemplate(template: PlanTemplate) {
     const goalRecipes = recipes.filter((r) => r.goal === template.goal);
     if (goalRecipes.length === 0) {
-      setToast("No recipes match this template goal");
+      showToast("No recipes match this template goal");
       setShowTemplates(false);
       return;
     }
@@ -313,7 +313,7 @@ export default function MealPlannerPage() {
     setMealPlan((prev) => ({ ...prev, plan: newPlan }));
     persistPlan(newPlan);
     setShowTemplates(false);
-    setToast(`${template.name} template applied`);
+    showToast(`${template.name} template applied`);
   }
 
   // ── Save & Load ────────────────────────────────────────────────────────────
@@ -321,7 +321,7 @@ export default function MealPlannerPage() {
   async function handleSave() {
     await persistPlan(mealPlan.plan, true);
     setMealPlan((prev) => ({ ...prev, isSaved: true }));
-    setToast("Meal plan saved!");
+    showToast("Meal plan saved!");
   }
 
   async function handleLoadSaved() {
@@ -353,7 +353,7 @@ export default function MealPlannerPage() {
     setMealPlan(plan);
     persistPlan(plan.plan);
     setShowSaved(false);
-    setToast("Meal plan loaded");
+    showToast("Meal plan loaded");
   }
 
   async function handleDuplicate() {
@@ -372,7 +372,7 @@ export default function MealPlannerPage() {
         is_saved: true,
       });
 
-    setToast("Meal plan duplicated & saved");
+    showToast("Meal plan duplicated & saved");
   }
 
   // ── Summaries ──────────────────────────────────────────────────────────────
@@ -617,7 +617,6 @@ export default function MealPlannerPage() {
       )}
 
       {/* Toast */}
-      {toast && <Toast message={toast} onClose={dismissToast} />}
     </>
   );
 }

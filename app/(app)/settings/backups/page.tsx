@@ -1,49 +1,45 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/components/ui/Toast";
 import {
   createBackup, loadBackupList, downloadBackup, deleteBackup, validateBackup, restoreFromBackup,
   ALL_CATEGORIES, CATEGORY_LABELS, formatBytes, type BackupMetadata, type ExportCategory, type ValidationResult,
 } from "@/lib/data-export";
 
 export default function BackupsPage() {
+  const { success: showToast } = useToast();
   const [backups, setBackups] = useState<BackupMetadata[]>([]);
   const [hydrated, setHydrated] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [showRestore, setShowRestore] = useState(false);
   const [restoreContent, setRestoreContent] = useState<string | null>(null);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [restoreMode, setRestoreMode] = useState<"merge" | "replace">("merge");
   const [restoreCategories, setRestoreCategories] = useState<Set<ExportCategory>>(new Set(ALL_CATEGORIES));
 
-  const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     setBackups(loadBackupList());
     setHydrated(true);
   }, []);
 
-  useEffect(() => {
-    if (toast) { const t = setTimeout(dismissToast, 3000); return () => clearTimeout(t); }
-  }, [toast, dismissToast]);
-
   function refresh() { setBackups(loadBackupList()); }
 
   function handleCreate() {
     createBackup();
     refresh();
-    setToast("Backup created successfully!");
+    showToast("Backup created successfully!");
   }
 
   function handleDownload(id: string) {
     downloadBackup(id);
-    setToast("Backup downloaded");
+    showToast("Backup downloaded");
   }
 
   function handleDelete(id: string) {
     deleteBackup(id);
     refresh();
-    setToast("Backup deleted");
+    showToast("Backup deleted");
   }
 
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -64,12 +60,12 @@ export default function BackupsPage() {
     if (!restoreContent) return;
     const result = restoreFromBackup(restoreContent, restoreMode, Array.from(restoreCategories));
     if (result.success) {
-      setToast(`Restored ${result.restored.length} data sources`);
+      showToast(`Restored ${result.restored.length} data sources`);
       setShowRestore(false);
       setRestoreContent(null);
       setValidation(null);
     } else {
-      setToast("Restore failed");
+      showToast("Restore failed");
     }
   }
 
@@ -194,12 +190,6 @@ export default function BackupsPage() {
               </>
             )}
           </div>
-        </div>
-      )}
-
-      {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-          <p className="text-sm font-medium text-zinc-800">{toast}</p>
         </div>
       )}
     </>

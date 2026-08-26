@@ -1,9 +1,11 @@
 "use client";
 
+  const { toast: globalToast } = useToast();
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import EventModal, { type CalendarEvent, type EventFormData } from "@/components/calendar/EventModal";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -60,7 +62,6 @@ export default function CalendarPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -186,8 +187,7 @@ export default function CalendarPage() {
   // ── Toast ─────────────────────────────────────────────────────────────────
 
   function showToast(message: string, type: "success" | "error") {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    globalToast(message, type);
   }
 
   // ── Navigation ────────────────────────────────────────────────────────────
@@ -462,21 +462,6 @@ export default function CalendarPage() {
         mode={modalMode}
       />
 
-      {/* Toast */}
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          className={[
-            "fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border px-5 py-3.5 shadow-lg",
-            toast.type === "success" ? "border-emerald-200 bg-white" : "border-red-200 bg-white",
-          ].join(" ")}
-        >
-          <span className={`text-sm font-medium ${toast.type === "success" ? "text-emerald-700" : "text-red-700"}`}>
-            {toast.type === "success" ? "✓" : "✗"} {toast.message}
-          </span>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,8 +1,10 @@
 "use client";
 
+  const { success: showToast } = useToast();
 import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -66,7 +68,6 @@ export default function MealPlannerPage() {
   const [selectedDay, setSelectedDay] = useState<Day>("Monday");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -164,7 +165,7 @@ export default function MealPlannerPage() {
     const cleared = emptyPlan();
     setPlan(cleared);
     await savePlan(cleared);
-    setToast("Meal plan cleared");
+    showToast("Meal plan cleared");
   }
 
   const totals = useMemo(() => dayTotals(plan, selectedDay, recipes), [plan, selectedDay, recipes]);
@@ -324,22 +325,6 @@ export default function MealPlannerPage() {
         </div>
       </div>
 
-      {/* Toast */}
-      {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100">
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true">
-              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
-            </svg>
-          </span>
-          <p className="text-sm font-medium text-zinc-800">{toast}</p>
-          <button type="button" onClick={() => setToast(null)} aria-label="Dismiss" className="ml-1 text-zinc-400 hover:text-zinc-600 focus-visible:outline-none">
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
-              <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-            </svg>
-          </button>
-        </div>
-      )}
     </>
   );
 }
