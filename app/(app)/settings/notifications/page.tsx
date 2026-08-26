@@ -1,9 +1,25 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { loadPreferences, savePreferences, type NotificationPreferences, type ReminderFrequency } from "@/lib/notifications";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type ReminderFrequency = "Daily" | "Weekly" | "Monthly" | "Never";
+
+interface NotificationPreferences {
+  workoutReminders: boolean;
+  nutritionReminders: boolean;
+  progressReminders: boolean;
+  achievementNotifications: boolean;
+  recommendationNotifications: boolean;
+  subscriptionNotifications: boolean;
+  reminderFrequency: ReminderFrequency;
+}
 
 const FREQUENCIES: ReminderFrequency[] = ["Daily", "Weekly", "Monthly", "Never"];
+
+// ── Toggle Component ──────────────────────────────────────────────────────────
 
 function Toggle({ enabled, onToggle, label, description }: { enabled: boolean; onToggle: () => void; label: string; description: string }) {
   return (
@@ -24,43 +40,122 @@ function Toggle({ enabled, onToggle, label, description }: { enabled: boolean; o
   );
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function NotificationPreferencesPage() {
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
-  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const dismissToast = useCallback(() => setToast(null), []);
 
+  // ── Load from Supabase ────────────────────────────────────────────────────
+
   useEffect(() => {
-    setPrefs(loadPreferences());
-    setHydrated(true);
+    async function loadPrefs() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      const { data } = await supabase
+        .from("notification_preferences")
+        .select("workout_reminders, nutrition_reminders, progress_reminders, achievement_notifications, recommendation_notifications, subscription_notifications, reminder_frequency")
+        .eq("user_id", user.id)
+        .single();
+
+      if (data) {
+        setPrefs({
+          workoutReminders: data.workout_reminders,
+          nutritionReminders: data.nutrition_reminders,
+          progressReminders: data.progress_reminders,
+          achievementNotifications: data.achievement_notifications,
+          recommendationNotifications: data.recommendation_notifications,
+          subscriptionNotifications: data.subscription_notifications,
+          reminderFrequency: data.reminder_frequency as ReminderFrequency,
+        });
+      } else {
+        // No preferences yet — use defaults
+        setPrefs({
+          workoutReminders: true,
+          nutritionReminders: true,
+          progressReminders: true,
+          achievementNotifications: true,
+          recommendationNotifications: true,
+          subscriptionNotifications: true,
+          reminderFrequency: "Daily",
+        });
+      }
+
+      setLoading(false);
+    }
+
+    loadPrefs();
   }, []);
 
   useEffect(() => {
     if (toast) { const t = setTimeout(dismissToast, 3000); return () => clearTimeout(t); }
   }, [toast, dismissToast]);
 
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
   function toggle(key: keyof Omit<NotificationPreferences, "reminderFrequency">) {
     if (!prefs) return;
-    const updated = { ...prefs, [key]: !prefs[key] };
-    setPrefs(updated);
-    savePreferences(updated);
+    setPrefs({ ...prefs, [key]: !prefs[key] });
   }
 
   function setFrequency(freq: ReminderFrequency) {
     if (!prefs) return;
-    const updated = { ...prefs, reminderFrequency: freq };
-    setPrefs(updated);
-    savePreferences(updated);
+    setPrefs({ ...prefs, reminderFrequency: freq });
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!prefs) return;
-    savePreferences(prefs);
-    setToast("Preferences saved!");
+    setSaving(true);
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
+
+    const { error } = await supabase
+      .from("notification_preferences")
+      .upsert(
+        {
+          user_id: user.id,
+          workout_reminders: prefs.workoutReminders,
+          nutrition_reminders: prefs.nutritionReminders,
+          progress_reminders: prefs.progressReminders,
+          achievement_notifications: prefs.achievementNotifications,
+          recommendation_notifications: prefs.recommendationNotifications,
+          subscription_notifications: prefs.subscriptionNotifications,
+          reminder_frequency: prefs.reminderFrequency,
+        },
+        { onConflict: "user_id" }
+      );
+
+    if (error) {
+      setToast("Error saving preferences");
+    } else {
+      setToast("Preferences saved!");
+    }
+
+    setSaving(false);
   }
 
-  if (!hydrated || !prefs) return null;
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading preferences...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!prefs) return null;
 
   return (
     <>
@@ -117,15 +212,15 @@ export default function NotificationPreferencesPage() {
           </div>
         </div>
 
-        <button type="button" onClick={handleSave}
-          className="w-fit rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900">
-          Save Preferences
+        <button type="button" onClick={handleSave} disabled={saving}
+          className="w-fit rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 disabled:opacity-50">
+          {saving ? "Saving..." : "Save Preferences"}
         </button>
       </div>
 
       {toast && (
         <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-          <p className="text-sm font-medium text-zinc-800">{toast}</p>
+          <p className="text-sm font-medium text-zinc-800">✓ {toast}</p>
         </div>
       )}
     </>
