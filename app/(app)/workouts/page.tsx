@@ -2,68 +2,235 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { loadWorkouts, loadTemplates, loadTemplateAsWorkout } from "@/lib/workouts-store";
-import type { Workout, WorkoutGoal, WorkoutDifficulty } from "@/data/workouts";
+import { createClient } from "@/lib/supabase/client";
 
-function difficultyColor(d: WorkoutDifficulty): string {
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type WorkoutGoal = "Fat Loss" | "Muscle Gain" | "Strength" | "Endurance" | "Mobility" | "General Fitness";
+type WorkoutDifficulty = "Beginner" | "Intermediate" | "Advanced";
+
+interface WorkoutItem {
+  id: string;
+  name: string;
+  description: string | null;
+  goal: WorkoutGoal | null;
+  difficulty: WorkoutDifficulty | null;
+  duration: number | null;
+  is_template: boolean;
+  exerciseCount: number;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function difficultyColor(d: WorkoutDifficulty | null): string {
   switch (d) {
     case "Beginner":     return "bg-emerald-50 text-emerald-700";
     case "Intermediate": return "bg-amber-50 text-amber-700";
     case "Advanced":     return "bg-red-50 text-red-700";
+    default:             return "bg-zinc-100 text-zinc-600";
   }
 }
 
-function goalColor(g: WorkoutGoal): string {
+function goalColor(g: WorkoutGoal | null): string {
   switch (g) {
-    case "Fat Loss":       return "bg-rose-50 text-rose-700";
-    case "Muscle Gain":    return "bg-blue-50 text-blue-700";
-    case "Strength":       return "bg-purple-50 text-purple-700";
-    case "Endurance":      return "bg-orange-50 text-orange-700";
-    case "Mobility":       return "bg-teal-50 text-teal-700";
-    case "General Fitness":return "bg-zinc-100 text-zinc-700";
+    case "Fat Loss":        return "bg-rose-50 text-rose-700";
+    case "Muscle Gain":     return "bg-blue-50 text-blue-700";
+    case "Strength":        return "bg-purple-50 text-purple-700";
+    case "Endurance":       return "bg-orange-50 text-orange-700";
+    case "Mobility":        return "bg-teal-50 text-teal-700";
+    case "General Fitness": return "bg-zinc-100 text-zinc-700";
+    default:                return "bg-zinc-100 text-zinc-600";
   }
 }
 
-function WorkoutCard({ workout, href }: { workout: Workout; href: string }) {
-  const totalExercises = workout.workoutDays.reduce((s, d) => s + d.exercises.length, 0);
+// ── Workout Card ──────────────────────────────────────────────────────────────
+
+function WorkoutCard({ workout, href }: { workout: WorkoutItem; href: string }) {
   return (
     <Link href={href} className="flex flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="mb-2 flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold text-zinc-900">{workout.name}</h3>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${difficultyColor(workout.difficulty)}`}>{workout.difficulty}</span>
+        {workout.difficulty && (
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${difficultyColor(workout.difficulty)}`}>
+            {workout.difficulty}
+          </span>
+        )}
       </div>
       {workout.description && <p className="mb-3 text-xs text-zinc-400 line-clamp-2">{workout.description}</p>}
       <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-zinc-100 pt-3">
-        <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${goalColor(workout.goal)}`}>{workout.goal}</span>
-        <span className="text-xs text-zinc-400">{totalExercises} exercises</span>
-        <span className="text-xs text-zinc-400">{workout.duration} min</span>
+        {workout.goal && (
+          <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${goalColor(workout.goal)}`}>{workout.goal}</span>
+        )}
+        <span className="text-xs text-zinc-400">{workout.exerciseCount} exercises</span>
+        {workout.duration && <span className="text-xs text-zinc-400">{workout.duration} min</span>}
       </div>
     </Link>
   );
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function WorkoutsPage() {
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
-  const [templates, setTemplates] = useState<Workout[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [workouts, setWorkouts] = useState<WorkoutItem[]>([]);
+  const [templates, setTemplates] = useState<WorkoutItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
-    setWorkouts(loadWorkouts());
-    setTemplates(loadTemplates());
-    setHydrated(true);
+    loadData();
   }, []);
 
-  function handleLoadTemplate(id: string) {
-    const w = loadTemplateAsWorkout(id);
-    if (w) {
-      setWorkouts(loadWorkouts());
-      setToast("Template loaded as workout!");
-      setTimeout(() => setToast(null), 3000);
+  async function loadData() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
+
+    // Load user's workouts (non-template)
+    const { data: userWorkouts } = await supabase
+      .from("workouts")
+      .select("id, name, description, goal, difficulty, duration, is_template, workout_days(workout_exercises(id))")
+      .eq("user_id", user.id)
+      .eq("is_template", false)
+      .order("created_at", { ascending: false });
+
+    if (userWorkouts) {
+      setWorkouts(userWorkouts.map(mapWorkout));
+    }
+
+    // Load system templates (user_id IS NULL, is_template = true)
+    const { data: templateData } = await supabase
+      .from("workouts")
+      .select("id, name, description, goal, difficulty, duration, is_template, workout_days(workout_exercises(id))")
+      .is("user_id", null)
+      .eq("is_template", true)
+      .order("name");
+
+    if (templateData) {
+      setTemplates(templateData.map(mapWorkout));
+    }
+
+    setLoading(false);
+  }
+
+  function mapWorkout(w: {
+    id: string;
+    name: string;
+    description: string | null;
+    goal: string | null;
+    difficulty: string | null;
+    duration: number | null;
+    is_template: boolean;
+    workout_days: { workout_exercises: { id: string }[] }[] | null;
+  }): WorkoutItem {
+    const exerciseCount = w.workout_days?.reduce(
+      (sum, d) => sum + (d.workout_exercises?.length || 0), 0
+    ) || 0;
+
+    return {
+      id: w.id,
+      name: w.name,
+      description: w.description,
+      goal: w.goal as WorkoutGoal | null,
+      difficulty: w.difficulty as WorkoutDifficulty | null,
+      duration: w.duration,
+      is_template: w.is_template,
+      exerciseCount,
+    };
+  }
+
+  // ── Use Template ──────────────────────────────────────────────────────────
+
+  async function handleUseTemplate(templateId: string) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Fetch template with full nested data
+    const { data: tpl } = await supabase
+      .from("workouts")
+      .select("name, description, goal, difficulty, duration, workout_days(day_name, sort_order, workout_exercises(exercise_id, exercise_name, sets, reps, rest_seconds, notes, sort_order))")
+      .eq("id", templateId)
+      .single();
+
+    if (!tpl) return;
+
+    // Create user's copy
+    const { data: newWorkout } = await supabase
+      .from("workouts")
+      .insert({
+        user_id: user.id,
+        name: tpl.name,
+        description: tpl.description,
+        goal: tpl.goal,
+        difficulty: tpl.difficulty,
+        duration: tpl.duration,
+        is_template: false,
+      })
+      .select("id")
+      .single();
+
+    if (!newWorkout) return;
+
+    // Copy days and exercises
+    for (const day of (tpl.workout_days || [])) {
+      const { data: newDay } = await supabase
+        .from("workout_days")
+        .insert({
+          workout_id: newWorkout.id,
+          user_id: user.id,
+          day_name: day.day_name,
+          sort_order: day.sort_order,
+        })
+        .select("id")
+        .single();
+
+      if (!newDay) continue;
+
+      const exercises = (day.workout_exercises || []).map((ex) => ({
+        workout_day_id: newDay.id,
+        user_id: user.id,
+        exercise_id: ex.exercise_id,
+        exercise_name: ex.exercise_name,
+        sets: ex.sets,
+        reps: ex.reps,
+        rest_seconds: ex.rest_seconds,
+        notes: ex.notes,
+        sort_order: ex.sort_order,
+      }));
+
+      if (exercises.length > 0) {
+        await supabase.from("workout_exercises").insert(exercises);
+      }
+    }
+
+    // Refresh list
+    await loadData();
+    setToast("Template loaded as your workout!");
+    setTimeout(() => setToast(null), 3000);
+  }
+
+  // ── Delete Workout ────────────────────────────────────────────────────────
+
+  async function handleDelete(workoutId: string) {
+    const supabase = createClient();
+    const { error } = await supabase.from("workouts").delete().eq("id", workoutId);
+    if (!error) {
+      setWorkouts((prev) => prev.filter((w) => w.id !== workoutId));
     }
   }
 
-  if (!hydrated) return null;
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading workouts...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -91,40 +258,61 @@ export default function WorkoutsPage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {workouts.map((w) => <WorkoutCard key={w.id} workout={w} href={`/workouts/${w.id}`} />)}
+            {workouts.map((w) => (
+              <div key={w.id} className="relative">
+                <WorkoutCard workout={w} href={`/workouts/${w.id}`} />
+                <button
+                  type="button"
+                  onClick={() => handleDelete(w.id)}
+                  className="absolute right-3 top-3 rounded-md p-1 text-zinc-300 transition-colors hover:bg-red-50 hover:text-red-600"
+                  aria-label={`Delete ${w.name}`}
+                >
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                    <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                  </svg>
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
       {/* Templates */}
-      <div>
-        <h2 className="mb-3 text-sm font-semibold text-zinc-900">Workout Templates</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {templates.map((tpl) => (
-            <div key={tpl.id} className="flex flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <div className="mb-2 flex items-start justify-between gap-2">
-                <h3 className="text-sm font-semibold text-zinc-900">{tpl.name}</h3>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${difficultyColor(tpl.difficulty)}`}>{tpl.difficulty}</span>
-              </div>
-              <p className="mb-3 text-xs text-zinc-400 line-clamp-2">{tpl.description}</p>
-              <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-3">
-                <div className="flex items-center gap-2">
-                  <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${goalColor(tpl.goal)}`}>{tpl.goal}</span>
-                  <span className="text-xs text-zinc-400">{tpl.duration} min</span>
+      {templates.length > 0 && (
+        <div>
+          <h2 className="mb-3 text-sm font-semibold text-zinc-900">Workout Templates</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {templates.map((tpl) => (
+              <div key={tpl.id} className="flex flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-zinc-900">{tpl.name}</h3>
+                  {tpl.difficulty && (
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${difficultyColor(tpl.difficulty)}`}>
+                      {tpl.difficulty}
+                    </span>
+                  )}
                 </div>
-                <button type="button" onClick={() => handleLoadTemplate(tpl.id)} className="text-xs font-semibold text-zinc-600 hover:text-zinc-900">
-                  Use Template
-                </button>
+                {tpl.description && <p className="mb-3 text-xs text-zinc-400 line-clamp-2">{tpl.description}</p>}
+                <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-3">
+                  <div className="flex items-center gap-2">
+                    {tpl.goal && <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${goalColor(tpl.goal)}`}>{tpl.goal}</span>}
+                    {tpl.duration && <span className="text-xs text-zinc-400">{tpl.duration} min</span>}
+                    <span className="text-xs text-zinc-400">{tpl.exerciseCount} ex.</span>
+                  </div>
+                  <button type="button" onClick={() => handleUseTemplate(tpl.id)} className="text-xs font-semibold text-zinc-600 hover:text-zinc-900">
+                    Use Template
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Toast */}
       {toast && (
         <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-          <p className="text-sm font-medium text-zinc-800">{toast}</p>
+          <p className="text-sm font-medium text-zinc-800">✓ {toast}</p>
         </div>
       )}
     </div>
