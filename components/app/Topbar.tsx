@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { Locale } from "@/lib/i18n/config";
 import LanguageSwitcher from "./LanguageSwitcher";
+import NotificationPanel from "./NotificationPanel";
 import { getUnreadCount, generateReminders } from "@/lib/notifications";
 import { createClient } from "@/lib/supabase/client";
 
@@ -36,6 +36,7 @@ export default function Topbar({ locale }: TopbarProps) {
   const router = useRouter();
   const [unread, setUnread] = useState(0);
   const [userInitial, setUserInitial] = useState("U");
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   useEffect(() => {
     generateReminders();
@@ -49,6 +50,18 @@ export default function Topbar({ locale }: TopbarProps) {
         setUserInitial(name.charAt(0).toUpperCase() || "U");
       }
     });
+  }, []);
+
+  function toggleNotifications() {
+    setNotificationsOpen((prev) => !prev);
+  }
+
+  const closeNotifications = useCallback(() => {
+    setNotificationsOpen(false);
+  }, []);
+
+  const handleUnreadCountChange = useCallback((count: number) => {
+    setUnread(count);
   }, []);
 
   async function handleLogout() {
@@ -78,21 +91,37 @@ export default function Topbar({ locale }: TopbarProps) {
         <LanguageSwitcher currentLocale={locale} />
 
         {/* Notifications */}
-        <Link
-          href="/notifications"
-          aria-label="Notifications"
-          className="relative rounded-lg p-2 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
-        >
-          <IconBell />
-          {unread > 0 && (
-            <span
-              aria-label={`${unread} unread`}
-              className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white"
-            >
-              {unread > 9 ? "9+" : unread}
-            </span>
-          )}
-        </Link>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={toggleNotifications}
+            aria-label="Notifications"
+            aria-expanded={notificationsOpen}
+            className={[
+              "relative rounded-lg p-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
+              notificationsOpen
+                ? "bg-zinc-100 text-zinc-900"
+                : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900",
+            ].join(" ")}
+          >
+            <IconBell />
+            {unread > 0 && (
+              <span
+                aria-label={`${unread} unread`}
+                className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white"
+              >
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
+          </button>
+
+          {/* Notification Panel (overlay) */}
+          <NotificationPanel
+            isOpen={notificationsOpen}
+            onClose={closeNotifications}
+            onUnreadCountChange={handleUnreadCountChange}
+          />
+        </div>
 
         {/* User avatar */}
         <button
