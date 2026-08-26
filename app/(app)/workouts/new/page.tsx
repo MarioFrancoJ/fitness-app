@@ -2,15 +2,44 @@
 
 import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { loadExercises } from "@/lib/exercises-store";
-import { addWorkout } from "@/lib/workouts-store";
-import { WORKOUT_GOALS, WORKOUT_DIFFICULTIES, DAY_NAMES, type WorkoutGoal, type WorkoutDifficulty, type DayName, type WorkoutDay, type WorkoutExercise } from "@/data/workouts";
-import type { Exercise } from "@/data/exercises";
+import { createClient } from "@/lib/supabase/client";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type WorkoutGoal = "Fat Loss" | "Muscle Gain" | "Strength" | "Endurance" | "Mobility" | "General Fitness";
+type WorkoutDifficulty = "Beginner" | "Intermediate" | "Advanced";
+type DayName = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
+
+interface ExerciseOption {
+  id: string;
+  name: string;
+}
+
+interface WorkoutExercise {
+  exerciseId: string;
+  exerciseName: string;
+  sets: number;
+  reps: number;
+  restSeconds: number;
+  notes: string;
+}
+
+interface WorkoutDay {
+  dayName: DayName;
+  exercises: WorkoutExercise[];
+}
+
+const WORKOUT_GOALS: WorkoutGoal[] = ["Fat Loss", "Muscle Gain", "Strength", "Endurance", "Mobility", "General Fitness"];
+const WORKOUT_DIFFICULTIES: WorkoutDifficulty[] = ["Beginner", "Intermediate", "Advanced"];
+const DAY_NAMES: DayName[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function NewWorkoutPage() {
   const router = useRouter();
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [exercises, setExercises] = useState<ExerciseOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   // Form
   const [name, setName] = useState("");
@@ -32,10 +61,25 @@ export default function NewWorkoutPage() {
   const [addRest, setAddRest] = useState("60");
   const [addNotes, setAddNotes] = useState("");
 
+  // ── Load exercises from Supabase ──────────────────────────────────────────
+
   useEffect(() => {
-    setExercises(loadExercises());
-    setHydrated(true);
+    async function loadExercises() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("exercises")
+        .select("id, name")
+        .order("name");
+
+      if (data) {
+        setExercises(data);
+      }
+      setLoading(false);
+    }
+    loadExercises();
   }, []);
+
+  // ── Day Management ────────────────────────────────────────────────────────
 
   function handleAddDay() {
     if (workoutDays.some((d) => d.dayName === selectedDay)) return;
@@ -45,6 +89,8 @@ export default function NewWorkoutPage() {
   function handleRemoveDay(idx: number) {
     setWorkoutDays(workoutDays.filter((_, i) => i !== idx));
   }
+
+  // ── Exercise Management ───────────────────────────────────────────────────
 
   function handleAddExercise(dayIdx: number) {
     if (!addExId) return;
@@ -77,25 +123,109 @@ export default function NewWorkoutPage() {
     );
   }
 
-  function handleSubmit(e: FormEvent) {
+  // ── Save to Supabase ──────────────────────────────────────────────────────
+
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    setError("");
+
     if (!name.trim()) { setError("Workout name is required."); return; }
     if (workoutDays.length === 0) { setError("Add at least one workout day."); return; }
 
-    addWorkout({
-      name: name.trim(),
-      description: description.trim(),
-      goal,
-      difficulty,
-      duration: parseInt(duration) || 45,
-      workoutDays,
-      isTemplate: false,
-    });
+    setSaving(true);
 
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setError("Not authenticated.");
+      setSaving(false);
+      return;
+    }
+
+    // 1. Create workout
+    const { data: workout, error: workoutErr } = await supabase
+      .from("workouts")
+      .insert({
+        user_id: user.id,
+        name: name.trim(),
+        description: description.trim() || null,
+        goal,
+        difficulty,
+        duration: parseInt(duration) || 45,
+        is_template: false,
+      })
+      .select("id")
+      .single();
+
+    if (workoutErr || !workout) {
+      setError("Error creating workout: " + (workoutErr?.message || "unknown"));
+      setSaving(false);
+      return;
+    }
+
+    // 2. Create workout_days + workout_exercises
+    for (let dayIdx = 0; dayIdx < workoutDays.length; dayIdx++) {
+      const day = workoutDays[dayIdx];
+
+      const { data: newDay, error: dayErr } = await supabase
+        .from("workout_days")
+        .insert({
+          workout_id: workout.id,
+          user_id: user.id,
+          day_name: day.dayName,
+          sort_order: dayIdx,
+        })
+        .select("id")
+        .single();
+
+      if (dayErr || !newDay) {
+        setError("Error creating day: " + (dayErr?.message || "unknown"));
+        setSaving(false);
+        return;
+      }
+
+      // Insert exercises for this day
+      if (day.exercises.length > 0) {
+        const exerciseInserts = day.exercises.map((ex, exIdx) => ({
+          workout_day_id: newDay.id,
+          user_id: user.id,
+          exercise_id: ex.exerciseId,
+          exercise_name: ex.exerciseName,
+          sets: ex.sets,
+          reps: ex.reps,
+          rest_seconds: ex.restSeconds,
+          notes: ex.notes || null,
+          sort_order: exIdx,
+        }));
+
+        const { error: exErr } = await supabase
+          .from("workout_exercises")
+          .insert(exerciseInserts);
+
+        if (exErr) {
+          setError("Error saving exercises: " + exErr.message);
+          setSaving(false);
+          return;
+        }
+      }
+    }
+
+    // Success — redirect to workouts list
     router.push("/workouts");
   }
 
-  if (!hydrated) return null;
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading exercises...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -105,7 +235,7 @@ export default function NewWorkoutPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-        {error && <p className="text-xs text-red-500" role="alert">{error}</p>}
+        {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-xs font-medium text-red-700" role="alert">{error}</p>}
 
         {/* Basic info */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
@@ -232,8 +362,9 @@ export default function NewWorkoutPage() {
 
         {/* Submit */}
         <div className="flex gap-3">
-          <button type="submit" className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900">
-            Create Workout
+          <button type="submit" disabled={saving}
+            className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 disabled:opacity-50">
+            {saving ? "Creating..." : "Create Workout"}
           </button>
           <button type="button" onClick={() => router.push("/workouts")} className="text-sm font-medium text-zinc-500 hover:text-zinc-900">
             Cancel
