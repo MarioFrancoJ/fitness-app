@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -93,6 +92,7 @@ function StatCard({ label, value, color = "text-zinc-900" }: { label: string; va
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ShoppingListPage() {
+  const { success: showToast } = useToast();
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [listId, setListId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

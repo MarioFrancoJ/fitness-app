@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -74,6 +73,7 @@ function WorkoutCard({ workout, href }: { workout: WorkoutItem; href: string }) 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function WorkoutsPage() {
+  const { success: showToast } = useToast();
   const [workouts, setWorkouts] = useState<WorkoutItem[]>([]);
   const [templates, setTemplates] = useState<WorkoutItem[]>([]);
   const [loading, setLoading] = useState(true);

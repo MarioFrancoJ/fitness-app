@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
@@ -40,6 +39,7 @@ const ROLE_PERMISSIONS = [
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminSettingsPage() {
+  const { success: showToast } = useToast();
   const [settings, setSettings] = useState<PlatformSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

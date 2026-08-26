@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
@@ -53,6 +52,7 @@ function priorityBadge(p: string): string {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminAIPage() {
+  const { success: showToast } = useToast();
   const [rules, setRules] = useState<RuleDefinition[]>([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"All" | RecommendationCategory>("All");

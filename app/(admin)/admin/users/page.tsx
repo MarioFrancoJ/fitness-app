@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
@@ -43,6 +42,7 @@ function roleBadge(r: UserRole): string {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminUsersPage() {
+  const { success: showToast } = useToast();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"All" | UserRole>("All");

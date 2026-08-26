@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
@@ -58,6 +57,7 @@ function categoryIcon(c: RecommendationCategory): string {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RecommendationsPage() {
+  const { success: showToast } = useToast();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [filter, setFilter] = useState<FilterTab>("active");
   const [loading, setLoading] = useState(true);

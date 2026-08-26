@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -137,6 +136,7 @@ function EmptyState() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function MealPlannerPage() {
+  const { success: showToast } = useToast();
   const [mealPlan, setMealPlan] = useState<MealPlanRow>({
     id: "",
     weekStartDate: "",

@@ -1,6 +1,5 @@
 "use client";
 
-  const { toast: globalToast } = useToast();
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import EventModal, { type CalendarEvent, type EventFormData } from "@/components/calendar/EventModal";
@@ -55,6 +54,7 @@ const TYPE_ICONS: Record<string, string> = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CalendarPage() {
+  const { toast: globalToast } = useToast();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());

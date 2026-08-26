@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -278,6 +277,7 @@ function Section({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
+  const { success: showToast } = useToast();
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>(EMPTY_PERSONAL);
   const [weight, setWeight] = useState<WeightInfo>(EMPTY_WEIGHT);
   const [measurements, setMeasurements] = useState<BodyMeasurements>(EMPTY_MEASUREMENTS);

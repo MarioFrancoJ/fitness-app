@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -69,6 +68,7 @@ function UsageBar({ label, current, max }: { label: string; current: number; max
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SubscriptionPage() {
+  const { success: showToast } = useToast();
   const [sub, setSub] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState({ recipesCreated: 0, workoutPlansCreated: 0, progressPhotosUploaded: 0, historyDays: 0 });
   const [loading, setLoading] = useState(true);

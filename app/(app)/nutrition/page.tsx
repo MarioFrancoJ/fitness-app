@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback, useMemo, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/Toast";
@@ -156,6 +155,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function NutritionPage() {
+  const { success: showToast } = useToast();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [targets, setTargets] = useState<NutritionTargets>(DEFAULT_TARGETS);
   const [hydrated, setHydrated] = useState(false);

@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -65,6 +64,7 @@ function goalColor(g: WorkoutGoal | null): string {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function WorkoutDetailPage() {
+  const { success: showToast } = useToast();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [workout, setWorkout] = useState<WorkoutDetail | null>(null);

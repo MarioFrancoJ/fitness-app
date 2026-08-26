@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -66,6 +65,7 @@ function mapPriority(p: string): "high" | "medium" | "low" {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AiCoachPage() {
+  const { success: showToast } = useToast();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [checkIn, setCheckIn] = useState<DailyCheckIn | null>(null);
   const [energy, setEnergy] = useState(7);

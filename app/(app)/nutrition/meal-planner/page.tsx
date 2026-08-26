@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
@@ -62,6 +61,7 @@ function dayTotals(plan: MealPlan, day: Day, recipes: RecipeSummary[]) {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function MealPlannerPage() {
+  const { success: showToast } = useToast();
   const [plan, setPlan] = useState<MealPlan>(emptyPlan());
   const [planId, setPlanId] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);

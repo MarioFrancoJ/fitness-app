@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
@@ -38,6 +37,7 @@ function priorityBadge(p: string): string {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminNotificationsPage() {
+  const { success: showToast } = useToast();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [formTitle, setFormTitle] = useState("");

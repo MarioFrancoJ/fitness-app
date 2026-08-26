@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
@@ -38,6 +37,7 @@ function planBadge(p: PlanType): string {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminSubscriptionsPage() {
+  const { success: showToast } = useToast();
   const [subscriptions, setSubscriptions] = useState<SubscriptionRow[]>([]);
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState<"All" | PlanType>("All");

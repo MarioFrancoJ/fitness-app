@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -71,6 +70,7 @@ const FEATURE_COMPARISON: PlanFeature[] = [
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PricingPage() {
+  const { success: showToast } = useToast();
   const [currentPlan, setCurrentPlan] = useState<PlanType>("FREE");
   const [loading, setLoading] = useState(true);
 

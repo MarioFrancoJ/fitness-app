@@ -1,6 +1,5 @@
 "use client";
 
-  const { success: showToast } = useToast();
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -56,6 +55,7 @@ function timeAgo(iso: string): string {
 }
 
 export default function NotificationsPage() {
+  const { success: showToast } = useToast();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [filter, setFilter] = useState<FilterTab>("all");
   const [loading, setLoading] = useState(true);
