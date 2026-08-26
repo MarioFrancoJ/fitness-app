@@ -1,11 +1,23 @@
-import { workoutTemplates } from "@/data/workout-templates";
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Workout Templates — FitnessApp",
-};
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 
-function difficultyColor(d: string) {
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface TemplateItem {
+  id: string;
+  name: string;
+  description: string | null;
+  goal: string | null;
+  difficulty: string | null;
+  duration: number | null;
+  exercises: string[];
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function difficultyColor(d: string | null) {
   switch (d) {
     case "Beginner":     return "bg-emerald-50 text-emerald-700";
     case "Intermediate": return "bg-amber-50 text-amber-700";
@@ -14,7 +26,66 @@ function difficultyColor(d: string) {
   }
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function TemplatesPage() {
+  const [templates, setTemplates] = useState<TemplateItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadTemplates() {
+      const supabase = createClient();
+
+      const { data } = await supabase
+        .from("workouts")
+        .select("id, name, description, goal, difficulty, duration, workout_days(workout_exercises(exercise_name))")
+        .eq("is_template", true)
+        .is("user_id", null)
+        .order("name");
+
+      if (data) {
+        setTemplates(data.map((t) => {
+          // Flatten all exercise names from all days
+          const exercises: string[] = [];
+          for (const day of (t.workout_days || [])) {
+            for (const ex of (day.workout_exercises || [])) {
+              if (!exercises.includes(ex.exercise_name)) {
+                exercises.push(ex.exercise_name);
+              }
+            }
+          }
+
+          return {
+            id: t.id,
+            name: t.name,
+            description: t.description,
+            goal: t.goal,
+            difficulty: t.difficulty,
+            duration: t.duration,
+            exercises,
+          };
+        }));
+      }
+
+      setLoading(false);
+    }
+
+    loadTemplates();
+  }, []);
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <p className="text-sm text-zinc-400">Loading templates...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -26,54 +97,68 @@ export default function TemplatesPage() {
       </div>
 
       {/* Template cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {workoutTemplates.map((tmpl) => (
-          <div
-            key={tmpl.id}
-            className="flex flex-col rounded-xl border border-zinc-200 bg-white p-6 shadow-sm"
-          >
-            {/* Top row */}
-            <div className="mb-3 flex items-start justify-between">
-              <h3 className="text-base font-semibold text-zinc-900">{tmpl.name}</h3>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${difficultyColor(tmpl.difficulty)}`}
-              >
-                {tmpl.difficulty}
-              </span>
-            </div>
-
-            {/* Meta */}
-            <div className="mb-3 flex items-center gap-2">
-              <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
-                {tmpl.category}
-              </span>
-              <span className="text-xs text-zinc-400">{tmpl.duration}</span>
-            </div>
-
-            {/* Description */}
-            <p className="mb-4 text-sm leading-relaxed text-zinc-500">
-              {tmpl.description}
-            </p>
-
-            {/* Exercises list */}
-            <div className="mt-auto border-t border-zinc-100 pt-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-                Exercises ({tmpl.exercises.length})
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {tmpl.exercises.map((ex) => (
+      {templates.length === 0 ? (
+        <div className="flex h-40 items-center justify-center rounded-xl border border-zinc-200 bg-white">
+          <p className="text-sm text-zinc-400">No templates available.</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {templates.map((tmpl) => (
+            <div
+              key={tmpl.id}
+              className="flex flex-col rounded-xl border border-zinc-200 bg-white p-6 shadow-sm"
+            >
+              {/* Top row */}
+              <div className="mb-3 flex items-start justify-between">
+                <h3 className="text-base font-semibold text-zinc-900">{tmpl.name}</h3>
+                {tmpl.difficulty && (
                   <span
-                    key={ex}
-                    className="rounded-md bg-zinc-50 px-2 py-0.5 text-xs text-zinc-600"
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${difficultyColor(tmpl.difficulty)}`}
                   >
-                    {ex}
+                    {tmpl.difficulty}
                   </span>
-                ))}
+                )}
+              </div>
+
+              {/* Meta */}
+              <div className="mb-3 flex items-center gap-2">
+                {tmpl.goal && (
+                  <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                    {tmpl.goal}
+                  </span>
+                )}
+                {tmpl.duration && (
+                  <span className="text-xs text-zinc-400">{tmpl.duration} min</span>
+                )}
+              </div>
+
+              {/* Description */}
+              {tmpl.description && (
+                <p className="mb-4 text-sm leading-relaxed text-zinc-500">
+                  {tmpl.description}
+                </p>
+              )}
+
+              {/* Exercises list */}
+              <div className="mt-auto border-t border-zinc-100 pt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">
+                  Exercises ({tmpl.exercises.length})
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {tmpl.exercises.map((ex) => (
+                    <span
+                      key={ex}
+                      className="rounded-md bg-zinc-50 px-2 py-0.5 text-xs text-zinc-600"
+                    >
+                      {ex}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
