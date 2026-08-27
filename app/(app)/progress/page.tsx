@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { SkeletonPage } from "@/components/ui/Skeleton";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

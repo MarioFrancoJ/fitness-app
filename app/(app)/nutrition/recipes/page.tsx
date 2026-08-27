@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import EmptyState from "@/components/ui/EmptyState";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -246,10 +247,13 @@ export default function RecipesPage() {
 
       {/* Content */}
       {allRecipes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white py-20">
-          <p className="mb-1 text-base font-semibold text-zinc-900">No recipes yet</p>
-          <p className="mb-6 text-sm text-zinc-500">Recipes will appear here once created.</p>
-        </div>
+        <EmptyState
+          icon="📖"
+          title="No recipes yet"
+          description="Recipes will appear here once created. Start building your recipe collection!"
+          actionLabel="Create Recipe"
+          actionHref="/nutrition/recipes"
+        />
       ) : showGrouped ? (
         <div className="flex flex-col gap-8">
           {/* Featured */}

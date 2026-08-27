@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { SkeletonPage } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
+import EmptyState from "@/components/ui/EmptyState";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -158,11 +160,11 @@ export default function RecommendationsPage() {
 
         {/* Recommendations list */}
         {displayed.length === 0 ? (
-          <div className="flex h-40 items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-sm">
-            <p className="text-sm text-zinc-400">
-              {filter === "active" ? "No active recommendations. You're on track!" : `No ${filter} recommendations.`}
-            </p>
-          </div>
+          <EmptyState
+            icon={filter === "active" ? "✨" : filter === "completed" ? "✅" : "🗑️"}
+            title={filter === "active" ? "No active recommendations" : `No ${filter} recommendations`}
+            description={filter === "active" ? "You're on track! Check back later for personalized tips." : `You don't have any ${filter} recommendations yet.`}
+          />
         ) : (
           <div className="flex flex-col gap-3">
             {displayed.map((rec) => (

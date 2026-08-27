@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
+import EmptyState from "@/components/ui/EmptyState";
 
 interface NotificationItem {
   id: string;
@@ -218,11 +219,11 @@ export default function NotificationsPage() {
 
         {/* List */}
         {filtered.length === 0 ? (
-          <div className="flex h-48 items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-sm">
-            <p className="text-sm text-zinc-400">
-              {filter === "unread" ? "No unread notifications." : filter === "archived" ? "No archived notifications." : "No notifications yet."}
-            </p>
-          </div>
+          <EmptyState
+            icon={filter === "unread" ? "📭" : filter === "archived" ? "📦" : "🔔"}
+            title={filter === "unread" ? "No unread notifications" : filter === "archived" ? "No archived notifications" : "No notifications yet"}
+            description={filter === "all" ? "Notifications will appear here as you use the app." : `You have no ${filter} notifications right now.`}
+          />
         ) : (
           <div className="flex flex-col gap-2">
             {filtered.map((notif) => (

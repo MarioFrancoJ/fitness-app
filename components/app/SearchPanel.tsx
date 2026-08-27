@@ -31,6 +31,7 @@ export default function SearchPanel({ open, onClose }: SearchPanelProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -130,7 +131,16 @@ export default function SearchPanel({ open, onClose }: SearchPanelProps) {
           ref={inputRef}
           type="text"
           value={query}
-          onChange={(e) => handleSearch(e.target.value)}
+          onChange={(e) => { handleSearch(e.target.value); setSelectedIndex(-1); }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") { e.preventDefault(); setSelectedIndex((i) => Math.min(i + 1, results.length - 1)); }
+            else if (e.key === "ArrowUp") { e.preventDefault(); setSelectedIndex((i) => Math.max(i - 1, -1)); }
+            else if (e.key === "Enter" && selectedIndex >= 0 && results[selectedIndex]) {
+              e.preventDefault();
+              window.location.href = results[selectedIndex].href;
+              onClose();
+            }
+          }}
           placeholder="Search workouts, exercises, recipes..."
           className="flex-1 bg-transparent text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
         />
@@ -157,32 +167,39 @@ export default function SearchPanel({ open, onClose }: SearchPanelProps) {
 
         {!loading && results.length > 0 && (
           <div className="py-2">
-            {Object.entries(grouped).map(([category, items]) => {
-              const meta = CATEGORY_META[category];
-              return (
-                <div key={category}>
-                  <p className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                    {meta.icon} {meta.label}
-                  </p>
-                  {items.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={item.href}
-                      onClick={onClose}
-                      className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-zinc-50"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate text-sm font-medium text-zinc-900">{item.title}</p>
-                        <p className="truncate text-xs text-zinc-400">{item.subtitle}</p>
-                      </div>
-                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-medium ${meta.color}`}>
-                        {meta.label.slice(0, -1)}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              );
-            })}
+            {(() => {
+              let flatIndex = -1;
+              return Object.entries(grouped).map(([category, items]) => {
+                const meta = CATEGORY_META[category];
+                return (
+                  <div key={category}>
+                    <p className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                      {meta.icon} {meta.label}
+                    </p>
+                    {items.map((item) => {
+                      flatIndex++;
+                      const isSelected = flatIndex === selectedIndex;
+                      return (
+                        <Link
+                          key={item.id}
+                          href={item.href}
+                          onClick={onClose}
+                          className={["flex items-center gap-3 px-4 py-2.5 transition-colors", isSelected ? "bg-zinc-100" : "hover:bg-zinc-50"].join(" ")}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="truncate text-sm font-medium text-zinc-900">{item.title}</p>
+                            <p className="truncate text-xs text-zinc-400">{item.subtitle}</p>
+                          </div>
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-medium ${meta.color}`}>
+                            {meta.label.slice(0, -1)}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                );
+              });
+            })()}
           </div>
         )}
 
@@ -195,9 +212,11 @@ export default function SearchPanel({ open, onClose }: SearchPanelProps) {
 
       {/* Footer hint */}
       <div className="border-t border-zinc-100 px-4 py-2">
-        <p className="text-[10px] text-zinc-400">
-          <kbd className="rounded border border-zinc-200 bg-zinc-50 px-1 font-mono">Esc</kbd> to close
-        </p>
+        <div className="flex items-center gap-3 text-[10px] text-zinc-400">
+          <span><kbd className="rounded border border-zinc-200 bg-zinc-50 px-1 font-mono">↑↓</kbd> navigate</span>
+          <span><kbd className="rounded border border-zinc-200 bg-zinc-50 px-1 font-mono">↵</kbd> open</span>
+          <span><kbd className="rounded border border-zinc-200 bg-zinc-50 px-1 font-mono">Esc</kbd> close</span>
+        </div>
       </div>
     </div>
   );
