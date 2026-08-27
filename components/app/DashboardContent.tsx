@@ -323,13 +323,10 @@ export default function DashboardContent() {
       ═══════════════════════════════════════════════════════════════════════ */}
       <header className="flex flex-col gap-golden-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-golden-base font-medium text-zinc-500">
-            {getGreeting()}
-          </p>
-          <h1 className="mt-golden-1 text-golden-xl font-bold tracking-tight text-zinc-900">
-            {profile?.name || "User"}
+          <h1 className="text-golden-lg font-bold tracking-tight text-zinc-900">
+            {getGreeting()}, {(profile?.name || "User").split(" ")[0]}
           </h1>
-          <div className="mt-golden-2 flex flex-wrap items-center gap-golden-2 text-golden-sm text-zinc-500">
+          <div className="mt-golden-1 flex flex-wrap items-center gap-golden-2 text-golden-sm text-zinc-500">
             {profile?.fitnessGoal && (
               <span className="inline-flex items-center gap-golden-1 rounded-golden-md bg-zinc-100 px-golden-2 py-golden-1 text-golden-sm font-medium text-zinc-700">
                 🎯 {profile.fitnessGoal}
@@ -339,12 +336,6 @@ export default function DashboardContent() {
           </div>
         </div>
         <div className="flex items-center gap-golden-2 sm:self-start">
-          <Link
-            href="/training/start"
-            className="inline-flex items-center gap-golden-2 rounded-golden-lg bg-zinc-900 px-golden-4 py-golden-3 text-golden-base font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700"
-          >
-            💪 Start Workout
-          </Link>
           <QuickActionsMenu />
         </div>
       </header>
@@ -464,9 +455,14 @@ export default function DashboardContent() {
         <div className="rounded-golden-xl border border-zinc-200 bg-white p-golden-4 shadow-sm lg:col-span-2">
           <div className="mb-golden-3 flex items-center justify-between">
             <h2 className="text-golden-base font-bold text-zinc-900">This Week</h2>
-            <span className="text-golden-sm text-zinc-400">
-              {weekly?.workoutsCompleted ?? 0}/{weekly?.workoutsGoal ?? 4}
-            </span>
+          </div>
+
+          {/* Workouts headline — primary emphasis */}
+          <div className="mb-golden-4 rounded-golden-md bg-zinc-900 px-golden-3 py-golden-3 text-center">
+            <p className="text-golden-lg font-bold text-white">
+              {weekly?.workoutsCompleted ?? 0}<span className="text-golden-sm font-medium text-zinc-400">/{weekly?.workoutsGoal ?? 4}</span>
+            </p>
+            <p className="text-golden-xs font-medium text-zinc-400">workouts completed</p>
           </div>
 
           {/* Day dots visualization */}
@@ -504,18 +500,18 @@ export default function DashboardContent() {
           {/* Progress bars */}
           <div className="space-y-golden-3">
             <ProgressRow
-              label="Calories"
-              current={weekly?.avgCalories ?? 0}
-              target={weekly?.caloriesTarget ?? 2200}
-              suffix="kcal avg"
-              color="bg-amber-500"
-            />
-            <ProgressRow
               label="Workouts"
               current={weekly?.workoutsCompleted ?? 0}
               target={weekly?.workoutsGoal ?? 4}
               suffix="sessions"
-              color="bg-blue-500"
+              color="bg-zinc-900"
+            />
+            <ProgressRow
+              label="Calories"
+              current={weekly?.avgCalories ?? 0}
+              target={weekly?.caloriesTarget ?? 2200}
+              suffix="kcal avg"
+              color="bg-zinc-300"
             />
             <div className="flex items-center justify-between rounded-golden-md bg-zinc-50 px-golden-3 py-golden-2">
               <span className="text-golden-sm font-medium text-zinc-600">Weight Δ</span>
