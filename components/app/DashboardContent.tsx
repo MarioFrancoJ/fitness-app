@@ -317,10 +317,13 @@ export default function DashboardContent() {
       ═══════════════════════════════════════════════════════════════════════ */}
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-            {getGreeting()}, {profile?.name || "User"}
+          <p className="text-sm font-medium text-zinc-500">
+            {getGreeting()}
+          </p>
+          <h1 className="mt-0.5 text-[2rem] font-bold tracking-tight text-zinc-900 lg:text-[2.25rem]">
+            {profile?.name || "User"}
           </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
             {profile?.fitnessGoal && (
               <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-700">
                 🎯 {profile.fitnessGoal}
