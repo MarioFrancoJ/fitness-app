@@ -372,27 +372,7 @@ export default function CalendarPage() {
         </button>
       </div>
 
-      {/* Month navigation */}
-      <div className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-5 py-3 shadow-sm">
-        <button type="button" onClick={prevMonth} className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Previous month">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" /></svg>
-        </button>
-
-        <div className="flex items-center gap-3">
-          <h2 className="text-lg font-bold text-zinc-900">
-            {currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-          </h2>
-          <button type="button" onClick={goToday} className="rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-200">
-            Today
-          </button>
-        </div>
-
-        <button type="button" onClick={nextMonth} className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Next month">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" /></svg>
-        </button>
-      </div>
-
-      {/* Upcoming events — shown first for immediate relevance */}
+      {/* Upcoming events — above calendar for immediate relevance */}
       <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
         <h3 className="mb-4 text-sm font-semibold text-zinc-900">Upcoming Events</h3>
         {events.filter((e) => new Date(e.start_date) >= today).length === 0 ? (
@@ -426,10 +406,32 @@ export default function CalendarPage() {
         )}
       </div>
 
+      {/* Month navigation + Calendar grid (grouped together, no gap between nav and grid) */}
+      <div className="flex flex-col gap-0">
+        <div className="flex items-center justify-between rounded-t-xl border border-zinc-200 bg-white px-5 py-3">
+          <button type="button" onClick={prevMonth} className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Previous month">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" /></svg>
+          </button>
+
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-bold text-zinc-900">
+              {currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            </h2>
+            <button type="button" onClick={goToday} className="rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-200">
+              Today
+            </button>
+          </div>
+
+          <button type="button" onClick={nextMonth} className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Next month">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" /></svg>
+          </button>
+        </div>
+      </div>
+
       {/* Calendar grid + sidebar */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="-mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
         {/* Calendar grid */}
-        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="rounded-b-xl border border-t-0 border-zinc-200 bg-white p-4 shadow-sm">
           {/* Weekday headers */}
           <div className="mb-2 grid grid-cols-7 gap-1">
             {WEEKDAYS.map((day) => (
