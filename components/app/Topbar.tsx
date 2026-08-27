@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Locale } from "@/lib/i18n/config";
 import LanguageSwitcher from "./LanguageSwitcher";
 import NotificationPanel from "./NotificationPanel";
@@ -169,10 +170,15 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
           <NotificationPanel isOpen={notificationsOpen} onClose={closeNotifications} onUnreadCountChange={handleUnreadCountChange} />
         </div>
 
-        {/* User avatar */}
-        <button type="button" aria-label="User menu" className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2">
+        {/* User avatar → Profile link */}
+        <Link
+          href="/profile"
+          aria-label="Open profile"
+          title="Profile"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2"
+        >
           {userInitial}
-        </button>
+        </Link>
 
         {/* Logout - hidden on mobile */}
         <button type="button" onClick={handleLogout} aria-label="Sign out" className="hidden rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 sm:block">
