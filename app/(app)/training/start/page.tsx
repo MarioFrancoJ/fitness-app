@@ -49,6 +49,8 @@ function formatTime(seconds: number): string {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+const SESSION_TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
+
 export default function TrainingStartPage() {
   const router = useRouter();
   const [workouts, setWorkouts] = useState<WorkoutOption[]>([]);
@@ -56,6 +58,7 @@ export default function TrainingStartPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [currentExIdx, setCurrentExIdx] = useState(0);
+  const [abandonedNotice, setAbandonedNotice] = useState<string | null>(null);
 
   // Rest timer
   const [restTime, setRestTime] = useState(0);
@@ -85,39 +88,59 @@ export default function TrainingStartPage() {
         .single();
 
       if (activeSession) {
-        // Resume active session — load exercise logs from DB
-        const { data: logs } = await supabase
-          .from("session_exercise_logs")
-          .select("id, exercise_id, exercise_name, sort_order, session_set_logs(set_number, target_reps, completed_reps, target_weight, completed_weight, completed)")
-          .eq("session_id", activeSession.id)
-          .order("sort_order");
+        const startMs = new Date(activeSession.start_time).getTime();
+        const elapsedMs = Date.now() - startMs;
 
-        if (logs && logs.length > 0) {
-          const exerciseLogs: ExerciseLog[] = logs.map((log) => ({
-            exerciseId: log.exercise_id,
-            exerciseName: log.exercise_name,
-            sets: (log.session_set_logs || [])
-              .sort((a: { set_number: number }, b: { set_number: number }) => a.set_number - b.set_number)
-              .map((s: { set_number: number; target_reps: number | null; completed_reps: number | null; target_weight: number | null; completed_weight: number | null; completed: boolean }) => ({
-                setNumber: s.set_number,
-                targetReps: s.target_reps || 0,
-                completedReps: s.completed_reps || 0,
-                targetWeight: Number(s.target_weight) || 0,
-                completedWeight: Number(s.completed_weight) || 0,
-                completed: s.completed,
-              })),
-          }));
+        // ── Auto-abandon stale sessions (>4 hours) ────────────────────────
+        if (elapsedMs > SESSION_TIMEOUT_MS) {
+          const durationMin = Math.min(Math.round(elapsedMs / 60000), 240); // Cap at 4h
+          await supabase
+            .from("training_sessions")
+            .update({
+              status: "Abandoned",
+              end_time: new Date(startMs + SESSION_TIMEOUT_MS).toISOString(),
+              duration_minutes: durationMin,
+            })
+            .eq("id", activeSession.id);
 
-          setSession({
-            id: activeSession.id,
-            workoutId: activeSession.workout_id,
-            workoutName: activeSession.workout_name || "Workout",
-            startTime: activeSession.start_time,
-            exerciseLogs,
-          });
+          setAbandonedNotice(
+            `Your previous workout "${activeSession.workout_name || "Session"}" was automatically closed due to inactivity.`
+          );
+          // Don't resume — fall through to show workout selection
+        } else {
+          // Resume active session — load exercise logs from DB
+          const { data: logs } = await supabase
+            .from("session_exercise_logs")
+            .select("id, exercise_id, exercise_name, sort_order, session_set_logs(set_number, target_reps, completed_reps, target_weight, completed_weight, completed)")
+            .eq("session_id", activeSession.id)
+            .order("sort_order");
 
-          const start = new Date(activeSession.start_time).getTime();
-          setElapsed(Math.floor((Date.now() - start) / 1000));
+          if (logs && logs.length > 0) {
+            const exerciseLogs: ExerciseLog[] = logs.map((log) => ({
+              exerciseId: log.exercise_id,
+              exerciseName: log.exercise_name,
+              sets: (log.session_set_logs || [])
+                .sort((a: { set_number: number }, b: { set_number: number }) => a.set_number - b.set_number)
+                .map((s: { set_number: number; target_reps: number | null; completed_reps: number | null; target_weight: number | null; completed_weight: number | null; completed: boolean }) => ({
+                  setNumber: s.set_number,
+                  targetReps: s.target_reps || 0,
+                  completedReps: s.completed_reps || 0,
+                  targetWeight: Number(s.target_weight) || 0,
+                  completedWeight: Number(s.completed_weight) || 0,
+                  completed: s.completed,
+                })),
+            }));
+
+            setSession({
+              id: activeSession.id,
+              workoutId: activeSession.workout_id,
+              workoutName: activeSession.workout_name || "Workout",
+              startTime: activeSession.start_time,
+              exerciseLogs,
+            });
+
+            setElapsed(Math.floor(elapsedMs / 1000));
+          }
         }
       }
 
@@ -379,6 +402,27 @@ export default function TrainingStartPage() {
   if (!session) {
     return (
       <div className="flex flex-col gap-6">
+        {/* Abandoned session notice */}
+        {abandonedNotice && (
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <span className="mt-0.5 text-lg">⏱️</span>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-900">{abandonedNotice}</p>
+              <p className="mt-0.5 text-xs text-amber-700">Sessions inactive for more than 4 hours are automatically closed.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAbandonedNotice(null)}
+              className="shrink-0 rounded-md p-1 text-amber-500 hover:bg-amber-100 hover:text-amber-700"
+              aria-label="Dismiss"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Start Workout</h1>
           <p className="mt-1 text-sm text-zinc-500">Select a workout to begin your training session.</p>

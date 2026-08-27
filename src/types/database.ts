@@ -1498,7 +1498,7 @@ export type Database = {
       recommendation_status: "New" | "Viewed" | "Dismissed" | "Completed"
       reminder_frequency: "Daily" | "Weekly" | "Monthly" | "Never"
       subscription_status: "Active" | "Trial" | "Expired" | "Cancelled" | "Pending"
-      training_session_status: "In Progress" | "Completed" | "Cancelled"
+      training_session_status: "In Progress" | "Completed" | "Cancelled" | "Abandoned"
       user_role: "USER" | "ADMIN" | "SUPER_ADMIN"
       user_status: "Active" | "Suspended" | "Deleted"
       workout_goal: "Fat Loss" | "Muscle Gain" | "Strength" | "Endurance" | "Mobility" | "General Fitness"
