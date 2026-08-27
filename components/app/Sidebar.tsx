@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -107,7 +107,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
   // Determine which section owns the current route
   const activeSectionId = useMemo(() => {
-    if (pathname === "/dashboard") return null; // Dashboard is standalone
+    if (pathname === "/dashboard") return null;
     for (const section of NAV_SECTIONS) {
       if (section.matchPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"))) {
         return section.id;
@@ -118,10 +118,17 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
   const [expandedId, setExpandedId] = useState<string | null>(activeSectionId);
 
-  // If the user navigates to a new section, auto-expand it
-  if (activeSectionId && activeSectionId !== expandedId) {
-    setExpandedId(activeSectionId);
-  }
+  // Auto-expand the active section ONLY when the route changes
+  // (not on every render — that would block manual toggling)
+  const prevPathRef = useRef(pathname);
+  useEffect(() => {
+    if (pathname !== prevPathRef.current) {
+      prevPathRef.current = pathname;
+      if (activeSectionId) {
+        setExpandedId(activeSectionId);
+      }
+    }
+  }, [pathname, activeSectionId]);
 
   // Collect all nav hrefs for active matching
   const allHrefs = useMemo(() => NAV_SECTIONS.flatMap((s) => s.items.map((i) => i.href)), []);
