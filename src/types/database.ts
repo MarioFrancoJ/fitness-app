@@ -356,6 +356,7 @@ export type Database = {
           date: string
           time: string | null
           photo_url: string | null
+          is_sandbox: boolean
           created_at: string
         }
         Insert: {
@@ -371,6 +372,7 @@ export type Database = {
           date: string
           time?: string | null
           photo_url?: string | null
+          is_sandbox?: boolean
           created_at?: string
         }
         Update: {
@@ -386,6 +388,7 @@ export type Database = {
           date?: string
           time?: string | null
           photo_url?: string | null
+          is_sandbox?: boolean
           created_at?: string
         }
         Relationships: [
@@ -458,6 +461,7 @@ export type Database = {
           right_thigh_cm: number | null
           left_calf_cm: number | null
           right_calf_cm: number | null
+          is_sandbox: boolean
           created_at: string
         }
         Insert: {
@@ -475,6 +479,7 @@ export type Database = {
           right_thigh_cm?: number | null
           left_calf_cm?: number | null
           right_calf_cm?: number | null
+          is_sandbox?: boolean
           created_at?: string
         }
         Update: {
@@ -492,6 +497,7 @@ export type Database = {
           right_thigh_cm?: number | null
           left_calf_cm?: number | null
           right_calf_cm?: number | null
+          is_sandbox?: boolean
           created_at?: string
         }
         Relationships: [
@@ -631,6 +637,7 @@ export type Database = {
           weight_kg: number | null
           notes: string | null
           upload_date: string
+          is_sandbox: boolean
           created_at: string
         }
         Insert: {
@@ -641,6 +648,7 @@ export type Database = {
           weight_kg?: number | null
           notes?: string | null
           upload_date?: string
+          is_sandbox?: boolean
           created_at?: string
         }
         Update: {
@@ -651,6 +659,7 @@ export type Database = {
           weight_kg?: number | null
           notes?: string | null
           upload_date?: string
+          is_sandbox?: boolean
           created_at?: string
         }
         Relationships: [
@@ -1041,6 +1050,7 @@ export type Database = {
           expiration_date: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
+          is_sandbox: boolean
           created_at: string
           updated_at: string
         }
@@ -1054,6 +1064,7 @@ export type Database = {
           expiration_date?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          is_sandbox?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -1067,6 +1078,7 @@ export type Database = {
           expiration_date?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          is_sandbox?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -1092,6 +1104,7 @@ export type Database = {
           duration_minutes: number | null
           status: Database["public"]["Enums"]["training_session_status"]
           notes: string | null
+          is_sandbox: boolean
           created_at: string
           updated_at: string
         }
@@ -1106,6 +1119,7 @@ export type Database = {
           duration_minutes?: number | null
           status?: Database["public"]["Enums"]["training_session_status"]
           notes?: string | null
+          is_sandbox?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -1120,6 +1134,7 @@ export type Database = {
           duration_minutes?: number | null
           status?: Database["public"]["Enums"]["training_session_status"]
           notes?: string | null
+          is_sandbox?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -1237,6 +1252,7 @@ export type Database = {
           created_at: string
           updated_at: string
           last_login_at: string | null
+          sandbox_mode: boolean
         }
         Insert: {
           id: string
@@ -1254,6 +1270,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
           last_login_at?: string | null
+          sandbox_mode?: boolean
         }
         Update: {
           id?: string
@@ -1271,6 +1288,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
           last_login_at?: string | null
+          sandbox_mode?: boolean
         }
         Relationships: []
       }
@@ -1281,6 +1299,7 @@ export type Database = {
           date: string
           weight_kg: number
           notes: string | null
+          is_sandbox: boolean
           created_at: string
         }
         Insert: {
@@ -1289,6 +1308,7 @@ export type Database = {
           date: string
           weight_kg: number
           notes?: string | null
+          is_sandbox?: boolean
           created_at?: string
         }
         Update: {
@@ -1297,6 +1317,7 @@ export type Database = {
           date?: string
           weight_kg?: number
           notes?: string | null
+          is_sandbox?: boolean
           created_at?: string
         }
         Relationships: [

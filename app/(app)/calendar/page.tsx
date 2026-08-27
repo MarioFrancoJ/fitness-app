@@ -113,24 +113,28 @@ export default function CalendarPage() {
         .eq("user_id", user.id)
         .gte("date", start)
         .lte("date", end)
-        .eq("status", "Completed"),
+        .eq("status", "Completed")
+        .eq("is_sandbox", false),
       supabase
         .from("meal_logs")
         .select("date")
         .gte("date", start)
-        .lte("date", end),
+        .lte("date", end)
+        .eq("is_sandbox", false),
       supabase
         .from("weight_entries")
         .select("date, weight_kg")
         .eq("user_id", user.id)
         .gte("date", start)
-        .lte("date", end),
+        .lte("date", end)
+        .eq("is_sandbox", false),
       supabase
         .from("progress_photos")
         .select("upload_date")
         .eq("user_id", user.id)
         .gte("upload_date", start)
-        .lte("upload_date", end),
+        .lte("upload_date", end)
+        .eq("is_sandbox", false),
     ]);
 
     // Build activity map

@@ -125,18 +125,21 @@ export default function DashboardContent() {
         .from("weight_entries")
         .select("weight_kg")
         .eq("user_id", user.id)
+        .eq("is_sandbox", false)
         .order("date", { ascending: false })
         .limit(1)
         .maybeSingle();
       const { data: mealsToday } = await supabase
         .from("meal_logs")
         .select("calories, protein")
-        .eq("date", today);
+        .eq("date", today)
+        .eq("is_sandbox", false);
       const { data: weekSessions } = await supabase
         .from("training_sessions")
         .select("id, date, status")
         .eq("user_id", user.id)
         .eq("status", "Completed")
+        .eq("is_sandbox", false)
         .gte("date", weekStart);
 
       setStats({
@@ -192,6 +195,7 @@ export default function DashboardContent() {
       const { data: weekMeals } = await supabase
         .from("meal_logs")
         .select("calories, date")
+        .eq("is_sandbox", false)
         .gte("date", weekStart);
       const daysWithMeals =
         new Set(weekMeals?.map((m) => m.date) || []).size || 1;
@@ -201,6 +205,7 @@ export default function DashboardContent() {
         .from("weight_entries")
         .select("weight_kg")
         .eq("user_id", user.id)
+        .eq("is_sandbox", false)
         .order("date", { ascending: false })
         .limit(2);
       let weightChange: number | null = null;
@@ -260,6 +265,7 @@ export default function DashboardContent() {
         .select("id, workout_name, start_time, status")
         .eq("user_id", user.id)
         .eq("status", "Completed")
+        .eq("is_sandbox", false)
         .order("start_time", { ascending: false })
         .limit(3);
       if (recentSessions)

@@ -49,6 +49,7 @@ export default function TrainingPage() {
         .from("training_sessions")
         .select("id, date, duration_minutes, status, workout_name, start_time")
         .eq("user_id", user.id)
+        .eq("is_sandbox", false)
         .order("date", { ascending: false });
 
       if (sessions) {
@@ -115,6 +116,7 @@ export default function TrainingPage() {
         .select("id, date, workout_name, duration_minutes, session_exercise_logs(id)")
         .eq("user_id", user.id)
         .eq("status", "Completed")
+        .eq("is_sandbox", false)
         .order("date", { ascending: false })
         .limit(5);
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useSandbox } from "@/contexts/SandboxContext";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -53,6 +54,7 @@ const SESSION_TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
 
 export default function TrainingStartPage() {
   const router = useRouter();
+  const { isSandbox } = useSandbox();
   const [workouts, setWorkouts] = useState<WorkoutOption[]>([]);
   const [session, setSession] = useState<ActiveSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -240,6 +242,7 @@ export default function TrainingStartPage() {
         status: "In Progress",
         start_time: new Date().toISOString(),
         date: new Date().toISOString().split("T")[0],
+        is_sandbox: isSandbox,
       })
       .select("id, start_time")
       .single();
