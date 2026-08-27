@@ -4,43 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
-import EmptyState from "@/components/ui/EmptyState";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface UserProfile {
-  name: string;
-  fitnessGoal: string;
-}
-
-interface QuickStats {
-  lastWeight: number | null;
-  caloriesToday: number;
-  proteinToday: number;
-  workoutsThisWeek: number;
-}
-
-interface TodayFocus {
-  hasWorkout: boolean;
-  workoutName: string | null;
-  exerciseCount: number;
-  workoutId: string | null;
-}
-
-interface WeeklyProgress {
-  workoutsCompleted: number;
-  workoutsGoal: number;
-  avgCalories: number;
-  caloriesTarget: number;
-  weightChange: number | null;
-}
-
-interface ActivityItem {
-  id: string;
-  type: "workout" | "meal" | "weight";
-  title: string;
-  timestamp: string;
-}
+interface UserProfile { name: string; fitnessGoal: string; }
+interface QuickStats { lastWeight: number | null; caloriesToday: number; proteinToday: number; workoutsThisWeek: number; }
+interface TodayFocus { hasWorkout: boolean; workoutName: string | null; exerciseCount: number; workoutId: string | null; }
+interface WeeklyProgress { workoutsCompleted: number; workoutsGoal: number; avgCalories: number; caloriesTarget: number; weightChange: number | null; }
+interface ActivityItem { id: string; type: "workout" | "meal" | "weight"; title: string; timestamp: string; }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -68,12 +39,7 @@ function timeAgo(iso: string): string {
 }
 
 function activityIcon(type: string): string {
-  switch (type) {
-    case "workout": return "💪";
-    case "meal": return "🥗";
-    case "weight": return "⚖️";
-    default: return "📋";
-  }
+  switch (type) { case "workout": return "💪"; case "meal": return "🥗"; case "weight": return "⚖️"; default: return "📋"; }
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -95,41 +61,12 @@ export default function DashboardContent() {
       const today = new Date().toISOString().slice(0, 10);
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-      // ── Profile ───────────────────────────────────────────────────────
-      const { data: profileData } = await supabase
-        .from("users")
-        .select("name, fitness_goal")
-        .eq("id", user.id)
-        .single();
+      const { data: profileData } = await supabase.from("users").select("name, fitness_goal").eq("id", user.id).single();
+      if (profileData) setProfile({ name: profileData.name || "User", fitnessGoal: profileData.fitness_goal || "" });
 
-      if (profileData) {
-        setProfile({ name: profileData.name || "User", fitnessGoal: profileData.fitness_goal || "" });
-      }
-
-      // ── Quick Stats ───────────────────────────────────────────────────
-
-      // Last weight
-      const { data: weightData } = await supabase
-        .from("weight_entries")
-        .select("weight_kg")
-        .eq("user_id", user.id)
-        .order("date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      // Today's nutrition
-      const { data: mealsToday } = await supabase
-        .from("meal_logs")
-        .select("calories, protein")
-        .eq("date", today);
-
-      // Workouts this week
-      const { data: weekSessions } = await supabase
-        .from("training_sessions")
-        .select("id, date, status")
-        .eq("user_id", user.id)
-        .eq("status", "Completed")
-        .gte("date", weekAgo);
+      const { data: weightData } = await supabase.from("weight_entries").select("weight_kg").eq("user_id", user.id).order("date", { ascending: false }).limit(1).maybeSingle();
+      const { data: mealsToday } = await supabase.from("meal_logs").select("calories, protein").eq("date", today);
+      const { data: weekSessions } = await supabase.from("training_sessions").select("id, date, status").eq("user_id", user.id).eq("status", "Completed").gte("date", weekAgo);
 
       setStats({
         lastWeight: weightData?.weight_kg ?? null,
@@ -138,261 +75,182 @@ export default function DashboardContent() {
         workoutsThisWeek: weekSessions?.length ?? 0,
       });
 
-      // ── Today's Focus ─────────────────────────────────────────────────
-
-      // Check for most recent workout (could be today's planned one)
-      const { data: nextWorkout } = await supabase
-        .from("workouts")
-        .select("id, name, workout_days(workout_exercises(id))")
-        .eq("user_id", user.id)
-        .eq("is_template", false)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
+      const { data: nextWorkout } = await supabase.from("workouts").select("id, name, workout_days(workout_exercises(id))").eq("user_id", user.id).eq("is_template", false).order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (nextWorkout) {
-        const exerciseCount = (nextWorkout.workout_days || []).reduce(
-          (sum: number, day: any) => sum + (day.workout_exercises?.length || 0), 0
-        );
+        const exerciseCount = (nextWorkout.workout_days || []).reduce((sum: number, day: any) => sum + (day.workout_exercises?.length || 0), 0);
         setFocus({ hasWorkout: true, workoutName: nextWorkout.name, exerciseCount, workoutId: nextWorkout.id });
       } else {
         setFocus({ hasWorkout: false, workoutName: null, exerciseCount: 0, workoutId: null });
       }
 
-      // ── Weekly Progress ───────────────────────────────────────────────
-
-      // Average calories this week
-      const { data: weekMeals } = await supabase
-        .from("meal_logs")
-        .select("calories, date")
-        .gte("date", weekAgo);
-
+      const { data: weekMeals } = await supabase.from("meal_logs").select("calories, date").gte("date", weekAgo);
       const daysWithMeals = new Set(weekMeals?.map((m) => m.date) || []).size || 1;
       const totalWeekCals = weekMeals?.reduce((s, m) => s + m.calories, 0) ?? 0;
-
-      // Weight change (last 2 entries)
-      const { data: recentWeights } = await supabase
-        .from("weight_entries")
-        .select("weight_kg")
-        .eq("user_id", user.id)
-        .order("date", { ascending: false })
-        .limit(2);
-
+      const { data: recentWeights } = await supabase.from("weight_entries").select("weight_kg").eq("user_id", user.id).order("date", { ascending: false }).limit(2);
       let weightChange: number | null = null;
-      if (recentWeights && recentWeights.length >= 2) {
-        weightChange = Math.round((recentWeights[0].weight_kg - recentWeights[1].weight_kg) * 10) / 10;
-      }
-
-      setWeekly({
-        workoutsCompleted: weekSessions?.length ?? 0,
-        workoutsGoal: 4,
-        avgCalories: Math.round(totalWeekCals / daysWithMeals),
-        caloriesTarget: 2200,
-        weightChange,
-      });
-
-      // ── Recent Activity ───────────────────────────────────────────────
+      if (recentWeights && recentWeights.length >= 2) weightChange = Math.round((recentWeights[0].weight_kg - recentWeights[1].weight_kg) * 10) / 10;
+      setWeekly({ workoutsCompleted: weekSessions?.length ?? 0, workoutsGoal: 4, avgCalories: Math.round(totalWeekCals / daysWithMeals), caloriesTarget: 2200, weightChange });
 
       const activities: ActivityItem[] = [];
-
-      // Recent sessions
-      const { data: recentSessions } = await supabase
-        .from("training_sessions")
-        .select("id, workout_name, start_time, status")
-        .eq("user_id", user.id)
-        .eq("status", "Completed")
-        .order("start_time", { ascending: false })
-        .limit(4);
-
-      if (recentSessions) {
-        for (const s of recentSessions) {
-          activities.push({ id: `s-${s.id}`, type: "workout", title: `Completed ${s.workout_name || "Workout"}`, timestamp: s.start_time });
-        }
-      }
-
-      // Recent meals
-      const { data: recentMeals } = await supabase
-        .from("meal_logs")
-        .select("id, name, created_at")
-        .order("created_at", { ascending: false })
-        .limit(4);
-
-      if (recentMeals) {
-        for (const m of recentMeals) {
-          activities.push({ id: `m-${m.id}`, type: "meal", title: `Logged ${m.name}`, timestamp: m.created_at });
-        }
-      }
-
-      // Recent weight entries
-      const { data: recentWeightEntries } = await supabase
-        .from("weight_entries")
-        .select("id, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(2);
-
-      if (recentWeightEntries) {
-        for (const w of recentWeightEntries) {
-          activities.push({ id: `w-${w.id}`, type: "weight", title: "Added Weight Entry", timestamp: w.created_at });
-        }
-      }
-
-      // Sort by timestamp, take first 10
+      const { data: recentSessions } = await supabase.from("training_sessions").select("id, workout_name, start_time, status").eq("user_id", user.id).eq("status", "Completed").order("start_time", { ascending: false }).limit(4);
+      if (recentSessions) for (const s of recentSessions) activities.push({ id: `s-${s.id}`, type: "workout", title: `Completed ${s.workout_name || "Workout"}`, timestamp: s.start_time });
+      const { data: recentMeals } = await supabase.from("meal_logs").select("id, name, created_at").order("created_at", { ascending: false }).limit(4);
+      if (recentMeals) for (const m of recentMeals) activities.push({ id: `m-${m.id}`, type: "meal", title: `Logged ${m.name}`, timestamp: m.created_at });
+      const { data: recentWeightEntries } = await supabase.from("weight_entries").select("id, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(2);
+      if (recentWeightEntries) for (const w of recentWeightEntries) activities.push({ id: `w-${w.id}`, type: "weight", title: "Added Weight Entry", timestamp: w.created_at });
       activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      setActivity(activities.slice(0, 10));
+      setActivity(activities.slice(0, 8));
 
       setLoading(false);
     }
-
     loadDashboard();
   }, []);
-
-  // ── Loading State ───────────────────────────────────────────────────────────
 
   if (loading) return <SkeletonDashboard />;
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 1 — Welcome Header
-      ═══════════════════════════════════════════════════════════════════════ */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-          {getGreeting()}, {profile?.name || "User"}
-        </h1>
-        <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-zinc-500">
-          {profile?.fitnessGoal && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700">
-              🎯 {profile.fitnessGoal}
-            </span>
-          )}
-          <span>{formatDate()}</span>
+      {/* ═══════ WELCOME + QUICK ACTIONS (above the fold) ═══════ */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+            {getGreeting()}, {profile?.name || "User"}
+          </h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
+            {profile?.fitnessGoal && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-700">🎯 {profile.fitnessGoal}</span>
+            )}
+            <span>{formatDate()}</span>
+          </div>
+        </div>
+
+        {/* Quick Actions — compact row, visible without scroll */}
+        <div className="flex gap-2">
+          <Link href="/training/start" className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700">
+            <span className="text-base">💪</span> Start Workout
+          </Link>
+          <Link href="/nutrition" className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50">
+            <span className="text-base">🥗</span> Log Meal
+          </Link>
+          <Link href="/progress/new" className="hidden items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 sm:inline-flex">
+            <span className="text-base">⚖️</span> Log Weight
+          </Link>
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 2 — Quick Stats
-      ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ═══════ QUICK STATS (actionable when empty) ═══════ */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Weight" value={stats?.lastWeight ? `${stats.lastWeight} kg` : "Not recorded"} icon="⚖️" />
-        <StatCard label="Calories Today" value={stats?.caloriesToday ? `${stats.caloriesToday} kcal` : "Not recorded"} icon="🔥" />
-        <StatCard label="Protein Today" value={stats?.proteinToday ? `${stats.proteinToday}g` : "Not recorded"} icon="🥩" />
-        <StatCard label="Workouts This Week" value={`${stats?.workoutsThisWeek ?? 0}`} icon="💪" />
+        <StatCard
+          label="Weight"
+          value={stats?.lastWeight ? `${stats.lastWeight} kg` : null}
+          emptyAction="Add weight"
+          emptyHref="/progress/new"
+          icon="⚖️"
+        />
+        <StatCard
+          label="Calories"
+          value={stats?.caloriesToday ? `${stats.caloriesToday} kcal` : null}
+          emptyAction="Log calories"
+          emptyHref="/nutrition"
+          icon="🔥"
+        />
+        <StatCard
+          label="Protein"
+          value={stats?.proteinToday ? `${stats.proteinToday}g` : null}
+          emptyAction="Log meal"
+          emptyHref="/nutrition"
+          icon="🥩"
+        />
+        <StatCard
+          label="Workouts"
+          value={`${stats?.workoutsThisWeek ?? 0} this week`}
+          icon="💪"
+        />
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 3 — Today's Focus + SECTION 4 — Weekly Progress (grid)
-      ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ═══════ TODAY'S FOCUS + WEEKLY PROGRESS (compact 2-col) ═══════ */}
       <div className="grid gap-4 lg:grid-cols-2">
 
-        {/* Today's Focus */}
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="mb-4 text-xs font-bold uppercase tracking-widest text-zinc-400">Today&apos;s Focus</p>
+        {/* Today's Focus — compact */}
+        <div className="rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Today&apos;s Focus</p>
           {focus?.hasWorkout ? (
-            <div>
-              <p className="text-lg font-bold text-zinc-900">{focus.workoutName}</p>
-              <p className="mt-1 text-sm text-zinc-500">{focus.exerciseCount} exercise{focus.exerciseCount !== 1 ? "s" : ""}</p>
-              <Link href="/training/start" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700">
-                Start Workout
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-base font-bold text-zinc-900">{focus.workoutName}</p>
+                <p className="text-xs text-zinc-500">{focus.exerciseCount} exercise{focus.exerciseCount !== 1 ? "s" : ""}</p>
+              </div>
+              <Link href="/training/start" className="shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700">
+                Start
               </Link>
             </div>
           ) : (
-            <div className="flex flex-col items-center py-4">
-              <span className="mb-2 text-2xl">🏋️</span>
-              <p className="mb-1 text-sm font-medium text-zinc-700">No workout scheduled today</p>
-              <p className="mb-4 text-xs text-zinc-400">Create a workout to get started</p>
-              <Link href="/workouts/new" className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700">
-                Create Workout
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-zinc-500">No workout scheduled</p>
+              <Link href="/workouts/new" className="shrink-0 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">
+                Create
               </Link>
             </div>
           )}
         </div>
 
-        {/* Weekly Progress */}
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="mb-4 text-xs font-bold uppercase tracking-widest text-zinc-400">Weekly Progress</p>
-          <div className="flex flex-col gap-4">
-            {/* Workouts progress bar */}
-            <ProgressBar
-              label="Workouts"
-              current={weekly?.workoutsCompleted ?? 0}
-              target={weekly?.workoutsGoal ?? 4}
-              unit=""
-              color="bg-blue-500"
-            />
-            {/* Avg Calories progress bar */}
-            <ProgressBar
-              label="Avg Calories"
-              current={weekly?.avgCalories ?? 0}
-              target={weekly?.caloriesTarget ?? 2200}
-              unit="kcal"
-              color="bg-amber-500"
-            />
-            {/* Weight change */}
-            <div className="flex items-center justify-between rounded-lg bg-zinc-50 px-4 py-3">
-              <span className="text-sm font-medium text-zinc-600">Weight Change</span>
+        {/* Weekly Progress — compact */}
+        <div className="rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">This Week</p>
+          <div className="flex flex-col gap-2.5">
+            <ProgressBar label="Workouts" current={weekly?.workoutsCompleted ?? 0} target={weekly?.workoutsGoal ?? 4} unit="" color="bg-blue-500" />
+            <ProgressBar label="Avg Calories" current={weekly?.avgCalories ?? 0} target={weekly?.caloriesTarget ?? 2200} unit="kcal" color="bg-amber-500" />
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-500">Weight Δ</span>
               {weekly?.weightChange !== null && weekly?.weightChange !== undefined ? (
-                <span className={`text-sm font-bold ${weekly.weightChange < 0 ? "text-emerald-600" : weekly.weightChange > 0 ? "text-red-500" : "text-zinc-700"}`}>
+                <span className={`text-xs font-bold ${weekly.weightChange < 0 ? "text-emerald-600" : weekly.weightChange > 0 ? "text-red-500" : "text-zinc-600"}`}>
                   {weekly.weightChange > 0 ? "+" : ""}{weekly.weightChange} kg
                 </span>
               ) : (
-                <span className="text-sm text-zinc-400">No data</span>
+                <Link href="/progress/new" className="text-xs font-medium text-zinc-400 hover:text-zinc-700">Add weight →</Link>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 5 — Recent Activity
-      ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ═══════ RECENT ACTIVITY (compact empty state) ═══════ */}
       <div className="rounded-xl border border-zinc-200 bg-white shadow-sm">
-        <div className="border-b border-zinc-100 px-6 py-4">
+        <div className="border-b border-zinc-100 px-5 py-3">
           <p className="text-sm font-semibold text-zinc-900">Recent Activity</p>
         </div>
         {activity.length === 0 ? (
-          <div className="p-6">
-            <EmptyState
-              icon="📊"
-              title="No activity yet"
-              description="Start training, logging meals, or tracking weight to see your activity here."
-              actionLabel="Start Workout"
-              actionHref="/training/start"
-              secondaryLabel="Log Meal"
-              secondaryHref="/nutrition"
-            />
+          <div className="flex items-center justify-between px-5 py-4">
+            <p className="text-sm text-zinc-400">No activity yet</p>
+            <div className="flex gap-2">
+              <Link href="/training/start" className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-700">Start Workout</Link>
+              <Link href="/nutrition" className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50">Log Meal</Link>
+            </div>
           </div>
         ) : (
           <div className="divide-y divide-zinc-50">
             {activity.map((item) => (
-              <div key={item.id} className="flex items-center gap-3 px-6 py-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm">
-                  {activityIcon(item.type)}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="truncate text-sm font-medium text-zinc-800">{item.title}</p>
-                </div>
-                <span className="shrink-0 text-xs text-zinc-400">{timeAgo(item.timestamp)}</span>
+              <div key={item.id} className="flex items-center gap-3 px-5 py-2.5">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs">{activityIcon(item.type)}</span>
+                <p className="flex-1 min-w-0 truncate text-sm text-zinc-700">{item.title}</p>
+                <span className="shrink-0 text-[11px] text-zinc-400">{timeAgo(item.timestamp)}</span>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 6 — Quick Actions
-      ═══════════════════════════════════════════════════════════════════════ */}
-      <div>
-        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-zinc-400">Quick Actions</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <QuickAction icon="⚖️" label="Log Weight" href="/progress/new" />
-          <QuickAction icon="🥗" label="Log Meal" href="/nutrition" />
-          <QuickAction icon="💪" label="Start Workout" href="/training/start" />
-          <QuickAction icon="📸" label="Upload Photo" href="/progress/photos/upload" />
-        </div>
+      {/* ═══════ SECONDARY ACTIONS (mobile: Log Weight + Upload Photo) ═══════ */}
+      <div className="flex gap-2 sm:hidden">
+        <Link href="/progress/new" className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white py-2.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">
+          ⚖️ Log Weight
+        </Link>
+        <Link href="/progress/photos/upload" className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white py-2.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">
+          📸 Upload Photo
+        </Link>
       </div>
     </div>
   );
@@ -400,13 +258,19 @@ export default function DashboardContent() {
 
 // ── Sub-Components ────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, icon }: { label: string; value: string; icon: string }) {
+function StatCard({ label, value, icon, emptyAction, emptyHref }: { label: string; value: string | null; icon: string; emptyAction?: string; emptyHref?: string }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-base">{icon}</span>
-      <div className="min-w-0">
+    <div className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white p-3.5 shadow-sm">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-sm">{icon}</span>
+      <div className="min-w-0 flex-1">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">{label}</p>
-        <p className="mt-0.5 truncate text-base font-bold text-zinc-900">{value}</p>
+        {value ? (
+          <p className="mt-0.5 truncate text-sm font-bold text-zinc-900">{value}</p>
+        ) : emptyAction && emptyHref ? (
+          <Link href={emptyHref} className="mt-0.5 inline-block text-xs font-medium text-zinc-500 hover:text-zinc-900">{emptyAction} →</Link>
+        ) : (
+          <p className="mt-0.5 text-xs text-zinc-400">—</p>
+        )}
       </div>
     </div>
   );
@@ -416,22 +280,13 @@ function ProgressBar({ label, current, target, unit, color }: { label: string; c
   const pct = target > 0 ? Math.min(Math.round((current / target) * 100), 100) : 0;
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-sm font-medium text-zinc-600">{label}</span>
-        <span className="text-xs font-semibold text-zinc-700">{current}{unit ? ` ${unit}` : ""} / {target}{unit ? ` ${unit}` : ""}</span>
+      <div className="mb-0.5 flex items-center justify-between">
+        <span className="text-xs text-zinc-600">{label}</span>
+        <span className="text-[11px] font-semibold text-zinc-700">{current}{unit ? ` ${unit}` : ""} / {target}</span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
         <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
-  );
-}
-
-function QuickAction({ icon, label, href }: { icon: string; label: string; href: string }) {
-  return (
-    <Link href={href} className="flex flex-col items-center gap-2 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-      <span className="text-xl">{icon}</span>
-      <span className="text-xs font-semibold text-zinc-700">{label}</span>
-    </Link>
   );
 }
