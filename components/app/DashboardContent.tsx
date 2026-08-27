@@ -23,6 +23,7 @@ interface TodayFocus {
   workoutName: string | null;
   exerciseCount: number;
   workoutId: string | null;
+  exerciseNames: string[];
 }
 interface WeeklyProgress {
   workoutsCompleted: number;
@@ -165,23 +166,26 @@ export default function DashboardContent() {
 
       const { data: nextWorkout } = await supabase
         .from("workouts")
-        .select("id, name, workout_days(workout_exercises(id))")
+        .select("id, name, workout_days(workout_exercises(id, exercise_name, sort_order))")
         .eq("user_id", user.id)
         .eq("is_template", false)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (nextWorkout) {
-        const exerciseCount = (nextWorkout.workout_days || []).reduce(
-          (sum: number, day: any) =>
-            sum + (day.workout_exercises?.length || 0),
-          0
-        );
+        const allExercises: { exercise_name: string; sort_order: number }[] = [];
+        for (const day of (nextWorkout.workout_days || [])) {
+          for (const ex of (day.workout_exercises || [])) {
+            allExercises.push(ex);
+          }
+        }
+        allExercises.sort((a, b) => a.sort_order - b.sort_order);
         setFocus({
           hasWorkout: true,
           workoutName: nextWorkout.name,
-          exerciseCount,
+          exerciseCount: allExercises.length,
           workoutId: nextWorkout.id,
+          exerciseNames: allExercises.slice(0, 3).map((e) => e.exercise_name),
         });
       } else {
         setFocus({
@@ -189,6 +193,7 @@ export default function DashboardContent() {
           workoutName: null,
           exerciseCount: 0,
           workoutId: null,
+          exerciseNames: [],
         });
       }
 
@@ -373,96 +378,105 @@ export default function DashboardContent() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 3 — MAIN AREA (two columns on desktop)
-          Left (wide): Today's Workout Hero — primary visual weight
-          Right (secondary): Weekly Progress
+          SECTION 3 — MAIN AREA (two equal columns)
+          Left: Today's Workout
+          Right: This Week
       ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="grid gap-golden-4 lg:grid-cols-5">
-        {/* Today's Workout Hero — takes 3/5 columns, visually dominant */}
-        <div className="order-first flex flex-col justify-between rounded-golden-xl bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-golden-5 text-white shadow-lg lg:col-span-3">
-          <div>
+      <div className="grid gap-golden-4 lg:grid-cols-2">
+        {/* Today's Workout — light card */}
+        <div className="rounded-golden-xl border border-zinc-200 bg-white p-golden-4 shadow-sm">
+          <div className="flex items-center justify-between">
             <p className="text-golden-xs font-bold uppercase tracking-widest text-zinc-400">
               Today&apos;s Workout
             </p>
-            {focus?.hasWorkout ? (
-              <>
-                <h3 className="mt-golden-3 text-golden-lg font-bold leading-tight">
-                  {focus.workoutName}
-                </h3>
-                <div className="mt-golden-3 flex flex-wrap items-center gap-golden-4 text-golden-base text-zinc-300">
-                  <span className="inline-flex items-center gap-golden-1">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342" />
-                    </svg>
-                    {focus.exerciseCount} exercise{focus.exerciseCount !== 1 ? "s" : ""}
-                  </span>
-                  <span className="inline-flex items-center gap-golden-1">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                    ~{Math.max(focus.exerciseCount * 4, 15)} min
-                  </span>
-                </div>
-                {/* Mini progress indicator */}
-                <div className="mt-golden-4">
-                  <div className="flex items-center justify-between text-golden-xs text-zinc-400">
-                    <span>Week progress</span>
-                    <span>{weekly?.workoutsCompleted ?? 0}/{weekly?.workoutsGoal ?? 4} done</span>
-                  </div>
-                  <div className="mt-golden-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-700">
-                    <div
-                      className="h-full rounded-full bg-white/80 transition-all duration-500"
-                      style={{ width: `${Math.min(((weekly?.workoutsCompleted ?? 0) / (weekly?.workoutsGoal ?? 4)) * 100, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <h3 className="mt-golden-3 text-golden-lg font-bold leading-tight">
-                  No workout planned
-                </h3>
-                <p className="mt-golden-2 text-golden-base text-zinc-400">
-                  Create a routine to get started with your training
-                </p>
-              </>
+            {focus?.hasWorkout && (
+              <Link
+                href="/training/start"
+                className="inline-flex items-center gap-golden-1 rounded-golden-md bg-zinc-900 px-golden-3 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-zinc-700"
+              >
+                Start Workout
+              </Link>
             )}
           </div>
 
-          <div className="mt-golden-5">
-            {focus?.hasWorkout ? (
-              <Link
-                href="/training/start"
-                className="inline-flex w-full items-center justify-center gap-golden-2 rounded-golden-lg bg-white px-golden-4 py-golden-3 text-golden-base font-bold text-zinc-900 shadow-sm transition-colors hover:bg-zinc-100"
-              >
-                💪 Start{" "}
-                {focus.workoutName && focus.workoutName.length <= 18
-                  ? focus.workoutName
-                  : "Workout"}
-              </Link>
-            ) : (
+          {focus?.hasWorkout ? (
+            <div className="mt-golden-3">
+              <h3 className="text-golden-lg font-bold text-zinc-900">{focus.workoutName}</h3>
+
+              {/* Compact indicators */}
+              <div className="mt-golden-3 flex flex-wrap items-center gap-golden-3 text-golden-sm text-zinc-500">
+                <span className="inline-flex items-center gap-1">
+                  <span className="text-golden-base">💪</span>
+                  {focus.exerciseCount} exercise{focus.exerciseCount !== 1 ? "s" : ""}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="text-golden-base">⏱️</span>
+                  ~{Math.max(focus.exerciseCount * 4, 15)} min
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="text-golden-base">📊</span>
+                  {weekly?.workoutsCompleted ?? 0}/{weekly?.workoutsGoal ?? 4} this week
+                </span>
+              </div>
+
+              {/* Next up — exercise preview */}
+              {focus.exerciseNames.length > 0 && (
+                <div className="mt-golden-4">
+                  <p className="mb-golden-2 text-golden-xs font-bold uppercase tracking-widest text-zinc-400">Next up</p>
+                  <div className="flex flex-col gap-golden-1">
+                    {focus.exerciseNames.map((name, i) => (
+                      <div key={i} className="flex items-center gap-golden-2 rounded-golden-md bg-zinc-50 px-golden-3 py-golden-2">
+                        <span className="text-golden-sm font-semibold text-zinc-400">{i + 1}</span>
+                        <span className="text-golden-sm font-medium text-zinc-700">{name}</span>
+                      </div>
+                    ))}
+                    {focus.exerciseCount > 3 && (
+                      <p className="pl-golden-3 text-golden-xs text-zinc-400">+{focus.exerciseCount - 3} more</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Weekly goal bar */}
+              <div className="mt-golden-4">
+                <div className="mb-golden-1 flex items-center justify-between text-golden-xs text-zinc-500">
+                  <span className="font-medium">Weekly goal</span>
+                  <span className="font-semibold text-zinc-700">{weekly?.workoutsCompleted ?? 0} of {weekly?.workoutsGoal ?? 4} workouts</span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+                  <div
+                    className="h-full rounded-full bg-zinc-900 transition-all duration-500"
+                    style={{ width: `${Math.min(((weekly?.workoutsCompleted ?? 0) / (weekly?.workoutsGoal ?? 4)) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-golden-4 flex flex-col items-center justify-center py-golden-5">
+              <p className="text-golden-base font-medium text-zinc-500">No workout planned</p>
+              <p className="mt-golden-1 text-golden-sm text-zinc-400">Create a routine to get started</p>
               <Link
                 href="/workouts/new"
-                className="inline-flex w-full items-center justify-center gap-golden-2 rounded-golden-lg border border-zinc-600 px-golden-4 py-golden-3 text-golden-base font-bold text-white transition-colors hover:border-zinc-400 hover:bg-zinc-700"
+                className="mt-golden-4 inline-flex items-center gap-golden-1 rounded-golden-md border border-zinc-200 px-golden-3 py-golden-2 text-golden-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
               >
                 Create Workout
               </Link>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
-        {/* Weekly Progress — takes 2/5 columns, secondary */}
-        <div className="rounded-golden-xl border border-zinc-200 bg-white p-golden-4 shadow-sm lg:col-span-2">
+        {/* This Week — light card */}
+        <div className="rounded-golden-xl border border-zinc-200 bg-white p-golden-4 shadow-sm">
           <div className="mb-golden-3 flex items-center justify-between">
-            <h2 className="text-golden-base font-bold text-zinc-900">This Week</h2>
+            <h2 className="text-golden-xs font-bold uppercase tracking-widest text-zinc-400">This Week</h2>
           </div>
 
-          {/* Workouts headline — primary emphasis */}
-          <div className="mb-golden-4 rounded-golden-md bg-zinc-900 px-golden-3 py-golden-3 text-center">
-            <p className="text-golden-lg font-bold text-white">
-              {weekly?.workoutsCompleted ?? 0}<span className="text-golden-sm font-medium text-zinc-400">/{weekly?.workoutsGoal ?? 4}</span>
+          {/* Workouts headline — prominent on light background */}
+          <div className="mb-golden-4">
+            <p className="text-golden-xl font-bold text-zinc-900">
+              {weekly?.workoutsCompleted ?? 0}<span className="text-golden-lg font-medium text-zinc-400">/{weekly?.workoutsGoal ?? 4}</span>
             </p>
-            <p className="text-golden-xs font-medium text-zinc-400">workouts completed</p>
+            <p className="text-golden-sm text-zinc-500">workouts completed</p>
           </div>
 
           {/* Day dots visualization */}
@@ -497,7 +511,7 @@ export default function DashboardContent() {
             })}
           </div>
 
-          {/* Progress bars */}
+          {/* Progress bars — secondary info */}
           <div className="space-y-golden-3">
             <ProgressRow
               label="Workouts"
