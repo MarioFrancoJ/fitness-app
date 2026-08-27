@@ -311,31 +311,31 @@ export default function DashboardContent() {
   if (loading) return <SkeletonDashboard />;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-golden-5">
       {/* ═══════════════════════════════════════════════════════════════════════
           SECTION 1 — HEADER
       ═══════════════════════════════════════════════════════════════════════ */}
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <header className="flex flex-col gap-golden-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-500">
+          <p className="text-golden-base font-medium text-zinc-500">
             {getGreeting()}
           </p>
-          <h1 className="mt-0.5 text-[2rem] font-bold tracking-tight text-zinc-900 lg:text-[2.25rem]">
+          <h1 className="mt-golden-1 text-golden-xl font-bold tracking-tight text-zinc-900">
             {profile?.name || "User"}
           </h1>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
+          <div className="mt-golden-2 flex flex-wrap items-center gap-golden-2 text-golden-sm text-zinc-500">
             {profile?.fitnessGoal && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-700">
+              <span className="inline-flex items-center gap-golden-1 rounded-golden-md bg-zinc-100 px-golden-2 py-golden-1 text-golden-sm font-medium text-zinc-700">
                 🎯 {profile.fitnessGoal}
               </span>
             )}
             <span>{formatDate()}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2 sm:self-start">
+        <div className="flex items-center gap-golden-2 sm:self-start">
           <Link
             href="/training/start"
-            className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700"
+            className="inline-flex items-center gap-golden-2 rounded-golden-lg bg-zinc-900 px-golden-4 py-golden-3 text-golden-base font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700"
           >
             💪 Start Workout
           </Link>
@@ -346,7 +346,7 @@ export default function DashboardContent() {
       {/* ═══════════════════════════════════════════════════════════════════════
           SECTION 2 — DAILY SUMMARY (compact metric strip)
       ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-golden-3 sm:grid-cols-4">
         <MetricTile
           icon="⚖️"
           label="Weight"
@@ -380,26 +380,26 @@ export default function DashboardContent() {
           Left (wide): Today's Workout Hero — primary visual weight
           Right (secondary): Weekly Progress
       ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="grid gap-4 lg:grid-cols-5">
+      <div className="grid gap-golden-4 lg:grid-cols-5">
         {/* Today's Workout Hero — takes 3/5 columns, visually dominant */}
-        <div className="order-first flex flex-col justify-between rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-6 text-white shadow-lg lg:col-span-3">
+        <div className="order-first flex flex-col justify-between rounded-golden-xl bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-golden-5 text-white shadow-lg lg:col-span-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <p className="text-golden-xs font-bold uppercase tracking-widest text-zinc-400">
               Today&apos;s Workout
             </p>
             {focus?.hasWorkout ? (
               <>
-                <h3 className="mt-3 text-xl font-bold leading-tight lg:text-2xl">
+                <h3 className="mt-golden-3 text-golden-lg font-bold leading-tight">
                   {focus.workoutName}
                 </h3>
-                <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-zinc-300">
-                  <span className="inline-flex items-center gap-1.5">
+                <div className="mt-golden-3 flex flex-wrap items-center gap-golden-4 text-golden-base text-zinc-300">
+                  <span className="inline-flex items-center gap-golden-1">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342" />
                     </svg>
                     {focus.exerciseCount} exercise{focus.exerciseCount !== 1 ? "s" : ""}
                   </span>
-                  <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-golden-1">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                     </svg>
@@ -407,12 +407,12 @@ export default function DashboardContent() {
                   </span>
                 </div>
                 {/* Mini progress indicator */}
-                <div className="mt-4">
-                  <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                <div className="mt-golden-4">
+                  <div className="flex items-center justify-between text-golden-xs text-zinc-400">
                     <span>Week progress</span>
                     <span>{weekly?.workoutsCompleted ?? 0}/{weekly?.workoutsGoal ?? 4} done</span>
                   </div>
-                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-700">
+                  <div className="mt-golden-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-700">
                     <div
                       className="h-full rounded-full bg-white/80 transition-all duration-500"
                       style={{ width: `${Math.min(((weekly?.workoutsCompleted ?? 0) / (weekly?.workoutsGoal ?? 4)) * 100, 100)}%` }}
@@ -422,21 +422,21 @@ export default function DashboardContent() {
               </>
             ) : (
               <>
-                <h3 className="mt-3 text-xl font-bold leading-tight lg:text-2xl">
+                <h3 className="mt-golden-3 text-golden-lg font-bold leading-tight">
                   No workout planned
                 </h3>
-                <p className="mt-2 text-sm text-zinc-400">
+                <p className="mt-golden-2 text-golden-base text-zinc-400">
                   Create a routine to get started with your training
                 </p>
               </>
             )}
           </div>
 
-          <div className="mt-6">
+          <div className="mt-golden-5">
             {focus?.hasWorkout ? (
               <Link
                 href="/training/start"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 text-sm font-bold text-zinc-900 shadow-sm transition-colors hover:bg-zinc-100"
+                className="inline-flex w-full items-center justify-center gap-golden-2 rounded-golden-lg bg-white px-golden-4 py-golden-3 text-golden-base font-bold text-zinc-900 shadow-sm transition-colors hover:bg-zinc-100"
               >
                 💪 Start{" "}
                 {focus.workoutName && focus.workoutName.length <= 18
@@ -446,7 +446,7 @@ export default function DashboardContent() {
             ) : (
               <Link
                 href="/workouts/new"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-600 px-5 py-3.5 text-sm font-bold text-white transition-colors hover:border-zinc-400 hover:bg-zinc-700"
+                className="inline-flex w-full items-center justify-center gap-golden-2 rounded-golden-lg border border-zinc-600 px-golden-4 py-golden-3 text-golden-base font-bold text-white transition-colors hover:border-zinc-400 hover:bg-zinc-700"
               >
                 Create Workout
               </Link>
@@ -455,24 +455,24 @@ export default function DashboardContent() {
         </div>
 
         {/* Weekly Progress — takes 2/5 columns, secondary */}
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-zinc-900">This Week</h2>
-            <span className="text-xs text-zinc-400">
+        <div className="rounded-golden-xl border border-zinc-200 bg-white p-golden-4 shadow-sm lg:col-span-2">
+          <div className="mb-golden-3 flex items-center justify-between">
+            <h2 className="text-golden-base font-bold text-zinc-900">This Week</h2>
+            <span className="text-golden-sm text-zinc-400">
               {weekly?.workoutsCompleted ?? 0}/{weekly?.workoutsGoal ?? 4}
             </span>
           </div>
 
           {/* Day dots visualization */}
-          <div className="mb-5 grid grid-cols-7 gap-1">
+          <div className="mb-golden-4 grid grid-cols-7 gap-golden-1">
             {getDayLabels().map((day, idx) => {
               const completed = weekly?.dailyWorkouts[idx] ?? false;
               const isToday = idx === ((new Date().getDay() + 6) % 7);
               return (
-                <div key={day} className="flex flex-col items-center gap-1">
+                <div key={day} className="flex flex-col items-center gap-golden-1">
                   <span
                     className={[
-                      "text-[9px] font-medium",
+                      "text-golden-xs font-medium",
                       isToday ? "text-zinc-900" : "text-zinc-400",
                     ].join(" ")}
                   >
@@ -480,7 +480,7 @@ export default function DashboardContent() {
                   </span>
                   <div
                     className={[
-                      "flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-bold transition-all",
+                      "flex h-8 w-8 items-center justify-center rounded-full text-golden-xs font-bold transition-all",
                       completed
                         ? "bg-zinc-900 text-white"
                         : isToday
@@ -496,7 +496,7 @@ export default function DashboardContent() {
           </div>
 
           {/* Progress bars */}
-          <div className="space-y-3">
+          <div className="space-y-golden-3">
             <ProgressRow
               label="Calories"
               current={weekly?.avgCalories ?? 0}
@@ -511,13 +511,13 @@ export default function DashboardContent() {
               suffix="sessions"
               color="bg-blue-500"
             />
-            <div className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2">
-              <span className="text-xs font-medium text-zinc-600">Weight Δ</span>
+            <div className="flex items-center justify-between rounded-golden-md bg-zinc-50 px-golden-3 py-golden-2">
+              <span className="text-golden-sm font-medium text-zinc-600">Weight Δ</span>
               {weekly?.weightChange !== null &&
               weekly?.weightChange !== undefined ? (
                 <span
                   className={[
-                    "text-sm font-bold",
+                    "text-golden-base font-bold",
                     weekly.weightChange < 0
                       ? "text-emerald-600"
                       : weekly.weightChange > 0
@@ -531,7 +531,7 @@ export default function DashboardContent() {
               ) : (
                 <Link
                   href="/progress/new"
-                  className="text-xs font-medium text-blue-600 hover:text-blue-700"
+                  className="text-golden-sm font-medium text-blue-600 hover:text-blue-700"
                 >
                   Add weight →
                 </Link>
@@ -544,28 +544,28 @@ export default function DashboardContent() {
       {/* ═══════════════════════════════════════════════════════════════════════
           SECTION 4 — BOTTOM AREA (Next Meal + Recent Activity)
       ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-golden-4 lg:grid-cols-2">
         {/* Next Meal */}
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-zinc-900">Next Meal</h2>
+        <div className="rounded-golden-xl border border-zinc-200 bg-white p-golden-4 shadow-sm">
+          <div className="mb-golden-3 flex items-center justify-between">
+            <h2 className="text-golden-base font-bold text-zinc-900">Next Meal</h2>
             <Link
               href="/nutrition/meal-planner"
-              className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-700"
+              className="text-golden-sm font-medium text-zinc-400 transition-colors hover:text-zinc-700"
             >
               Meal Plan →
             </Link>
           </div>
           {nextMeal ? (
-            <div className="flex items-center gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-lg">
+            <div className="flex items-center gap-golden-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-golden-lg bg-amber-50 text-lg">
                 🍽️
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-zinc-900">
+                <p className="truncate text-golden-base font-semibold text-zinc-900">
                   {nextMeal.name}
                 </p>
-                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                <div className="flex items-center gap-golden-2 text-golden-sm text-zinc-500">
                   {nextMeal.time && <span>{nextMeal.time}</span>}
                   {nextMeal.calories && (
                     <span className="text-zinc-400">
@@ -576,25 +576,25 @@ export default function DashboardContent() {
               </div>
               <Link
                 href="/nutrition"
-                className="shrink-0 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
+                className="shrink-0 rounded-golden-md border border-zinc-200 px-golden-3 py-golden-1 text-golden-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
               >
                 Log
               </Link>
             </div>
           ) : (
-            <div className="flex items-center gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-lg">
+            <div className="flex items-center gap-golden-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-golden-lg bg-zinc-100 text-lg">
                 🍽️
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-zinc-500">No meal planned</p>
-                <p className="text-xs text-zinc-400">
+                <p className="text-golden-base text-zinc-500">No meal planned</p>
+                <p className="text-golden-sm text-zinc-400">
                   Set up your meal plan for the week
                 </p>
               </div>
               <Link
                 href="/nutrition/meal-planner"
-                className="shrink-0 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
+                className="shrink-0 rounded-golden-md border border-zinc-200 px-golden-3 py-golden-1 text-golden-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
               >
                 Plan
               </Link>
@@ -603,21 +603,21 @@ export default function DashboardContent() {
         </div>
 
         {/* Recent Activity */}
-        <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3">
-            <h2 className="text-sm font-bold text-zinc-900">Recent Activity</h2>
+        <div className="rounded-golden-xl border border-zinc-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-zinc-100 px-golden-4 py-golden-3">
+            <h2 className="text-golden-base font-bold text-zinc-900">Recent Activity</h2>
             {activity.length > 0 && (
-              <span className="text-[10px] font-medium text-zinc-400">
+              <span className="text-golden-xs font-medium text-zinc-400">
                 {activity.length} entries
               </span>
             )}
           </div>
           {activity.length === 0 ? (
-            <div className="px-5 py-5 text-center">
-              <p className="text-sm text-zinc-400">
+            <div className="px-golden-4 py-golden-4 text-center">
+              <p className="text-golden-base text-zinc-400">
                 No activity yet
               </p>
-              <p className="mt-1 text-xs text-zinc-300">
+              <p className="mt-golden-1 text-golden-sm text-zinc-300">
                 Complete a workout or log a meal to see it here
               </p>
             </div>
@@ -626,11 +626,11 @@ export default function DashboardContent() {
               {activity.slice(0, 5).map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center gap-3 px-5 py-2.5"
+                  className="flex items-center gap-golden-3 px-golden-4 py-golden-2"
                 >
                   <span
                     className={[
-                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs",
+                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-golden-sm",
                       item.type === "workout"
                         ? "bg-blue-50 text-blue-600"
                         : item.type === "meal"
@@ -644,10 +644,10 @@ export default function DashboardContent() {
                       ? "🥗"
                       : "⚖️"}
                   </span>
-                  <p className="min-w-0 flex-1 truncate text-sm text-zinc-700">
+                  <p className="min-w-0 flex-1 truncate text-golden-base text-zinc-700">
                     {item.title}
                   </p>
-                  <span className="shrink-0 text-[11px] text-zinc-400">
+                  <span className="shrink-0 text-golden-xs text-zinc-400">
                     {timeAgo(item.timestamp)}
                   </span>
                 </div>
@@ -782,7 +782,7 @@ function QuickActionsMenu() {
           aria-haspopup="true"
           aria-expanded={open}
           aria-label="Quick Actions"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-300"
+          className="inline-flex items-center gap-golden-1 rounded-golden-lg border border-zinc-200 bg-white px-golden-3 py-golden-2 text-golden-base font-semibold text-zinc-700 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-300"
         >
           <span>⚡</span>
           <span className="hidden sm:inline">Quick Actions</span>
@@ -806,7 +806,7 @@ function QuickActionsMenu() {
         {open && (
           <div
             role="menu"
-            className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-zinc-200 bg-white py-1 shadow-lg animate-in fade-in-0 zoom-in-95"
+            className="absolute right-0 top-full z-50 mt-golden-2 w-48 rounded-golden-lg border border-zinc-200 bg-white py-golden-1 shadow-lg animate-in fade-in-0 zoom-in-95"
           >
             {QUICK_ACTIONS.map((action, idx) => (
               <a
@@ -823,12 +823,12 @@ function QuickActionsMenu() {
                   closeDropdown();
                 }}
                 className={[
-                  "flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 transition-colors hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none",
+                  "flex items-center gap-golden-3 px-golden-3 py-golden-3 text-golden-base text-zinc-700 transition-colors hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none",
                   focusIndex === idx ? "bg-zinc-50" : "",
                 ].join(" ")}
                 style={{ minHeight: "44px" }}
               >
-                <span className="text-base">{action.icon}</span>
+                <span className="text-golden-md">{action.icon}</span>
                 <span className="font-medium">{action.label}</span>
               </a>
             ))}
@@ -847,9 +847,9 @@ function QuickActionsMenu() {
             className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in-0"
             onClick={closeSheet}
           />
-          <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-white pb-8 pt-3 shadow-2xl animate-in slide-in-from-bottom duration-200">
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-zinc-300" />
-            <p className="mb-2 px-5 text-xs font-bold uppercase tracking-widest text-zinc-400">
+          <div className="absolute bottom-0 left-0 right-0 rounded-t-golden-xl bg-white pb-golden-6 pt-golden-3 shadow-2xl animate-in slide-in-from-bottom duration-200">
+            <div className="mx-auto mb-golden-4 h-1 w-10 rounded-full bg-zinc-300" />
+            <p className="mb-golden-2 px-golden-4 text-golden-sm font-bold uppercase tracking-widest text-zinc-400">
               Quick Actions
             </p>
             <div className="flex flex-col">
@@ -862,11 +862,11 @@ function QuickActionsMenu() {
                     router.push(action.href);
                     closeSheet();
                   }}
-                  className="flex items-center gap-4 px-5 py-4 text-zinc-700 transition-colors hover:bg-zinc-50 active:bg-zinc-100"
+                  className="flex items-center gap-golden-4 px-golden-4 py-golden-3 text-zinc-700 transition-colors hover:bg-zinc-50 active:bg-zinc-100"
                   style={{ minHeight: "52px" }}
                 >
                   <span className="text-xl">{action.icon}</span>
-                  <span className="text-base font-medium">{action.label}</span>
+                  <span className="text-golden-md font-medium">{action.label}</span>
                 </a>
               ))}
             </div>
@@ -897,29 +897,29 @@ function MetricTile({
   const inner = (
     <div
       className={[
-        "flex items-center gap-3 rounded-xl border bg-white px-3.5 py-3 shadow-sm transition-all",
+        "flex items-center gap-golden-3 rounded-golden-lg border bg-white px-golden-3 py-golden-3 shadow-sm transition-all",
         isEmpty
           ? "border-zinc-200 cursor-pointer hover:border-zinc-300 hover:shadow-md"
           : "border-zinc-200",
       ].join(" ")}
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-base">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-golden-md bg-zinc-100 text-golden-md">
         {icon}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+        <p className="text-golden-xs font-bold uppercase tracking-widest text-zinc-400">
           {label}
         </p>
         {value ? (
-          <p className="mt-0.5 truncate text-sm font-bold text-zinc-900">
+          <p className="mt-golden-1 truncate text-golden-base font-bold text-zinc-900">
             {value}
           </p>
         ) : emptyLabel ? (
-          <p className="mt-0.5 text-xs font-medium text-blue-600">
+          <p className="mt-golden-1 text-golden-sm font-medium text-blue-600">
             {emptyLabel} →
           </p>
         ) : (
-          <p className="mt-0.5 text-xs text-zinc-400">—</p>
+          <p className="mt-golden-1 text-golden-sm text-zinc-400">—</p>
         )}
       </div>
     </div>
@@ -949,9 +949,9 @@ function ProgressRow({
   const pct = target > 0 ? Math.min(Math.round((current / target) * 100), 100) : 0;
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs font-medium text-zinc-600">{label}</span>
-        <span className="text-[11px] font-semibold text-zinc-700">
+      <div className="mb-golden-1 flex items-center justify-between">
+        <span className="text-golden-sm font-medium text-zinc-600">{label}</span>
+        <span className="text-golden-xs font-semibold text-zinc-700">
           {current} / {target} {suffix}
         </span>
       </div>
