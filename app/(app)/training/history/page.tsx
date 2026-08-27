@@ -83,7 +83,7 @@ export default function TrainingHistoryPage() {
           )
         `)
         .eq("user_id", user.id)
-        .in("status", ["Completed", "Cancelled", "Abandoned"])
+        .neq("status", "In Progress")
         .order("date", { ascending: false });
 
       if (data) {

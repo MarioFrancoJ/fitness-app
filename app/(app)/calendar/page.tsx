@@ -113,7 +113,7 @@ export default function CalendarPage() {
         .eq("user_id", user.id)
         .gte("date", start)
         .lte("date", end)
-        .in("status", ["Completed", "Cancelled", "Abandoned"]),
+        .neq("status", "In Progress"),
       supabase
         .from("meal_logs")
         .select("date")
@@ -388,6 +388,40 @@ export default function CalendarPage() {
         </button>
       </div>
 
+      {/* Upcoming events — shown first for immediate relevance */}
+      <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <h3 className="mb-4 text-sm font-semibold text-zinc-900">Upcoming Events</h3>
+        {events.filter((e) => new Date(e.start_date) >= today).length === 0 ? (
+          <div className="flex h-16 items-center justify-center">
+            <p className="text-sm text-zinc-400">No upcoming events. Create one to get started!</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-zinc-50">
+            {events
+              .filter((e) => new Date(e.start_date) >= today)
+              .slice(0, 5)
+              .map((event) => (
+                <li key={event.id} className="flex items-center gap-3 py-3">
+                  <span
+                    className="h-3 w-3 shrink-0 rounded-full"
+                    style={{ backgroundColor: event.color || "#6b7280" }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-zinc-900 truncate">{event.title}</p>
+                    <p className="text-xs text-zinc-400">
+                      {new Date(event.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      {!event.all_day && ` at ${formatTime(event.start_date)}`}
+                    </p>
+                  </div>
+                  <span className="text-xs text-zinc-300">
+                    {TYPE_ICONS[event.event_type] || "📌"}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        )}
+      </div>
+
       {/* Calendar grid + sidebar */}
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         {/* Calendar grid */}
@@ -605,40 +639,6 @@ export default function CalendarPage() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Upcoming events */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-        <h3 className="mb-4 text-sm font-semibold text-zinc-900">Upcoming Events</h3>
-        {events.filter((e) => new Date(e.start_date) >= today).length === 0 ? (
-          <div className="flex h-24 items-center justify-center">
-            <p className="text-sm text-zinc-400">No upcoming events. Create one to get started!</p>
-          </div>
-        ) : (
-          <ul className="divide-y divide-zinc-50">
-            {events
-              .filter((e) => new Date(e.start_date) >= today)
-              .slice(0, 5)
-              .map((event) => (
-                <li key={event.id} className="flex items-center gap-3 py-3">
-                  <span
-                    className="h-3 w-3 shrink-0 rounded-full"
-                    style={{ backgroundColor: event.color || "#6b7280" }}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-zinc-900 truncate">{event.title}</p>
-                    <p className="text-xs text-zinc-400">
-                      {new Date(event.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      {!event.all_day && ` at ${formatTime(event.start_date)}`}
-                    </p>
-                  </div>
-                  <span className="text-xs text-zinc-300">
-                    {TYPE_ICONS[event.event_type] || "📌"}
-                  </span>
-                </li>
-              ))}
-          </ul>
-        )}
       </div>
 
       {/* Event Modal */}
