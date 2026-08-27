@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -18,21 +19,29 @@ function IconTrendUp() { return <svg viewBox="0 0 20 20" fill="currentColor" cla
 function IconCamera() { return <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path fillRule="evenodd" d="M1 8a2 2 0 0 1 2-2h.93a2 2 0 0 0 1.664-.89l.812-1.22A2 2 0 0 1 8.07 3h3.86a2 2 0 0 1 1.664.89l.812 1.22A2 2 0 0 0 16.07 6H17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8Zm9 6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clipRule="evenodd" /></svg>; }
 function IconRuler() { return <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path fillRule="evenodd" d="M2 4.75A2.75 2.75 0 0 1 4.75 2h10.5A2.75 2.75 0 0 1 18 4.75v10.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25V4.75Zm4 0a.75.75 0 0 0-1.5 0v2a.75.75 0 0 0 1.5 0v-2Zm3 0a.75.75 0 0 0-1.5 0v3.5a.75.75 0 0 0 1.5 0v-3.5Zm3 0a.75.75 0 0 0-1.5 0v2a.75.75 0 0 0 1.5 0v-2Zm3 0a.75.75 0 0 0-1.5 0v3.5a.75.75 0 0 0 1.5 0v-3.5Z" clipRule="evenodd" /></svg>; }
 function IconSpark() { return <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path d="M10 1a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 1ZM5.05 3.05a.75.75 0 0 1 1.06 0l1.062 1.06a.75.75 0 1 1-1.06 1.06L5.05 4.11a.75.75 0 0 1 0-1.06ZM14.95 3.05a.75.75 0 0 1 0 1.06l-1.06 1.062a.75.75 0 0 1-1.062-1.06l1.06-1.06a.75.75 0 0 1 1.06 0ZM3 10a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 3 10ZM14 10a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 14 10ZM10 14a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 14Z" /></svg>; }
-function IconBell() { return <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path fillRule="evenodd" d="M4 8a6 6 0 1 1 12 0c0 1.887.454 3.665 1.257 5.234a.75.75 0 0 1-.515 1.076 32.903 32.903 0 0 1-3.256.508 3.5 3.5 0 0 1-6.972 0 32.91 32.91 0 0 1-3.256-.508.75.75 0 0 1-.515-1.076A11.448 11.448 0 0 0 4 8Z" clipRule="evenodd" /></svg>; }
 function IconStar() { return <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path fillRule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401Z" clipRule="evenodd" /></svg>; }
-function IconSettings() { return <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path fillRule="evenodd" d="M8.34 1.804A1 1 0 0 1 9.32 1h1.36a1 1 0 0 1 .98.804l.295 1.473c.497.144.97.342 1.409.58l1.27-.802a1 1 0 0 1 1.197.144l.96.96a1 1 0 0 1 .145 1.197l-.802 1.27c.238.44.436.912.58 1.409l1.473.294A1 1 0 0 1 19 9.32v1.36a1 1 0 0 1-.804.98l-1.473.295a6.96 6.96 0 0 1-.58 1.409l.802 1.27a1 1 0 0 1-.144 1.197l-.96.96a1 1 0 0 1-1.197.145l-1.27-.802a6.96 6.96 0 0 1-1.409.58l-.294 1.473A1 1 0 0 1 10.68 19H9.32a1 1 0 0 1-.98-.804l-.295-1.473a6.96 6.96 0 0 1-1.409-.58l-1.27.802a1 1 0 0 1-1.197-.144l-.96-.96a1 1 0 0 1-.145-1.197l.802-1.27a6.96 6.96 0 0 1-.58-1.409L1.804 11.68A1 1 0 0 1 1 10.68V9.32a1 1 0 0 1 .804-.98l1.473-.295c.144-.497.342-.97.58-1.409l-.802-1.27a1 1 0 0 1 .144-1.197l.96-.96A1 1 0 0 1 5.356 3.064l1.27.802c.44-.238.912-.436 1.409-.58L8.34 1.804ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clipRule="evenodd" /></svg>; }
 function IconUser() { return <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.23 1.23 0 0 0 .41 1.412A9.957 9.957 0 0 0 10 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 0 0-13.074.003Z" /></svg>; }
+function IconChevron({ open }: { open: boolean }) { return <svg viewBox="0 0 20 20" fill="currentColor" className={`h-3.5 w-3.5 text-zinc-400 transition-transform duration-200 ${open ? "rotate-90" : ""}`} aria-hidden="true"><path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" /></svg>; }
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 
 interface NavItem { label: string; href: string; icon: React.ReactNode; }
-interface NavGroup { title: string; items: NavItem[]; }
+interface NavSection {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  items: NavItem[];
+  /** Route prefixes that belong to this section */
+  matchPrefixes: string[];
+}
 
-const NAV_GROUPS: NavGroup[] = [
+const NAV_SECTIONS: NavSection[] = [
   {
-    title: "Training",
+    id: "training",
+    label: "Training",
+    icon: <IconDumbbell />,
+    matchPrefixes: ["/workouts", "/training", "/calendar"],
     items: [
-      { label: "Dashboard", href: "/dashboard", icon: <IconGrid /> },
       { label: "Workouts", href: "/workouts", icon: <IconDumbbell /> },
       { label: "Workout Builder", href: "/training/workout-builder", icon: <IconHammer /> },
       { label: "Exercises", href: "/training/exercises", icon: <IconList /> },
@@ -42,7 +51,10 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: "Nutrition",
+    id: "nutrition",
+    label: "Nutrition",
+    icon: <IconLeaf />,
+    matchPrefixes: ["/nutrition"],
     items: [
       { label: "Meals", href: "/nutrition", icon: <IconLeaf /> },
       { label: "Recipes", href: "/nutrition/recipes", icon: <IconBook /> },
@@ -50,7 +62,10 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: "Progress",
+    id: "progress",
+    label: "Progress",
+    icon: <IconTrendUp />,
+    matchPrefixes: ["/progress"],
     items: [
       { label: "Overview", href: "/progress", icon: <IconTrendUp /> },
       { label: "Photos", href: "/progress/photos", icon: <IconCamera /> },
@@ -58,20 +73,24 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: "AI",
+    id: "ai",
+    label: "AI",
+    icon: <IconSpark />,
+    matchPrefixes: ["/ai", "/ai-coach", "/recommendations", "/notifications"],
     items: [
       { label: "AI Chat", href: "/ai/chat", icon: <IconSpark /> },
       { label: "AI Coach", href: "/ai-coach", icon: <IconSpark /> },
       { label: "Recommendations", href: "/recommendations", icon: <IconStar /> },
-      { label: "Notifications", href: "/notifications", icon: <IconBell /> },
     ],
   },
   {
-    title: "Account",
+    id: "account",
+    label: "Account",
+    icon: <IconUser />,
+    matchPrefixes: ["/profile", "/subscription", "/settings"],
     items: [
-      { label: "Subscription", href: "/subscription", icon: <IconStar /> },
       { label: "Profile", href: "/profile", icon: <IconUser /> },
-      { label: "Settings", href: "/settings/notifications", icon: <IconSettings /> },
+      { label: "Subscription", href: "/subscription", icon: <IconStar /> },
     ],
   },
 ];
@@ -86,26 +105,39 @@ interface SidebarProps {
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
 
-  // On route change, close mobile sidebar
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleNavClick = () => { if (onClose) onClose(); };
+  // Determine which section owns the current route
+  const activeSectionId = useMemo(() => {
+    if (pathname === "/dashboard") return null; // Dashboard is standalone
+    for (const section of NAV_SECTIONS) {
+      if (section.matchPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"))) {
+        return section.id;
+      }
+    }
+    return null;
+  }, [pathname]);
 
-  // Collect all nav hrefs to determine which ones need exact matching
-  const allHrefs = NAV_GROUPS.flatMap((g) => g.items.map((i) => i.href));
+  const [expandedId, setExpandedId] = useState<string | null>(activeSectionId);
 
-  function isActive(href: string): boolean {
-    // Exact match always wins
+  // If the user navigates to a new section, auto-expand it
+  if (activeSectionId && activeSectionId !== expandedId) {
+    setExpandedId(activeSectionId);
+  }
+
+  // Collect all nav hrefs for active matching
+  const allHrefs = useMemo(() => NAV_SECTIONS.flatMap((s) => s.items.map((i) => i.href)), []);
+
+  function isItemActive(href: string): boolean {
     if (pathname === href) return true;
-
-    // If another nav item's href starts with this href + "/", then this item
-    // is a "parent" route — only match exactly (not startsWith)
     const hasChildInNav = allHrefs.some((h) => h !== href && h.startsWith(href + "/"));
     if (hasChildInNav) return false;
-
-    // For leaf items (no child nav items), allow startsWith for sub-pages
-    // e.g. /workouts matches /workouts/123 (detail pages not in nav)
     return pathname.startsWith(href + "/");
   }
+
+  function toggleSection(id: string) {
+    setExpandedId((prev) => (prev === id ? null : id));
+  }
+
+  const handleNavClick = () => { if (onClose) onClose(); };
 
   return (
     <>
@@ -128,10 +160,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       >
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b border-zinc-100 px-5">
-          <Link href="/dashboard" className="text-base font-bold tracking-tight text-zinc-900 transition-opacity hover:opacity-80">
+          <Link href="/dashboard" onClick={handleNavClick} className="text-base font-bold tracking-tight text-zinc-900 transition-opacity hover:opacity-80">
             FitnessApp
           </Link>
-          {/* Close button on mobile */}
           <button type="button" onClick={onClose} className="rounded-md p-1 text-zinc-400 hover:text-zinc-700 md:hidden" aria-label="Close menu">
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
           </button>
@@ -139,35 +170,78 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.title} className="mb-3">
-              <p className="mb-1 px-3 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                {group.title}
-              </p>
-              <div className="flex flex-col gap-0.5">
-                {group.items.map((item) => {
-                  const active = isActive(item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={handleNavClick}
-                      className={[
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                        active
-                          ? "bg-zinc-900 text-white"
-                          : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
-                      ].join(" ")}
-                      aria-current={active ? "page" : undefined}
-                    >
-                      {item.icon}
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+          {/* Dashboard — standalone top-level link */}
+          <Link
+            href="/dashboard"
+            onClick={handleNavClick}
+            className={[
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              pathname === "/dashboard"
+                ? "bg-zinc-900 text-white"
+                : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
+            ].join(" ")}
+            aria-current={pathname === "/dashboard" ? "page" : undefined}
+          >
+            <IconGrid />
+            Dashboard
+          </Link>
+
+          {/* Collapsible sections */}
+          <div className="mt-2 flex flex-col gap-0.5">
+            {NAV_SECTIONS.map((section) => {
+              const isExpanded = expandedId === section.id;
+              const sectionHasActiveItem = section.matchPrefixes.some(
+                (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+              );
+
+              return (
+                <div key={section.id}>
+                  {/* Section header — toggle */}
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(section.id)}
+                    className={[
+                      "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      sectionHasActiveItem && !isExpanded
+                        ? "bg-zinc-100 text-zinc-900"
+                        : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
+                    ].join(" ")}
+                    aria-expanded={isExpanded}
+                  >
+                    {section.icon}
+                    <span className="flex-1 text-left">{section.label}</span>
+                    <IconChevron open={isExpanded} />
+                  </button>
+
+                  {/* Submenu items */}
+                  {isExpanded && (
+                    <div className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-zinc-100 pl-3">
+                      {section.items.map((item) => {
+                        const active = isItemActive(item.href);
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={handleNavClick}
+                            className={[
+                              "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors",
+                              active
+                                ? "bg-zinc-900 text-white"
+                                : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900",
+                            ].join(" ")}
+                            aria-current={active ? "page" : undefined}
+                          >
+                            {item.icon}
+                            {item.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </nav>
       </aside>
     </>
