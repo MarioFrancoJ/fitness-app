@@ -126,7 +126,7 @@ export default function SessionDetailPage() {
         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
           <span>{session.date}</span>
           <span>{session.durationMinutes} minutes</span>
-          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${session.status === "Completed" ? "bg-emerald-50 text-emerald-700" : session.status === "Cancelled" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${session.status === "Completed" ? "bg-emerald-50 text-emerald-700" : session.status === "Cancelled" ? "bg-red-50 text-red-700" : session.status === "Abandoned" ? "bg-zinc-100 text-zinc-600" : "bg-amber-50 text-amber-700"}`}>
             {session.status}
           </span>
         </div>
