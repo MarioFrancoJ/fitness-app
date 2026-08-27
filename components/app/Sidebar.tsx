@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -22,6 +22,8 @@ function IconSpark() { return <svg viewBox="0 0 20 20" fill="currentColor" class
 function IconStar() { return <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path fillRule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401Z" clipRule="evenodd" /></svg>; }
 function IconUser() { return <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.23 1.23 0 0 0 .41 1.412A9.957 9.957 0 0 0 10 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 0 0-13.074.003Z" /></svg>; }
 function IconChevron({ open }: { open: boolean }) { return <svg viewBox="0 0 20 20" fill="currentColor" className={`h-3.5 w-3.5 text-zinc-400 transition-transform duration-200 ${open ? "rotate-90" : ""}`} aria-hidden="true"><path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" /></svg>; }
+function IconCollapse() { return <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" clipRule="evenodd" /><path fillRule="evenodd" d="M6 10a.75.75 0 0 1 .75-.75h9.546l-1.048-1.47a.75.75 0 1 1 1.22-.874l2.25 3.154a.75.75 0 0 1 0 .874l-2.25 3.154a.75.75 0 1 1-1.22-.874l1.048-1.47H6.75A.75.75 0 0 1 6 10Z" clipRule="evenodd" /></svg>; }
+function IconExpand() { return <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" clipRule="evenodd" /><path fillRule="evenodd" d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-1.47a.75.75 0 1 0-1.22-.874l-2.25 3.154a.75.75 0 0 0 0 .874l2.25 3.154a.75.75 0 0 0 1.22-.874L8.704 10.75h9.546A.75.75 0 0 0 19 10Z" clipRule="evenodd" /></svg>; }
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 
@@ -31,187 +33,236 @@ interface NavSection {
   label: string;
   icon: React.ReactNode;
   items: NavItem[];
-  /** Route prefixes that belong to this section */
   matchPrefixes: string[];
 }
 
 const NAV_SECTIONS: NavSection[] = [
-  {
-    id: "training",
-    label: "Training",
-    icon: <IconDumbbell />,
-    matchPrefixes: ["/workouts", "/training", "/calendar"],
-    items: [
-      { label: "Workouts", href: "/workouts", icon: <IconDumbbell /> },
-      { label: "Workout Builder", href: "/training/workout-builder", icon: <IconHammer /> },
-      { label: "Exercises", href: "/training/exercises", icon: <IconList /> },
-      { label: "Templates", href: "/training/templates", icon: <IconList /> },
-      { label: "History", href: "/training/history", icon: <IconClock /> },
-      { label: "Calendar", href: "/calendar", icon: <IconCalendar /> },
-    ],
-  },
-  {
-    id: "nutrition",
-    label: "Nutrition",
-    icon: <IconLeaf />,
-    matchPrefixes: ["/nutrition"],
-    items: [
-      { label: "Meals", href: "/nutrition", icon: <IconLeaf /> },
-      { label: "Recipes", href: "/nutrition/recipes", icon: <IconBook /> },
-      { label: "Shopping List", href: "/nutrition/shopping-list", icon: <IconCart /> },
-    ],
-  },
-  {
-    id: "progress",
-    label: "Progress",
-    icon: <IconTrendUp />,
-    matchPrefixes: ["/progress"],
-    items: [
-      { label: "Overview", href: "/progress", icon: <IconTrendUp /> },
-      { label: "Photos", href: "/progress/photos", icon: <IconCamera /> },
-      { label: "Measurements", href: "/progress/measurements", icon: <IconRuler /> },
-    ],
-  },
-  {
-    id: "ai",
-    label: "AI",
-    icon: <IconSpark />,
-    matchPrefixes: ["/ai", "/ai-coach", "/recommendations", "/notifications"],
-    items: [
-      { label: "AI Chat", href: "/ai/chat", icon: <IconSpark /> },
-      { label: "AI Coach", href: "/ai-coach", icon: <IconSpark /> },
-      { label: "Recommendations", href: "/recommendations", icon: <IconStar /> },
-    ],
-  },
-  {
-    id: "account",
-    label: "Account",
-    icon: <IconUser />,
-    matchPrefixes: ["/profile", "/subscription", "/settings"],
-    items: [
-      { label: "Profile", href: "/profile", icon: <IconUser /> },
-      { label: "Subscription", href: "/subscription", icon: <IconStar /> },
-    ],
-  },
+  { id: "training", label: "Training", icon: <IconDumbbell />, matchPrefixes: ["/workouts", "/training", "/calendar"], items: [
+    { label: "Workouts", href: "/workouts", icon: <IconDumbbell /> },
+    { label: "Workout Builder", href: "/training/workout-builder", icon: <IconHammer /> },
+    { label: "Exercises", href: "/training/exercises", icon: <IconList /> },
+    { label: "Templates", href: "/training/templates", icon: <IconList /> },
+    { label: "History", href: "/training/history", icon: <IconClock /> },
+    { label: "Calendar", href: "/calendar", icon: <IconCalendar /> },
+  ]},
+  { id: "nutrition", label: "Nutrition", icon: <IconLeaf />, matchPrefixes: ["/nutrition"], items: [
+    { label: "Meals", href: "/nutrition", icon: <IconLeaf /> },
+    { label: "Recipes", href: "/nutrition/recipes", icon: <IconBook /> },
+    { label: "Shopping List", href: "/nutrition/shopping-list", icon: <IconCart /> },
+  ]},
+  { id: "progress", label: "Progress", icon: <IconTrendUp />, matchPrefixes: ["/progress"], items: [
+    { label: "Overview", href: "/progress", icon: <IconTrendUp /> },
+    { label: "Photos", href: "/progress/photos", icon: <IconCamera /> },
+    { label: "Measurements", href: "/progress/measurements", icon: <IconRuler /> },
+  ]},
+  { id: "ai", label: "AI", icon: <IconSpark />, matchPrefixes: ["/ai", "/ai-coach", "/recommendations", "/notifications"], items: [
+    { label: "AI Chat", href: "/ai/chat", icon: <IconSpark /> },
+    { label: "AI Coach", href: "/ai-coach", icon: <IconSpark /> },
+    { label: "Recommendations", href: "/recommendations", icon: <IconStar /> },
+  ]},
+  { id: "account", label: "Account", icon: <IconUser />, matchPrefixes: ["/profile", "/subscription", "/settings"], items: [
+    { label: "Profile", href: "/profile", icon: <IconUser /> },
+    { label: "Subscription", href: "/subscription", icon: <IconStar /> },
+  ]},
 ];
+
+const STORAGE_KEY = "sidebar-collapsed";
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-interface SidebarProps {
-  open?: boolean;
-  onClose?: () => void;
-}
+interface SidebarProps { open?: boolean; onClose?: () => void; }
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
+  const [popoverId, setPopoverId] = useState<string | null>(null);
+  const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Determine which section owns the current route
+  // Load collapsed preference from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === "true") setCollapsed(true);
+  }, []);
+
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem(STORAGE_KEY, String(next));
+    setPopoverId(null);
+  }
+
+  // Active section detection
   const activeSectionId = useMemo(() => {
     if (pathname === "/dashboard") return null;
     for (const section of NAV_SECTIONS) {
-      if (section.matchPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"))) {
-        return section.id;
-      }
+      if (section.matchPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/"))) return section.id;
     }
     return null;
   }, [pathname]);
 
   const [expandedId, setExpandedId] = useState<string | null>(activeSectionId);
-
-  // Auto-expand the active section ONLY when the route changes
-  // (not on every render — that would block manual toggling)
   const prevPathRef = useRef(pathname);
   useEffect(() => {
     if (pathname !== prevPathRef.current) {
       prevPathRef.current = pathname;
-      if (activeSectionId) {
-        setExpandedId(activeSectionId);
-      }
+      if (activeSectionId) setExpandedId(activeSectionId);
     }
   }, [pathname, activeSectionId]);
 
-  // Collect all nav hrefs for active matching
   const allHrefs = useMemo(() => NAV_SECTIONS.flatMap((s) => s.items.map((i) => i.href)), []);
-
   function isItemActive(href: string): boolean {
     if (pathname === href) return true;
-    const hasChildInNav = allHrefs.some((h) => h !== href && h.startsWith(href + "/"));
-    if (hasChildInNav) return false;
+    const hasChild = allHrefs.some((h) => h !== href && h.startsWith(href + "/"));
+    if (hasChild) return false;
     return pathname.startsWith(href + "/");
   }
+  function toggleSection(id: string) { setExpandedId((prev) => (prev === id ? null : id)); }
+  const handleNavClick = () => { if (onClose) onClose(); setPopoverId(null); };
 
-  function toggleSection(id: string) {
-    setExpandedId((prev) => (prev === id ? null : id));
+  // Popover handlers (collapsed mode)
+  function openPopover(id: string) {
+    if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
+    setPopoverId(id);
+  }
+  function scheduleClosePopover() {
+    closeTimerRef.current = setTimeout(() => setPopoverId(null), 200);
+  }
+  function cancelClosePopover() {
+    if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
   }
 
-  const handleNavClick = () => { if (onClose) onClose(); };
+  // Keyboard handler for popover
+  function handlePopoverKeyDown(e: React.KeyboardEvent, sectionId: string) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setPopoverId((prev) => (prev === sectionId ? null : sectionId));
+    } else if (e.key === "Escape") {
+      setPopoverId(null);
+    }
+  }
 
   return (
     <>
       {/* Mobile overlay */}
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
-          onClick={onClose}
-          aria-hidden="true"
-        />
-      )}
+      {open && <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={onClose} aria-hidden="true" />}
 
       {/* Sidebar */}
       <aside
         className={[
-          "fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r border-zinc-100 bg-white transition-transform duration-200 ease-in-out",
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-zinc-100 bg-white transition-all duration-200 ease-in-out",
           "md:static md:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
+          collapsed ? "md:w-[68px]" : "md:w-60",
+          "w-60", // Mobile always full width
         ].join(" ")}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center justify-between border-b border-zinc-100 px-5">
-          <Link href="/dashboard" onClick={handleNavClick} className="text-base font-bold tracking-tight text-zinc-900 transition-opacity hover:opacity-80">
-            FitnessApp
-          </Link>
+        <div className="flex h-16 items-center justify-between border-b border-zinc-100 px-4">
+          {collapsed ? (
+            <Link href="/dashboard" onClick={handleNavClick} className="mx-auto text-base font-bold text-zinc-900 transition-opacity hover:opacity-80" title="Dashboard">
+              F
+            </Link>
+          ) : (
+            <Link href="/dashboard" onClick={handleNavClick} className="text-base font-bold tracking-tight text-zinc-900 transition-opacity hover:opacity-80">
+              FitnessApp
+            </Link>
+          )}
           <button type="button" onClick={onClose} className="rounded-md p-1 text-zinc-400 hover:text-zinc-700 md:hidden" aria-label="Close menu">
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
-          {/* Dashboard — standalone top-level link */}
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-4">
+          {/* Dashboard */}
           <Link
             href="/dashboard"
             onClick={handleNavClick}
+            title={collapsed ? "Dashboard" : undefined}
             className={[
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-              pathname === "/dashboard"
-                ? "bg-zinc-900 text-white"
-                : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
+              "flex items-center rounded-lg transition-colors",
+              collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5 text-sm font-medium",
+              pathname === "/dashboard" ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
             ].join(" ")}
             aria-current={pathname === "/dashboard" ? "page" : undefined}
           >
             <IconGrid />
-            Dashboard
+            {!collapsed && "Dashboard"}
           </Link>
 
-          {/* Collapsible sections */}
+          {/* Sections */}
           <div className="mt-2 flex flex-col gap-0.5">
             {NAV_SECTIONS.map((section) => {
               const isExpanded = expandedId === section.id;
-              const sectionHasActiveItem = section.matchPrefixes.some(
-                (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
-              );
+              const isPopoverOpen = popoverId === section.id;
+              const sectionActive = section.matchPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
 
+              // ── COLLAPSED MODE ──
+              if (collapsed) {
+                return (
+                  <div
+                    key={section.id}
+                    className="relative"
+                    onMouseEnter={() => openPopover(section.id)}
+                    onMouseLeave={scheduleClosePopover}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setPopoverId((prev) => (prev === section.id ? null : section.id))}
+                      onKeyDown={(e) => handlePopoverKeyDown(e, section.id)}
+                      title={section.label}
+                      className={[
+                        "flex w-full items-center justify-center rounded-lg p-2.5 transition-colors",
+                        sectionActive ? "bg-zinc-100 text-zinc-900" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900",
+                      ].join(" ")}
+                      aria-haspopup="true"
+                      aria-expanded={isPopoverOpen}
+                    >
+                      {section.icon}
+                    </button>
+
+                    {/* Popover */}
+                    {isPopoverOpen && (
+                      <div
+                        className="absolute left-full top-0 z-[60] ml-2 w-48 rounded-xl border border-zinc-200 bg-white py-1 shadow-lg"
+                        onMouseEnter={cancelClosePopover}
+                        onMouseLeave={scheduleClosePopover}
+                        role="menu"
+                      >
+                        <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400">{section.label}</p>
+                        {section.items.map((item) => {
+                          const active = isItemActive(item.href);
+                          return (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              onClick={handleNavClick}
+                              role="menuitem"
+                              className={[
+                                "flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium transition-colors",
+                                active ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900",
+                              ].join(" ")}
+                            >
+                              {item.icon}
+                              {item.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // ── EXPANDED MODE ──
               return (
                 <div key={section.id}>
-                  {/* Section header — toggle */}
                   <button
                     type="button"
                     onClick={() => toggleSection(section.id)}
                     className={[
                       "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                      sectionHasActiveItem && !isExpanded
-                        ? "bg-zinc-100 text-zinc-900"
-                        : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
+                      sectionActive && !isExpanded ? "bg-zinc-100 text-zinc-900" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
                     ].join(" ")}
                     aria-expanded={isExpanded}
                   >
@@ -219,8 +270,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                     <span className="flex-1 text-left">{section.label}</span>
                     <IconChevron open={isExpanded} />
                   </button>
-
-                  {/* Submenu items */}
                   {isExpanded && (
                     <div className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-zinc-100 pl-3">
                       {section.items.map((item) => {
@@ -232,9 +281,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                             onClick={handleNavClick}
                             className={[
                               "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors",
-                              active
-                                ? "bg-zinc-900 text-white"
-                                : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900",
+                              active ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900",
                             ].join(" ")}
                             aria-current={active ? "page" : undefined}
                           >
@@ -250,6 +297,20 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             })}
           </div>
         </nav>
+
+        {/* Collapse toggle — desktop only */}
+        <div className="hidden border-t border-zinc-100 p-2 md:block">
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="flex w-full items-center justify-center gap-2 rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <IconExpand /> : <IconCollapse />}
+            {!collapsed && <span className="text-xs font-medium">Collapse</span>}
+          </button>
+        </div>
       </aside>
     </>
   );
