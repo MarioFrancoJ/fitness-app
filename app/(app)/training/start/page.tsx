@@ -77,70 +77,87 @@ export default function TrainingStartPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      // Check for active session
-      const { data: activeSession } = await supabase
+      // Check for active sessions (handle multiple stale sessions defensively)
+      const { data: activeSessions } = await supabase
         .from("training_sessions")
         .select("id, workout_id, workout_name, start_time")
         .eq("user_id", user.id)
         .eq("status", "In Progress")
-        .order("start_time", { ascending: false })
-        .limit(1)
-        .single();
+        .order("start_time", { ascending: false });
 
-      if (activeSession) {
-        const startMs = new Date(activeSession.start_time).getTime();
+      let sessionToResume: { id: string; workout_id: string | null; workout_name: string | null; start_time: string } | null = null;
+
+      if (activeSessions && activeSessions.length > 0) {
+        // Auto-abandon ALL stale sessions (>4 hours)
+        const stale = activeSessions.filter(
+          (s) => Date.now() - new Date(s.start_time).getTime() > SESSION_TIMEOUT_MS
+        );
+        const fresh = activeSessions.filter(
+          (s) => Date.now() - new Date(s.start_time).getTime() <= SESSION_TIMEOUT_MS
+        );
+
+        if (stale.length > 0) {
+          // Mark all stale sessions as Abandoned
+          for (const s of stale) {
+            const startMs = new Date(s.start_time).getTime();
+            const elapsedMs = Date.now() - startMs;
+            await supabase
+              .from("training_sessions")
+              .update({
+                status: "Abandoned",
+                end_time: new Date(startMs + SESSION_TIMEOUT_MS).toISOString(),
+                duration_minutes: Math.min(Math.round(elapsedMs / 60000), 240),
+              })
+              .eq("id", s.id);
+          }
+
+          // Show notice for the most recent abandoned session
+          const lastAbandoned = stale[0];
+          setAbandonedNotice(
+            `Your previous workout "${lastAbandoned.workout_name || "Session"}" was automatically closed due to inactivity.`
+          );
+        }
+
+        // Only resume the most recent fresh session (if any)
+        sessionToResume = fresh.length > 0 ? fresh[0] : null;
+      }
+
+      if (sessionToResume) {
+        const startMs = new Date(sessionToResume.start_time).getTime();
         const elapsedMs = Date.now() - startMs;
 
-        // ── Auto-abandon stale sessions (>4 hours) ────────────────────────
-        if (elapsedMs > SESSION_TIMEOUT_MS) {
-          const durationMin = Math.min(Math.round(elapsedMs / 60000), 240); // Cap at 4h
-          await supabase
-            .from("training_sessions")
-            .update({
-              status: "Abandoned",
-              end_time: new Date(startMs + SESSION_TIMEOUT_MS).toISOString(),
-              duration_minutes: durationMin,
-            })
-            .eq("id", activeSession.id);
+        // Resume active session — load exercise logs from DB
+        const { data: logs } = await supabase
+          .from("session_exercise_logs")
+          .select("id, exercise_id, exercise_name, sort_order, session_set_logs(set_number, target_reps, completed_reps, target_weight, completed_weight, completed)")
+          .eq("session_id", sessionToResume.id)
+          .order("sort_order");
 
-          setAbandonedNotice(
-            `Your previous workout "${activeSession.workout_name || "Session"}" was automatically closed due to inactivity.`
-          );
-          // Don't resume — fall through to show workout selection
-        } else {
-          // Resume active session — load exercise logs from DB
-          const { data: logs } = await supabase
-            .from("session_exercise_logs")
-            .select("id, exercise_id, exercise_name, sort_order, session_set_logs(set_number, target_reps, completed_reps, target_weight, completed_weight, completed)")
-            .eq("session_id", activeSession.id)
-            .order("sort_order");
+        if (logs && logs.length > 0) {
+          const exerciseLogs: ExerciseLog[] = logs.map((log) => ({
+            exerciseId: log.exercise_id,
+            exerciseName: log.exercise_name,
+            sets: (log.session_set_logs || [])
+              .sort((a: { set_number: number }, b: { set_number: number }) => a.set_number - b.set_number)
+              .map((s: { set_number: number; target_reps: number | null; completed_reps: number | null; target_weight: number | null; completed_weight: number | null; completed: boolean }) => ({
+                setNumber: s.set_number,
+                targetReps: s.target_reps || 0,
+                completedReps: s.completed_reps || 0,
+                targetWeight: Number(s.target_weight) || 0,
+                completedWeight: Number(s.completed_weight) || 0,
+                completed: s.completed,
+              })),
+          }));
 
-          if (logs && logs.length > 0) {
-            const exerciseLogs: ExerciseLog[] = logs.map((log) => ({
-              exerciseId: log.exercise_id,
-              exerciseName: log.exercise_name,
-              sets: (log.session_set_logs || [])
-                .sort((a: { set_number: number }, b: { set_number: number }) => a.set_number - b.set_number)
-                .map((s: { set_number: number; target_reps: number | null; completed_reps: number | null; target_weight: number | null; completed_weight: number | null; completed: boolean }) => ({
-                  setNumber: s.set_number,
-                  targetReps: s.target_reps || 0,
-                  completedReps: s.completed_reps || 0,
-                  targetWeight: Number(s.target_weight) || 0,
-                  completedWeight: Number(s.completed_weight) || 0,
-                  completed: s.completed,
-                })),
-            }));
+          setSession({
+            id: sessionToResume.id,
+            workoutId: sessionToResume.workout_id,
+            workoutName: sessionToResume.workout_name || "Workout",
+            startTime: sessionToResume.start_time,
+            exerciseLogs,
+          });
 
-            setSession({
-              id: activeSession.id,
-              workoutId: activeSession.workout_id,
-              workoutName: activeSession.workout_name || "Workout",
-              startTime: activeSession.start_time,
-              exerciseLogs,
-            });
-
-            setElapsed(Math.floor(elapsedMs / 1000));
-          }
+          setElapsed(Math.floor(elapsedMs / 1000));
         }
       }
 

@@ -44,10 +44,10 @@ export default function TrainingPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      // 1. Load all completed sessions for stats
+      // 1. Load all sessions for stats (includes In Progress for active detection)
       const { data: sessions } = await supabase
         .from("training_sessions")
-        .select("id, date, duration_minutes, status, workout_name")
+        .select("id, date, duration_minutes, status, workout_name, start_time")
         .eq("user_id", user.id)
         .order("date", { ascending: false });
 
@@ -85,11 +85,27 @@ export default function TrainingPage() {
           exerciseCount: 0, // Will enrich below
         })));
 
-        // Check active session
+        // Check active session — auto-abandon if stale (>4h)
         const active = sessions.find((s) => s.status === "In Progress");
         if (active) {
-          setHasActiveSession(true);
-          setActiveWorkoutName(active.workout_name || "Workout");
+          const elapsedMs = Date.now() - new Date(active.start_time).getTime();
+          const TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 hours
+
+          if (elapsedMs > TIMEOUT_MS) {
+            // Auto-abandon stale session
+            await supabase
+              .from("training_sessions")
+              .update({
+                status: "Abandoned",
+                end_time: new Date(new Date(active.start_time).getTime() + TIMEOUT_MS).toISOString(),
+                duration_minutes: Math.min(Math.round(elapsedMs / 60000), 240),
+              })
+              .eq("id", active.id);
+            // Don't show as active
+          } else {
+            setHasActiveSession(true);
+            setActiveWorkoutName(active.workout_name || "Workout");
+          }
         }
       }
 

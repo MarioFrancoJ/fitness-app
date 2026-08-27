@@ -113,7 +113,7 @@ export default function CalendarPage() {
         .eq("user_id", user.id)
         .gte("date", start)
         .lte("date", end)
-        .neq("status", "In Progress"),
+        .eq("status", "Completed"),
       supabase
         .from("meal_logs")
         .select("date")
