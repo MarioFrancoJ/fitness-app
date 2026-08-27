@@ -8,6 +8,7 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import NotificationPanel from "./NotificationPanel";
 import SearchPanel from "./SearchPanel";
 import { createClient } from "@/lib/supabase/client";
+import { useSandbox } from "@/contexts/SandboxContext";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,44 @@ function IconMenu() {
   );
 }
 
+// ── Sandbox Toggle ────────────────────────────────────────────────────────────
+
+function SandboxToggle() {
+  const { isSandbox, toggleSandbox } = useSandbox();
+  const [toggling, setToggling] = useState(false);
+
+  async function handleToggle() {
+    setToggling(true);
+    await toggleSandbox();
+    setToggling(false);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleToggle}
+      disabled={toggling}
+      className={[
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-colors",
+        isSandbox
+          ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+          : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200",
+      ].join(" ")}
+      title={isSandbox ? "Exit Sandbox Mode" : "Enter Sandbox Mode"}
+    >
+      <span className="relative flex h-3 w-6 items-center rounded-full bg-current/20">
+        <span
+          className={[
+            "absolute h-2.5 w-2.5 rounded-full transition-all duration-200",
+            isSandbox ? "left-3 bg-amber-600" : "left-0.5 bg-zinc-400",
+          ].join(" ")}
+        />
+      </span>
+      {isSandbox ? "Sandbox ON" : "Sandbox"}
+    </button>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface TopbarProps {
@@ -44,6 +83,7 @@ interface TopbarProps {
 
 export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
   const router = useRouter();
+  const { isSuperAdmin, role } = useSandbox();
   const [unread, setUnread] = useState(0);
   const [userInitial, setUserInitial] = useState("U");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -169,6 +209,16 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
 
           <NotificationPanel isOpen={notificationsOpen} onClose={closeNotifications} onUnreadCountChange={handleUnreadCountChange} />
         </div>
+
+        {/* SuperAdmin badge + Sandbox toggle */}
+        {isSuperAdmin && (
+          <div className="hidden items-center gap-2 sm:inline-flex">
+            <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">
+              ⚡ SuperAdmin
+            </span>
+            <SandboxToggle />
+          </div>
+        )}
 
         {/* User avatar → Profile link */}
         <Link
