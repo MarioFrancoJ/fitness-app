@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 
@@ -111,7 +112,7 @@ export default function DashboardContent() {
   return (
     <div className="flex flex-col gap-5">
 
-      {/* ═══════ 1. HEADER — Single primary CTA ═══════ */}
+      {/* ═══════ 1. HEADER — Primary CTA + Quick Actions dropdown ═══════ */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
@@ -124,25 +125,15 @@ export default function DashboardContent() {
             <span>{formatDate()}</span>
           </div>
         </div>
-        <Link href="/training/start" className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 sm:self-start">
-          💪 Start Workout
-        </Link>
+        <div className="flex items-center gap-2 sm:self-start">
+          <Link href="/training/start" className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700">
+            💪 Start Workout
+          </Link>
+          <QuickActionsMenu />
+        </div>
       </div>
 
-      {/* ═══════ 2. QUICK ACTIONS BAR — secondary, below header ═══════ */}
-      <div className="flex items-center gap-2">
-        <Link href="/nutrition" className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50">
-          🥗 Log Meal
-        </Link>
-        <Link href="/progress/new" className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50">
-          ⚖️ Log Weight
-        </Link>
-        <Link href="/progress/photos/upload" className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50">
-          📸 Upload Photo
-        </Link>
-      </div>
-
-      {/* ═══════ 3. QUICK STATS — contextual links when empty ═══════ */}
+      {/* ═══════ 2. QUICK STATS — contextual links when empty ═══════ */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="Weight" value={stats?.lastWeight ? `${stats.lastWeight} kg` : null} emptyAction="Add weight" emptyHref="/progress/new" icon="⚖️" />
         <StatCard label="Calories" value={stats?.caloriesToday ? `${stats.caloriesToday} kcal` : null} emptyAction="Log calories" emptyHref="/nutrition" icon="🔥" />
@@ -150,7 +141,7 @@ export default function DashboardContent() {
         <StatCard label="Workouts" value={`${stats?.workoutsThisWeek ?? 0} this week`} icon="💪" />
       </div>
 
-      {/* ═══════ 4. TODAY'S FOCUS + WEEKLY PROGRESS ═══════ */}
+      {/* ═══════ 3. TODAY'S FOCUS + WEEKLY PROGRESS ═══════ */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Today's Focus */}
         <div className="rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm">
@@ -195,7 +186,7 @@ export default function DashboardContent() {
         </div>
       </div>
 
-      {/* ═══════ 5. RECENT ACTIVITY (no duplication with actions above) ═══════ */}
+      {/* ═══════ 4. RECENT ACTIVITY (no duplication with actions above) ═══════ */}
       <div className="rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div className="border-b border-zinc-100 px-5 py-3">
           <p className="text-sm font-semibold text-zinc-900">Recent Activity</p>
@@ -221,6 +212,207 @@ export default function DashboardContent() {
 }
 
 // ── Sub-Components ────────────────────────────────────────────────────────────
+
+const QUICK_ACTIONS = [
+  { label: "Log Meal", icon: "🥗", href: "/nutrition" },
+  { label: "Log Weight", icon: "⚖️", href: "/progress/new" },
+  { label: "Upload Photo", icon: "📸", href: "/progress/photos/upload" },
+];
+
+function QuickActionsMenu() {
+  const [open, setOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [focusIndex, setFocusIndex] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const itemsRef = useRef<(HTMLAnchorElement | null)[]>([]);
+  const router = useRouter();
+
+  // Detect mobile (< 640px)
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+
+  const closeDropdown = useCallback(() => {
+    setOpen(false);
+    setFocusIndex(-1);
+    buttonRef.current?.focus();
+  }, []);
+
+  const closeSheet = useCallback(() => {
+    setSheetOpen(false);
+  }, []);
+
+  // Click outside handler
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        closeDropdown();
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open, closeDropdown]);
+
+  // Escape key handler for dropdown
+  useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeDropdown();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, closeDropdown]);
+
+  // Escape key handler for bottom sheet
+  useEffect(() => {
+    if (!sheetOpen) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeSheet();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [sheetOpen, closeSheet]);
+
+  // Lock body scroll when sheet is open
+  useEffect(() => {
+    if (sheetOpen) {
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = ""; };
+    }
+  }, [sheetOpen]);
+
+  function handleButtonClick() {
+    if (isMobile) {
+      setSheetOpen(true);
+    } else {
+      setOpen((prev) => !prev);
+      setFocusIndex(-1);
+    }
+  }
+
+  function handleDropdownKeyDown(e: React.KeyboardEvent) {
+    if (!open) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const next = Math.min(focusIndex + 1, QUICK_ACTIONS.length - 1);
+      setFocusIndex(next);
+      itemsRef.current[next]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const prev = Math.max(focusIndex - 1, 0);
+      setFocusIndex(prev);
+      itemsRef.current[prev]?.focus();
+    } else if (e.key === "Enter" && focusIndex >= 0) {
+      e.preventDefault();
+      router.push(QUICK_ACTIONS[focusIndex].href);
+      closeDropdown();
+    }
+  }
+
+  return (
+    <>
+      {/* Desktop dropdown */}
+      <div ref={containerRef} className="relative" onKeyDown={handleDropdownKeyDown}>
+        <button
+          ref={buttonRef}
+          onClick={handleButtonClick}
+          aria-haspopup="true"
+          aria-expanded={open}
+          aria-label="Quick Actions"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-300"
+        >
+          <span>⚡</span>
+          <span className="hidden sm:inline">Quick Actions</span>
+          <svg
+            className={`h-3.5 w-3.5 text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+
+        {open && (
+          <div
+            role="menu"
+            className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-zinc-200 bg-white py-1 shadow-lg animate-in fade-in-0 zoom-in-95"
+          >
+            {QUICK_ACTIONS.map((action, idx) => (
+              <a
+                key={action.href}
+                ref={(el) => { itemsRef.current[idx] = el; }}
+                href={action.href}
+                role="menuitem"
+                tabIndex={-1}
+                onClick={(e) => {
+                  e.preventDefault();
+                  router.push(action.href);
+                  closeDropdown();
+                }}
+                className={[
+                  "flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 transition-colors hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none",
+                  focusIndex === idx ? "bg-zinc-50" : "",
+                ].join(" ")}
+                style={{ minHeight: "44px" }}
+              >
+                <span className="text-base">{action.icon}</span>
+                <span className="font-medium">{action.label}</span>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Mobile bottom sheet */}
+      {sheetOpen && (
+        <div
+          className="fixed inset-0 z-[100] sm:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Quick Actions"
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in-0"
+            onClick={closeSheet}
+          />
+          {/* Sheet */}
+          <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-white pb-8 pt-3 shadow-2xl animate-in slide-in-from-bottom duration-200">
+            {/* Handle */}
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-zinc-300" />
+            <p className="mb-2 px-5 text-xs font-bold uppercase tracking-widest text-zinc-400">Quick Actions</p>
+            <div className="flex flex-col">
+              {QUICK_ACTIONS.map((action) => (
+                <a
+                  key={action.href}
+                  href={action.href}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    router.push(action.href);
+                    closeSheet();
+                  }}
+                  className="flex items-center gap-4 px-5 py-4 text-zinc-700 transition-colors hover:bg-zinc-50 active:bg-zinc-100"
+                  style={{ minHeight: "52px" }}
+                >
+                  <span className="text-xl">{action.icon}</span>
+                  <span className="text-base font-medium">{action.label}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 function StatCard({ label, value, icon, emptyAction, emptyHref }: { label: string; value: string | null; icon: string; emptyAction?: string; emptyHref?: string }) {
   const isEmpty = !value && emptyAction && emptyHref;
