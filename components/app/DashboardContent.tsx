@@ -108,13 +108,11 @@ export default function DashboardContent() {
 
   if (loading) return <SkeletonDashboard />;
 
-  // ── Render ──────────────────────────────────────────────────────────────────
-
   return (
     <div className="flex flex-col gap-5">
 
-      {/* ═══════ WELCOME + QUICK ACTIONS (above the fold) ═══════ */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* ═══════ 1. HEADER — Single primary CTA ═══════ */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
             {getGreeting()}, {profile?.name || "User"}
@@ -126,55 +124,35 @@ export default function DashboardContent() {
             <span>{formatDate()}</span>
           </div>
         </div>
-
-        {/* Quick Actions — compact row, visible without scroll */}
-        <div className="flex gap-2">
-          <Link href="/training/start" className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700">
-            <span className="text-base">💪</span> Start Workout
-          </Link>
-          <Link href="/nutrition" className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50">
-            <span className="text-base">🥗</span> Log Meal
-          </Link>
-          <Link href="/progress/new" className="hidden items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 sm:inline-flex">
-            <span className="text-base">⚖️</span> Log Weight
-          </Link>
-        </div>
+        <Link href="/training/start" className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 sm:self-start">
+          💪 Start Workout
+        </Link>
       </div>
 
-      {/* ═══════ QUICK STATS (actionable when empty) ═══════ */}
+      {/* ═══════ 2. QUICK ACTIONS BAR — secondary, below header ═══════ */}
+      <div className="flex items-center gap-2">
+        <Link href="/nutrition" className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50">
+          🥗 Log Meal
+        </Link>
+        <Link href="/progress/new" className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50">
+          ⚖️ Log Weight
+        </Link>
+        <Link href="/progress/photos/upload" className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50">
+          📸 Upload Photo
+        </Link>
+      </div>
+
+      {/* ═══════ 3. QUICK STATS — contextual links when empty ═══════ */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard
-          label="Weight"
-          value={stats?.lastWeight ? `${stats.lastWeight} kg` : null}
-          emptyAction="Add weight"
-          emptyHref="/progress/new"
-          icon="⚖️"
-        />
-        <StatCard
-          label="Calories"
-          value={stats?.caloriesToday ? `${stats.caloriesToday} kcal` : null}
-          emptyAction="Log calories"
-          emptyHref="/nutrition"
-          icon="🔥"
-        />
-        <StatCard
-          label="Protein"
-          value={stats?.proteinToday ? `${stats.proteinToday}g` : null}
-          emptyAction="Log meal"
-          emptyHref="/nutrition"
-          icon="🥩"
-        />
-        <StatCard
-          label="Workouts"
-          value={`${stats?.workoutsThisWeek ?? 0} this week`}
-          icon="💪"
-        />
+        <StatCard label="Weight" value={stats?.lastWeight ? `${stats.lastWeight} kg` : null} emptyAction="Add weight" emptyHref="/progress/new" icon="⚖️" />
+        <StatCard label="Calories" value={stats?.caloriesToday ? `${stats.caloriesToday} kcal` : null} emptyAction="Log calories" emptyHref="/nutrition" icon="🔥" />
+        <StatCard label="Protein" value={stats?.proteinToday ? `${stats.proteinToday}g` : null} emptyAction="Log meal" emptyHref="/nutrition" icon="🥩" />
+        <StatCard label="Workouts" value={`${stats?.workoutsThisWeek ?? 0} this week`} icon="💪" />
       </div>
 
-      {/* ═══════ TODAY'S FOCUS + WEEKLY PROGRESS (compact 2-col) ═══════ */}
+      {/* ═══════ 4. TODAY'S FOCUS + WEEKLY PROGRESS ═══════ */}
       <div className="grid gap-4 lg:grid-cols-2">
-
-        {/* Today's Focus — compact */}
+        {/* Today's Focus */}
         <div className="rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm">
           <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Today&apos;s Focus</p>
           {focus?.hasWorkout ? (
@@ -184,20 +162,20 @@ export default function DashboardContent() {
                 <p className="text-xs text-zinc-500">{focus.exerciseCount} exercise{focus.exerciseCount !== 1 ? "s" : ""}</p>
               </div>
               <Link href="/training/start" className="shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700">
-                Start
+                Start {focus.workoutName && focus.workoutName.length <= 20 ? focus.workoutName : "Workout"}
               </Link>
             </div>
           ) : (
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-zinc-500">No workout scheduled</p>
               <Link href="/workouts/new" className="shrink-0 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">
-                Create
+                Create Workout
               </Link>
             </div>
           )}
         </div>
 
-        {/* Weekly Progress — compact */}
+        {/* Weekly Progress */}
         <div className="rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm">
           <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">This Week</p>
           <div className="flex flex-col gap-2.5">
@@ -210,25 +188,21 @@ export default function DashboardContent() {
                   {weekly.weightChange > 0 ? "+" : ""}{weekly.weightChange} kg
                 </span>
               ) : (
-                <Link href="/progress/new" className="text-xs font-medium text-zinc-400 hover:text-zinc-700">Add weight →</Link>
+                <Link href="/progress/new" className="text-xs text-zinc-400 transition-colors hover:text-zinc-700">Add weight →</Link>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* ═══════ RECENT ACTIVITY (compact empty state) ═══════ */}
+      {/* ═══════ 5. RECENT ACTIVITY (no duplication with actions above) ═══════ */}
       <div className="rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div className="border-b border-zinc-100 px-5 py-3">
           <p className="text-sm font-semibold text-zinc-900">Recent Activity</p>
         </div>
         {activity.length === 0 ? (
-          <div className="flex items-center justify-between px-5 py-4">
-            <p className="text-sm text-zinc-400">No activity yet</p>
-            <div className="flex gap-2">
-              <Link href="/training/start" className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-700">Start Workout</Link>
-              <Link href="/nutrition" className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50">Log Meal</Link>
-            </div>
+          <div className="px-5 py-4">
+            <p className="text-sm text-zinc-400">No activity yet — complete a workout or log a meal to see it here.</p>
           </div>
         ) : (
           <div className="divide-y divide-zinc-50">
@@ -242,16 +216,6 @@ export default function DashboardContent() {
           </div>
         )}
       </div>
-
-      {/* ═══════ SECONDARY ACTIONS (mobile: Log Weight + Upload Photo) ═══════ */}
-      <div className="flex gap-2 sm:hidden">
-        <Link href="/progress/new" className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white py-2.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">
-          ⚖️ Log Weight
-        </Link>
-        <Link href="/progress/photos/upload" className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white py-2.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">
-          📸 Upload Photo
-        </Link>
-      </div>
     </div>
   );
 }
@@ -259,21 +223,29 @@ export default function DashboardContent() {
 // ── Sub-Components ────────────────────────────────────────────────────────────
 
 function StatCard({ label, value, icon, emptyAction, emptyHref }: { label: string; value: string | null; icon: string; emptyAction?: string; emptyHref?: string }) {
-  return (
-    <div className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white p-3.5 shadow-sm">
+  const isEmpty = !value && emptyAction && emptyHref;
+
+  const content = (
+    <div className={["flex items-start gap-3 rounded-xl border bg-white p-3.5 shadow-sm transition-colors", isEmpty ? "border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 cursor-pointer" : "border-zinc-200"].join(" ")}>
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-sm">{icon}</span>
       <div className="min-w-0 flex-1">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">{label}</p>
         {value ? (
           <p className="mt-0.5 truncate text-sm font-bold text-zinc-900">{value}</p>
-        ) : emptyAction && emptyHref ? (
-          <Link href={emptyHref} className="mt-0.5 inline-block text-xs font-medium text-zinc-500 hover:text-zinc-900">{emptyAction} →</Link>
+        ) : emptyAction ? (
+          <p className="mt-0.5 text-xs font-medium text-blue-600">{emptyAction} →</p>
         ) : (
           <p className="mt-0.5 text-xs text-zinc-400">—</p>
         )}
       </div>
     </div>
   );
+
+  if (isEmpty) {
+    return <Link href={emptyHref!}>{content}</Link>;
+  }
+
+  return content;
 }
 
 function ProgressBar({ label, current, target, unit, color }: { label: string; current: number; target: number; unit: string; color: string }) {
