@@ -88,6 +88,23 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleNavClick = () => { if (onClose) onClose(); };
 
+  // Collect all nav hrefs to determine which ones need exact matching
+  const allHrefs = NAV_GROUPS.flatMap((g) => g.items.map((i) => i.href));
+
+  function isActive(href: string): boolean {
+    // Exact match always wins
+    if (pathname === href) return true;
+
+    // If another nav item's href starts with this href + "/", then this item
+    // is a "parent" route — only match exactly (not startsWith)
+    const hasChildInNav = allHrefs.some((h) => h !== href && h.startsWith(href + "/"));
+    if (hasChildInNav) return false;
+
+    // For leaf items (no child nav items), allow startsWith for sub-pages
+    // e.g. /workouts matches /workouts/123 (detail pages not in nav)
+    return pathname.startsWith(href + "/");
+  }
+
   return (
     <>
       {/* Mobile overlay */}
@@ -109,7 +126,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       >
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b border-zinc-100 px-5">
-          <span className="text-base font-bold tracking-tight text-zinc-900">FitnessApp</span>
+          <Link href="/dashboard" className="text-base font-bold tracking-tight text-zinc-900 transition-opacity hover:opacity-80">
+            FitnessApp
+          </Link>
           {/* Close button on mobile */}
           <button type="button" onClick={onClose} className="rounded-md p-1 text-zinc-400 hover:text-zinc-700 md:hidden" aria-label="Close menu">
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
@@ -125,7 +144,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               </p>
               <div className="flex flex-col gap-0.5">
                 {group.items.map((item) => {
-                  const active = pathname === item.href || pathname.startsWith(item.href + "/");
+                  const active = isActive(item.href);
                   return (
                     <Link
                       key={item.href}
