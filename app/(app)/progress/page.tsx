@@ -149,7 +149,7 @@ function LineChart({
           <g key={i}>
             <circle cx={p.x} cy={p.y} r={4} fill="white" stroke={color} strokeWidth={2} />
             {data.length <= 14 && (
-              <text x={p.x} y={height - 8} textAnchor="middle" className="text-[8px]" fill="#71717a">
+              <text x={p.x} y={height - 8} textAnchor="middle" className="text-xs" fill="#71717a">
                 {p.label}
               </text>
             )}

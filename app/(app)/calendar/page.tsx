@@ -511,7 +511,7 @@ export default function CalendarPage() {
                         />
                       ))}
                       {dayEvents.length > 3 && (
-                        <span className="text-[8px] text-zinc-400">+{dayEvents.length - 3}</span>
+                        <span className="text-xs text-zinc-400">+{dayEvents.length - 3}</span>
                       )}
                     </div>
                   )}

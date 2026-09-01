@@ -12,28 +12,60 @@
   --font-mono: var(--font-geist-mono);
 
   /* ═══════════════════════════════════════════════════════════════════════════
-     GOLDEN RATIO DESIGN SYSTEM (φ = 1.618)
-     Base unit: 14px (text) / 8px (spacing)
-     Scale: base × φⁿ where n = -1, 0, 1, 2, 3, 4
-     Fibonacci integers used where exact φ values are impractical.
+     TYPOGRAPHY SCALE (normalized)
+     Allowed rendered sizes: 12 · 14 · 16 · 20 · 24 · 32 px
+     - 12px: auxiliary labels, eyebrows, non-critical help
+     - 14px: navigation, body, links, metadata, secondary actions
+     - 16px: buttons, inputs, emphasized text, secondary metrics
+     - 20px: card & section titles
+     - 24px: page titles, main dashboard headings
+     - 32px: exceptionally important metrics/headings
+     Hierarchy comes from font-weight and contrast, not off-scale sizes.
+     Line-heights are proportional and consistent per token.
   ═══════════════════════════════════════════════════════════════════════════ */
 
-  /* ── Typography Scale ────────────────────────────────────────────────────
-     φ⁻¹ = 0.618 → 9px (xs)
-     φ⁰  = 1.000 → 14px (base)
-     φ¹  = 1.618 → 23px (lg)
-     φ²  = 2.618 → 37px (xl)
-     φ³  = 4.236 → 59px (2xl)
-     φ⁴  = 6.854 → 96px (3xl — display only)
+  /* ── Tailwind default scale — snapped to the allowed scale ────────────────
+     text-xs=12, text-sm=14, text-base=16, text-lg=20, text-xl=20,
+     text-2xl=24, text-3xl/4xl/5xl=32 (all collapse to 32 max)
   ──────────────────────────────────────────────────────────────────────── */
-  --text-golden-xs: 0.75rem;      /* 12px  — captions, labels (min legible size) */
-  --text-golden-sm: 0.75rem;      /* 12px  — small text, meta */
-  --text-golden-base: 0.875rem;   /* 14px  — body text */
-  --text-golden-md: 1rem;         /* 16px  — emphasized body */
-  --text-golden-lg: 1.4375rem;    /* 23px  — section headings */
-  --text-golden-xl: 2.3125rem;    /* 37px  — page titles */
-  --text-golden-2xl: 3.6875rem;   /* 59px  — hero display */
-  --text-golden-3xl: 6rem;        /* 96px  — display only */
+  --text-xs: 0.75rem;              /* 12px */
+  --text-xs--line-height: 1rem;    /* 16px */
+  --text-sm: 0.875rem;             /* 14px */
+  --text-sm--line-height: 1.25rem; /* 20px */
+  --text-base: 1rem;               /* 16px */
+  --text-base--line-height: 1.5rem;/* 24px */
+  --text-lg: 1.25rem;              /* 20px */
+  --text-lg--line-height: 1.75rem; /* 28px */
+  --text-xl: 1.25rem;              /* 20px */
+  --text-xl--line-height: 1.75rem; /* 28px */
+  --text-2xl: 1.5rem;              /* 24px */
+  --text-2xl--line-height: 2rem;   /* 32px */
+  --text-3xl: 2rem;                /* 32px */
+  --text-3xl--line-height: 2.5rem; /* 40px */
+  --text-4xl: 2rem;                /* 32px */
+  --text-4xl--line-height: 2.5rem; /* 40px */
+  --text-5xl: 2rem;                /* 32px */
+  --text-5xl--line-height: 2.5rem; /* 40px */
+
+  /* ── Golden token aliases — remapped onto the allowed scale ──────────────
+     Kept for backward compatibility; every alias now resolves to a valid size.
+  ──────────────────────────────────────────────────────────────────────── */
+  --text-golden-xs: 0.75rem;      /* 12px — auxiliary labels, eyebrows */
+  --text-golden-xs--line-height: 1rem;
+  --text-golden-sm: 0.875rem;     /* 14px — nav, body, links, metadata */
+  --text-golden-sm--line-height: 1.25rem;
+  --text-golden-base: 0.875rem;   /* 14px — body text */
+  --text-golden-base--line-height: 1.25rem;
+  --text-golden-md: 1rem;         /* 16px — buttons, inputs, emphasized */
+  --text-golden-md--line-height: 1.5rem;
+  --text-golden-lg: 1.25rem;      /* 20px — card & section titles */
+  --text-golden-lg--line-height: 1.75rem;
+  --text-golden-xl: 1.5rem;       /* 24px — page / main dashboard titles */
+  --text-golden-xl--line-height: 2rem;
+  --text-golden-2xl: 2rem;        /* 32px — exceptional headings */
+  --text-golden-2xl--line-height: 2.5rem;
+  --text-golden-3xl: 2rem;        /* 32px — exceptional headings (capped) */
+  --text-golden-3xl--line-height: 2.5rem;
 
   /* ── Spacing Scale (Fibonacci-based: 5, 8, 13, 21, 34, 55, 89) ─────────
      These are the integer approximations of φ-scaled intervals.
