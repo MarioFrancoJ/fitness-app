@@ -256,21 +256,42 @@ export default function TrainingStartPage() {
     }
 
     // Create training session in Supabase
-    const { data: newSession, error: sessionErr } = await supabase
+    const baseSession = {
+      user_id: user.id,
+      workout_id: workout.id,
+      workout_name: workout.name,
+      status: "In Progress" as const,
+      start_time: new Date().toISOString(),
+      date: new Date().toISOString().split("T")[0],
+    };
+
+    let newSession: { id: string; start_time: string } | null = null;
+    const firstTry = await supabase
       .from("training_sessions")
-      .insert({
-        user_id: user.id,
-        workout_id: workout.id,
-        workout_name: workout.name,
-        status: "In Progress",
-        start_time: new Date().toISOString(),
-        date: new Date().toISOString().split("T")[0],
-        is_sandbox: isSandbox,
-      })
+      .insert({ ...baseSession, is_sandbox: isSandbox })
       .select("id, start_time")
       .single();
 
-    if (sessionErr || !newSession) {
+    if (firstTry.error) {
+      // Fallback: if the is_sandbox column isn't present in this environment,
+      // retry the insert without it so the session can still start.
+      const retry = await supabase
+        .from("training_sessions")
+        .insert(baseSession)
+        .select("id, start_time")
+        .single();
+      if (retry.error || !retry.data) {
+        console.error("Failed to start training session:", retry.error || firstTry.error);
+        toast(`We couldn't start your session: ${(retry.error || firstTry.error)?.message ?? "unknown error"}`, "error");
+        setStarting(false);
+        return;
+      }
+      newSession = retry.data;
+    } else {
+      newSession = firstTry.data;
+    }
+
+    if (!newSession) {
       toast("We couldn't start your session. Please try again.", "error");
       setStarting(false);
       return;
