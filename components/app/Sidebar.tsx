@@ -239,7 +239,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                               onClick={handleNavClick}
                               role="menuitem"
                               className={[
-                                "flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium transition-colors",
+                                "flex items-center gap-2.5 px-3 py-2 text-sm font-medium transition-colors",
                                 active ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900",
                               ].join(" ")}
                             >
@@ -280,7 +280,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                             href={item.href}
                             onClick={handleNavClick}
                             className={[
-                              "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors",
+                              "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
                               active ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900",
                             ].join(" ")}
                             aria-current={active ? "page" : undefined}
