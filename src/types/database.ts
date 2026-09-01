@@ -1292,6 +1292,63 @@ export type Database = {
         }
         Relationships: []
       }
+      water_logs: {
+        Row: {
+          id: string
+          user_id: string
+          date: string
+          intake_ml: number
+          goal_ml: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          date?: string
+          intake_ml?: number
+          goal_ml?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          date?: string
+          intake_ml?: number
+          goal_ml?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      supplement_logs: {
+        Row: {
+          id: string
+          user_id: string
+          date: string
+          taken: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          date?: string
+          taken?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          date?: string
+          taken?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       weight_entries: {
         Row: {
           id: string
