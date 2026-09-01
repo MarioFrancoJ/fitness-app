@@ -349,31 +349,33 @@ export default function DashboardContent() {
           SECTION 2 — DAILY SUMMARY (compact metric strip)
       ═══════════════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-2 gap-golden-3 sm:grid-cols-4">
-        <MetricTile
+        <KpiCard
           icon="⚖️"
           label="Weight"
-          value={stats?.lastWeight ? `${stats.lastWeight} kg` : null}
-          emptyLabel="Add weight"
-          href="/progress/new"
+          value={stats?.lastWeight ? `${stats.lastWeight} kg` : "—"}
+          sub={stats?.lastWeight ? "Latest entry" : "No entries yet"}
+          href="/progress/weight"
         />
-        <MetricTile
+        <KpiCard
           icon="🔥"
-          label="Calories"
-          value={stats?.caloriesToday ? `${stats.caloriesToday} kcal` : null}
-          emptyLabel="Log calories"
+          label="Calories Today"
+          value={stats?.caloriesToday ? `${stats.caloriesToday.toLocaleString()} kcal` : "0 kcal"}
+          sub="Logged today"
           href="/nutrition"
         />
-        <MetricTile
+        <KpiCard
           icon="🥩"
-          label="Protein"
-          value={stats?.proteinToday ? `${stats.proteinToday}g` : null}
-          emptyLabel="Log meal"
+          label="Protein Today"
+          value={stats?.proteinToday ? `${stats.proteinToday}g` : "0g"}
+          sub="Logged today"
           href="/nutrition"
         />
-        <MetricTile
+        <KpiCard
           icon="💪"
-          label="Workouts"
-          value={`${stats?.workoutsThisWeek ?? 0} this week`}
+          label="Workouts This Week"
+          value={`${stats?.workoutsThisWeek ?? 0}`}
+          sub="Completed sessions"
+          href="/training/history"
         />
       </div>
 
@@ -550,12 +552,7 @@ export default function DashboardContent() {
                   {weekly.weightChange} kg
                 </span>
               ) : (
-                <Link
-                  href="/progress/new"
-                  className="text-golden-sm font-medium text-blue-600 hover:text-blue-700"
-                >
-                  Add weight →
-                </Link>
+                <span className="text-golden-sm font-medium text-zinc-400">No data yet</span>
               )}
             </div>
           </div>
@@ -690,7 +687,10 @@ export default function DashboardContent() {
 const QUICK_ACTIONS = [
   { label: "Log Meal", icon: "🥗", href: "/nutrition" },
   { label: "Log Weight", icon: "⚖️", href: "/progress/new" },
-  { label: "Upload Photo", icon: "📸", href: "/progress/photos/upload" },
+  { label: "Add Measurement", icon: "📏", href: "/progress/new" },
+  { label: "Upload Progress Photo", icon: "📸", href: "/progress/photos/upload" },
+  { label: "Start Workout", icon: "💪", href: "/training/start" },
+  { label: "Create Recipe", icon: "🍳", href: "/nutrition/recipes" },
 ];
 
 function QuickActionsMenu() {
@@ -827,7 +827,7 @@ function QuickActionsMenu() {
         {open && (
           <div
             role="menu"
-            className="absolute right-0 top-full z-50 mt-golden-2 w-48 rounded-golden-lg border border-zinc-200 bg-white py-golden-1 shadow-lg animate-in fade-in-0 zoom-in-95"
+            className="absolute right-0 top-full z-50 mt-golden-2 w-56 rounded-golden-lg border border-zinc-200 bg-white py-golden-1 shadow-lg animate-in fade-in-0 zoom-in-95"
           >
             {QUICK_ACTIONS.map((action, idx) => (
               <a
@@ -898,31 +898,27 @@ function QuickActionsMenu() {
   );
 }
 
-// ── Metric Tile ───────────────────────────────────────────────────────────────
+// ── KPI Card ────────────────────────────────────────────────────────────────
+// Information-first card that navigates to its related module. No create CTA —
+// data creation lives in Quick Actions. Hover + arrow signal it's clickable.
 
-function MetricTile({
+function KpiCard({
   icon,
   label,
   value,
-  emptyLabel,
+  sub,
   href,
 }: {
   icon: string;
   label: string;
-  value: string | null;
-  emptyLabel?: string;
-  href?: string;
+  value: string;
+  sub: string;
+  href: string;
 }) {
-  const isEmpty = !value && emptyLabel && href;
-
-  const inner = (
-    <div
-      className={[
-        "flex items-center gap-golden-3 rounded-golden-lg border bg-white px-golden-3 py-golden-3 shadow-sm transition-all",
-        isEmpty
-          ? "border-zinc-200 cursor-pointer hover:border-zinc-300 hover:shadow-md"
-          : "border-zinc-200",
-      ].join(" ")}
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-golden-3 rounded-golden-lg border border-zinc-200 bg-white px-golden-3 py-golden-3 shadow-sm transition-all hover:border-zinc-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-zinc-300"
     >
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-golden-md bg-zinc-100 text-golden-md">
         {icon}
@@ -931,25 +927,23 @@ function MetricTile({
         <p className="text-golden-xs font-bold uppercase tracking-widest text-zinc-400">
           {label}
         </p>
-        {value ? (
-          <p className="mt-golden-1 truncate text-golden-base font-bold text-zinc-900">
-            {value}
-          </p>
-        ) : emptyLabel ? (
-          <p className="mt-golden-1 text-golden-sm font-medium text-blue-600">
-            {emptyLabel} →
-          </p>
-        ) : (
-          <p className="mt-golden-1 text-golden-sm text-zinc-400">—</p>
-        )}
+        <p className="mt-golden-1 truncate text-golden-base font-bold text-zinc-900">
+          {value}
+        </p>
+        <p className="truncate text-golden-xs text-zinc-400">{sub}</p>
       </div>
-    </div>
+      <svg
+        className="h-4 w-4 shrink-0 text-zinc-300 transition-colors group-hover:text-zinc-500"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+        aria-hidden="true"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+      </svg>
+    </Link>
   );
-
-  if (isEmpty) {
-    return <Link href={href!}>{inner}</Link>;
-  }
-  return inner;
 }
 
 // ── Progress Row ──────────────────────────────────────────────────────────────
