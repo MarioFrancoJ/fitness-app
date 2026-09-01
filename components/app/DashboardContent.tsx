@@ -730,6 +730,7 @@ function DailyHabits({
   const [goalMl, setGoalMl] = useState(WATER_GOAL_ML);
   const [takenSupps, setTakenSupps] = useState<string[]>([]);
   const [customMl, setCustomMl] = useState("");
+  const [lastAddedMl, setLastAddedMl] = useState(0); // for "Undo" of the last water add
   const [error, setError] = useState<string | null>(null);
 
   // Load today's water + supplement logs
@@ -797,9 +798,20 @@ function DailyHabits({
       // Roll back optimistic update so the UI never shows unsaved data as saved.
       setIntakeMl(prev);
       setError(`Could not save water: ${upsertError.message}`);
+    } else if (ml > 0) {
+      // Remember the last added amount so it can be undone in one tap.
+      setLastAddedMl(ml);
     }
     setSaving(false);
   }, [intakeMl, goalMl, saving]);
+
+  // Undo the most recent water addition (removes exactly the last added amount).
+  const undoLastWater = useCallback(() => {
+    if (lastAddedMl <= 0) return;
+    const amount = lastAddedMl;
+    setLastAddedMl(0);
+    void addWater(-amount);
+  }, [lastAddedMl, addWater]);
 
   // Toggle a supplement (upsert the taken array)
   const toggleSupplement = useCallback(async (name: string) => {
@@ -873,7 +885,10 @@ function DailyHabits({
               style={{ width: `${waterPct}%` }}
             />
           </div>
-          <div className="mt-golden-3 flex flex-wrap gap-golden-2">
+          {/* Compact single-row control group: quick adds + custom amount + Add.
+              Flex-wrap keeps it responsive; the input flex-grows so the whole
+              thing reads as one interaction group aligned with the chips UI. */}
+          <div className="mt-golden-3 flex flex-wrap items-center gap-golden-2">
             {WATER_QUICK_ADD.map((ml) => (
               <button
                 key={ml}
@@ -885,50 +900,54 @@ function DailyHabits({
                 +{ml >= 1000 ? `${ml / 1000}L` : `${ml}ml`}
               </button>
             ))}
-            {intakeMl > 0 && (
+            {/* Custom water amount — users can log any amount in ml */}
+            <div className="flex min-w-[7.5rem] flex-1 items-center gap-golden-1 rounded-golden-md border border-zinc-200 bg-white pr-golden-1 transition-colors focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-400">
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                step={50}
+                value={customMl}
+                onChange={(e) => setCustomMl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    submitCustomWater();
+                  }
+                }}
+                disabled={loading || saving}
+                placeholder="Amount in ml"
+                aria-label="Custom water amount in millilitres"
+                className="min-w-0 flex-1 rounded-golden-md bg-transparent px-golden-3 py-golden-1 text-golden-sm text-zinc-700 placeholder:text-zinc-400 focus:outline-none disabled:opacity-50"
+              />
               <button
                 type="button"
-                onClick={() => addWater(-250)}
-                disabled={loading}
-                className="rounded-golden-md border border-zinc-200 bg-white px-golden-2 py-golden-1 text-golden-sm font-medium text-zinc-400 transition-colors hover:text-zinc-700 disabled:opacity-50"
-                aria-label="Remove 250ml"
+                onClick={submitCustomWater}
+                disabled={loading || saving || customMl.trim() === ""}
+                className="shrink-0 rounded-golden-md bg-blue-500 px-golden-3 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
               >
-                −
+                Add
+              </button>
+            </div>
+          </div>
+          <div className="mt-golden-2 flex min-h-[1.25rem] items-center justify-between gap-golden-2">
+            {waterReached ? (
+              <p className="text-golden-xs font-medium text-emerald-600">Goal reached! 🎉</p>
+            ) : (
+              <span />
+            )}
+            {lastAddedMl > 0 && (
+              <button
+                type="button"
+                onClick={undoLastWater}
+                disabled={loading || saving}
+                className="inline-flex items-center gap-golden-1 text-golden-xs font-medium text-zinc-400 transition-colors hover:text-zinc-700 disabled:opacity-50"
+                aria-label={`Undo last water add of ${lastAddedMl >= 1000 ? `${lastAddedMl / 1000}L` : `${lastAddedMl}ml`}`}
+              >
+                ↺ Undo {lastAddedMl >= 1000 ? `${lastAddedMl / 1000}L` : `${lastAddedMl}ml`}
               </button>
             )}
           </div>
-          {/* Custom water amount — users can log any amount in ml */}
-          <div className="mt-golden-2 flex items-center gap-golden-2">
-            <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              step={50}
-              value={customMl}
-              onChange={(e) => setCustomMl(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  submitCustomWater();
-                }
-              }}
-              disabled={loading || saving}
-              placeholder="Amount in ml"
-              aria-label="Custom water amount in millilitres"
-              className="min-w-0 flex-1 rounded-golden-md border border-zinc-200 bg-white px-golden-3 py-golden-1 text-golden-sm text-zinc-700 placeholder:text-zinc-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50"
-            />
-            <button
-              type="button"
-              onClick={submitCustomWater}
-              disabled={loading || saving || customMl.trim() === ""}
-              className="shrink-0 rounded-golden-md bg-blue-500 px-golden-4 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
-            >
-              Add
-            </button>
-          </div>
-          {waterReached && (
-            <p className="mt-golden-2 text-golden-xs font-medium text-emerald-600">Goal reached! 🎉</p>
-          )}
         </div>
 
         {/* Supplement tracking */}
