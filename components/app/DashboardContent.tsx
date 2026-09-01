@@ -729,6 +729,8 @@ function DailyHabits({
   const [intakeMl, setIntakeMl] = useState(0);
   const [goalMl, setGoalMl] = useState(WATER_GOAL_ML);
   const [takenSupps, setTakenSupps] = useState<string[]>([]);
+  const [customMl, setCustomMl] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   // Load today's water + supplement logs
   useEffect(() => {
@@ -753,6 +755,14 @@ function DailyHabits({
           .maybeSingle(),
       ]);
 
+      // Surface load failures instead of silently showing empty state — this is
+      // how a missing table/migration would otherwise masquerade as "no data".
+      if (waterRes.error || suppRes.error) {
+        setError(
+          "Could not load your habit data. If this persists, the water/supplement tables may be missing from the database."
+        );
+      }
+
       if (waterRes.data) {
         setIntakeMl(waterRes.data.intake_ml ?? 0);
         setGoalMl(waterRes.data.goal_ml ?? WATER_GOAL_ML);
@@ -765,40 +775,65 @@ function DailyHabits({
     load();
   }, []);
 
-  // Persist water intake (upsert on user_id + date)
+  // Persist water intake (upsert on user_id + date).
+  // Returns true on success so the UI can roll back optimistic state on failure.
   const addWater = useCallback(async (ml: number) => {
     if (saving) return;
+    const prev = intakeMl;
     const next = Math.max(0, intakeMl + ml);
     setIntakeMl(next); // optimistic
     setSaving(true);
+    setError(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaving(false); return; }
-    await supabase
+    if (!user) { setIntakeMl(prev); setSaving(false); return; }
+    const { error: upsertError } = await supabase
       .from("water_logs")
       .upsert(
         { user_id: user.id, date: todayKey(), intake_ml: next, goal_ml: goalMl },
         { onConflict: "user_id,date" }
       );
+    if (upsertError) {
+      // Roll back optimistic update so the UI never shows unsaved data as saved.
+      setIntakeMl(prev);
+      setError(`Could not save water: ${upsertError.message}`);
+    }
     setSaving(false);
   }, [intakeMl, goalMl, saving]);
 
   // Toggle a supplement (upsert the taken array)
   const toggleSupplement = useCallback(async (name: string) => {
+    const prev = takenSupps;
     const next = takenSupps.includes(name)
       ? takenSupps.filter((s) => s !== name)
       : [...takenSupps, name];
     setTakenSupps(next); // optimistic
+    setError(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase
+    if (!user) { setTakenSupps(prev); return; }
+    const { error: upsertError } = await supabase
       .from("supplement_logs")
       .upsert(
         { user_id: user.id, date: todayKey(), taken: next },
         { onConflict: "user_id,date" }
       );
+    if (upsertError) {
+      setTakenSupps(prev);
+      setError(`Could not save supplements: ${upsertError.message}`);
+    }
   }, [takenSupps]);
+
+  // Add a custom water amount typed by the user (any positive number of ml).
+  const submitCustomWater = useCallback(() => {
+    const parsed = Number(customMl);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setError("Enter a water amount greater than 0 ml.");
+      return;
+    }
+    setCustomMl("");
+    void addWater(Math.round(parsed));
+  }, [customMl, addWater]);
 
   const waterPct = Math.min(Math.round((intakeMl / goalMl) * 100), 100);
   const waterReached = intakeMl >= goalMl;
@@ -811,6 +846,15 @@ function DailyHabits({
         <h2 className="text-golden-base font-bold text-zinc-900">Daily Habits</h2>
         <span className="text-golden-xs text-zinc-400">Resets daily</span>
       </div>
+
+      {error && (
+        <div
+          role="alert"
+          className="mb-golden-3 rounded-golden-md border border-red-200 bg-red-50 px-golden-3 py-golden-2 text-golden-sm font-medium text-red-700"
+        >
+          {error}
+        </div>
+      )}
 
       <div className="grid gap-golden-4 lg:grid-cols-2">
         {/* Water tracking */}
@@ -852,6 +896,35 @@ function DailyHabits({
                 −
               </button>
             )}
+          </div>
+          {/* Custom water amount — users can log any amount in ml */}
+          <div className="mt-golden-2 flex items-center gap-golden-2">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              step={50}
+              value={customMl}
+              onChange={(e) => setCustomMl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  submitCustomWater();
+                }
+              }}
+              disabled={loading || saving}
+              placeholder="Amount in ml"
+              aria-label="Custom water amount in millilitres"
+              className="min-w-0 flex-1 rounded-golden-md border border-zinc-200 bg-white px-golden-3 py-golden-1 text-golden-sm text-zinc-700 placeholder:text-zinc-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={submitCustomWater}
+              disabled={loading || saving || customMl.trim() === ""}
+              className="shrink-0 rounded-golden-md bg-blue-500 px-golden-4 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
+            >
+              Add
+            </button>
           </div>
           {waterReached && (
             <p className="mt-golden-2 text-golden-xs font-medium text-emerald-600">Goal reached! 🎉</p>
