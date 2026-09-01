@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useSandbox } from "@/contexts/SandboxContext";
+import { useToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -54,11 +55,14 @@ const SESSION_TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
 
 export default function TrainingStartPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isSandbox } = useSandbox();
+  const { toast } = useToast();
   const [workouts, setWorkouts] = useState<WorkoutOption[]>([]);
   const [session, setSession] = useState<ActiveSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [currentExIdx, setCurrentExIdx] = useState(0);
   const [abandonedNotice, setAbandonedNotice] = useState<string | null>(null);
 
@@ -209,19 +213,30 @@ export default function TrainingStartPage() {
 
   // ── Start Session ─────────────────────────────────────────────────────────
 
-  async function handleSelectWorkout(workoutId: string) {
+  const handleSelectWorkout = useCallback(async (workoutId: string) => {
+    if (starting) return; // prevent double-start
+    setStarting(true);
+
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      toast("You need to be signed in to start a workout.", "error");
+      setStarting(false);
+      return;
+    }
 
     // Fetch workout exercises
-    const { data: workout } = await supabase
+    const { data: workout, error: workoutErr } = await supabase
       .from("workouts")
       .select("id, name, workout_days(workout_exercises(exercise_id, exercise_name, sets, reps, sort_order))")
       .eq("id", workoutId)
       .single();
 
-    if (!workout) return;
+    if (workoutErr || !workout) {
+      toast("We couldn't load that workout. Please try again.", "error");
+      setStarting(false);
+      return;
+    }
 
     // Flatten exercises from all days
     const allExercises: { exercise_id: string | null; exercise_name: string; sets: number; reps: number; sort_order: number }[] = [];
@@ -231,6 +246,14 @@ export default function TrainingStartPage() {
       }
     }
     allExercises.sort((a, b) => a.sort_order - b.sort_order);
+
+    // Guard: a workout with no exercises can't be trained — send the user to edit it
+    if (allExercises.length === 0) {
+      toast("This workout has no exercises yet. Add some before starting.", "error");
+      setStarting(false);
+      router.push(`/workouts/${workout.id}`);
+      return;
+    }
 
     // Create training session in Supabase
     const { data: newSession, error: sessionErr } = await supabase
@@ -247,7 +270,11 @@ export default function TrainingStartPage() {
       .select("id, start_time")
       .single();
 
-    if (sessionErr || !newSession) return;
+    if (sessionErr || !newSession) {
+      toast("We couldn't start your session. Please try again.", "error");
+      setStarting(false);
+      return;
+    }
 
     // Create session_exercise_logs + session_set_logs
     const exerciseLogs: ExerciseLog[] = [];
@@ -305,7 +332,22 @@ export default function TrainingStartPage() {
     });
     setCurrentExIdx(0);
     setElapsed(0);
-  }
+    setStarting(false);
+  }, [starting, isSandbox, router, toast]);
+
+  // ── Auto-start from ?workout= param ───────────────────────────────────────
+  // Lets other pages deep-link into the training flow for a specific workout.
+  // An active session (already loaded into `session`) always takes priority.
+  const autoStartRef = useRef(false);
+  useEffect(() => {
+    if (loading || session || autoStartRef.current) return;
+    const workoutParam = searchParams.get("workout");
+    if (!workoutParam) return;
+    // Only auto-start if the workout belongs to the loaded list (valid + owned)
+    if (!workouts.some((w) => w.id === workoutParam)) return;
+    autoStartRef.current = true;
+    handleSelectWorkout(workoutParam);
+  }, [loading, session, workouts, searchParams, handleSelectWorkout]);
 
   // ── Set Actions ───────────────────────────────────────────────────────────
 
@@ -449,24 +491,38 @@ export default function TrainingStartPage() {
         </div>
 
         {workouts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white py-20">
-            <p className="mb-1 text-base font-semibold text-zinc-900">No workouts created</p>
-            <p className="mb-6 text-sm text-zinc-500">Create a workout first to start training.</p>
-            <Link href="/workouts/new" className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700">
-              Create Workout
-            </Link>
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white px-6 py-20 text-center">
+            <span className="mb-4 text-3xl" aria-hidden="true">🏋️</span>
+            <p className="mb-1 text-base font-semibold text-zinc-900">No workout plan yet</p>
+            <p className="mb-6 max-w-sm text-sm text-zinc-500">
+              You don&apos;t have any workouts to train with. Create your own or start from a template.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link href="/workouts/new" className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700">
+                Create Workout
+              </Link>
+              <Link href="/training/templates" className="rounded-lg border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50">
+                Browse Templates
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {workouts.map((w) => (
-              <button key={w.id} type="button" onClick={() => handleSelectWorkout(w.id)}
-                className="flex flex-col items-start rounded-xl border border-zinc-200 bg-white p-5 text-left shadow-sm transition-shadow hover:shadow-md">
+            {workouts.map((w) => {
+              const empty = w.exerciseCount === 0;
+              return (
+              <button key={w.id} type="button" onClick={() => handleSelectWorkout(w.id)} disabled={starting}
+                className="flex flex-col items-start rounded-xl border border-zinc-200 bg-white p-5 text-left shadow-sm transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60">
                 <p className="text-sm font-semibold text-zinc-900">{w.name}</p>
                 <p className="mt-1 text-xs text-zinc-400">
-                  {w.goal || "Custom"} · {w.exerciseCount} exercises{w.duration ? ` · ${w.duration} min` : ""}
+                  {w.goal || "Custom"} · {w.exerciseCount} exercise{w.exerciseCount !== 1 ? "s" : ""}{w.duration ? ` · ${w.duration} min` : ""}
                 </p>
+                {empty && (
+                  <span className="mt-2 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">Add exercises to train</span>
+                )}
               </button>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

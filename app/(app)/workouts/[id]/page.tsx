@@ -227,7 +227,22 @@ export default function WorkoutDetailPage() {
               <span className="text-xs text-zinc-400">{workout.workout_days.length} days</span>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {totalExercises > 0 ? (
+              <Link
+                href={`/training/start?workout=${workout.id}`}
+                className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700"
+              >
+                Start Workout
+              </Link>
+            ) : (
+              <span
+                title="Add exercises to this workout before starting"
+                className="cursor-not-allowed rounded-lg bg-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-400"
+              >
+                Start Workout
+              </span>
+            )}
             <button type="button" onClick={handleDuplicate} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">Duplicate</button>
             <button type="button" onClick={handleDelete} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50">Delete</button>
           </div>
