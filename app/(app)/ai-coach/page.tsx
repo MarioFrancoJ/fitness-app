@@ -222,19 +222,19 @@ export default function AiCoachPage() {
         {/* Dashboard Widgets */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Today&apos;s Focus</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Today&apos;s Focus</p>
             <p className="mt-1 text-sm font-semibold text-zinc-900">{todaysFocus?.title || "Keep Going"}</p>
           </div>
           <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Weekly Goal</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Weekly Goal</p>
             <p className="mt-1 text-sm font-semibold text-zinc-900">{weeklyGoal}</p>
           </div>
           <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Current Streak</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Current Streak</p>
             <p className="mt-1 text-xl font-bold text-blue-600">{stats.currentStreak} <span className="text-xs font-normal text-zinc-400">days</span></p>
           </div>
           <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">This Week</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">This Week</p>
             <p className="mt-1 text-xl font-bold text-zinc-900">{stats.workoutsThisWeek} <span className="text-xs font-normal text-zinc-400">workouts</span></p>
           </div>
         </div>
@@ -274,7 +274,7 @@ export default function AiCoachPage() {
                 <div key={rec.id} className={`rounded-xl border border-zinc-200 bg-white p-5 shadow-sm ${priorityBorder(rec.priority)}`}>
                   <div className="mb-1 flex items-center gap-2">
                     <span className="text-base">{categoryIcon(rec.category)}</span>
-                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${categoryColor(rec.category)}`}>{rec.category}</span>
+                    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${categoryColor(rec.category)}`}>{rec.category}</span>
                   </div>
                   <p className="text-sm font-semibold text-zinc-900">{rec.title}</p>
                   <p className="mt-1 text-xs text-zinc-500">{rec.message}</p>

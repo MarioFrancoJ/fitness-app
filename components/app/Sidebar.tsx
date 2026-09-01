@@ -229,7 +229,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                         onMouseLeave={scheduleClosePopover}
                         role="menu"
                       >
-                        <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400">{section.label}</p>
+                        <p className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-zinc-400">{section.label}</p>
                         {section.items.map((item) => {
                           const active = isItemActive(item.href);
                           return (

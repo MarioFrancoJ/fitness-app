@@ -415,23 +415,23 @@ export default function NutritionPage() {
               <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
                 <div className="rounded-lg bg-zinc-50 p-3 text-center">
                   <p className="text-lg font-bold text-zinc-900">{todaySummary.totalCalories}</p>
-                  <p className="text-[10px] text-zinc-400">Consumed</p>
+                  <p className="text-xs text-zinc-400">Consumed</p>
                 </div>
                 <div className="rounded-lg bg-zinc-50 p-3 text-center">
                   <p className="text-lg font-bold text-emerald-600">{Math.max(0, targets.calories - todaySummary.totalCalories)}</p>
-                  <p className="text-[10px] text-zinc-400">Remaining</p>
+                  <p className="text-xs text-zinc-400">Remaining</p>
                 </div>
                 <div className="rounded-lg bg-blue-50 p-3 text-center">
                   <p className="text-lg font-bold text-blue-600">{todaySummary.totalProtein}g</p>
-                  <p className="text-[10px] text-zinc-400">Protein</p>
+                  <p className="text-xs text-zinc-400">Protein</p>
                 </div>
                 <div className="rounded-lg bg-amber-50 p-3 text-center">
                   <p className="text-lg font-bold text-amber-600">{todaySummary.totalCarbs}g</p>
-                  <p className="text-[10px] text-zinc-400">Carbs</p>
+                  <p className="text-xs text-zinc-400">Carbs</p>
                 </div>
                 <div className="rounded-lg bg-emerald-50 p-3 text-center">
                   <p className="text-lg font-bold text-emerald-600">{todaySummary.totalFat}g</p>
-                  <p className="text-[10px] text-zinc-400">Fat</p>
+                  <p className="text-xs text-zinc-400">Fat</p>
                 </div>
               </div>
 
@@ -562,23 +562,23 @@ export default function NutritionPage() {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                 <div className="rounded-lg bg-zinc-50 p-3 text-center">
                   <p className="text-lg font-bold text-zinc-900">{historyStats.totalCalories}</p>
-                  <p className="text-[10px] text-zinc-400">Total Calories</p>
+                  <p className="text-xs text-zinc-400">Total Calories</p>
                 </div>
                 <div className="rounded-lg bg-zinc-50 p-3 text-center">
                   <p className="text-lg font-bold text-zinc-900">{historyStats.avgCalories}</p>
-                  <p className="text-[10px] text-zinc-400">Avg Calories/Day</p>
+                  <p className="text-xs text-zinc-400">Avg Calories/Day</p>
                 </div>
                 <div className="rounded-lg bg-blue-50 p-3 text-center">
                   <p className="text-lg font-bold text-blue-600">{historyStats.avgProtein}g</p>
-                  <p className="text-[10px] text-zinc-400">Avg Protein</p>
+                  <p className="text-xs text-zinc-400">Avg Protein</p>
                 </div>
                 <div className="rounded-lg bg-amber-50 p-3 text-center">
                   <p className="text-lg font-bold text-amber-600">{historyStats.avgCarbs}g</p>
-                  <p className="text-[10px] text-zinc-400">Avg Carbs</p>
+                  <p className="text-xs text-zinc-400">Avg Carbs</p>
                 </div>
                 <div className="rounded-lg bg-emerald-50 p-3 text-center">
                   <p className="text-lg font-bold text-emerald-600">{historyStats.avgFat}g</p>
-                  <p className="text-[10px] text-zinc-400">Avg Fat</p>
+                  <p className="text-xs text-zinc-400">Avg Fat</p>
                 </div>
               </div>
             </div>

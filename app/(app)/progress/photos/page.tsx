@@ -144,7 +144,7 @@ export default function ProgressPhotosPage() {
               {achievements.map((a) => (
                 <div key={a.id} className={["flex items-center gap-3 rounded-lg border p-3", a.unlocked ? "border-emerald-200 bg-emerald-50" : "border-zinc-100 bg-zinc-50 opacity-60"].join(" ")}>
                   <span className="text-xl">{a.icon}</span>
-                  <div><p className={`text-xs font-semibold ${a.unlocked ? "text-emerald-900" : "text-zinc-500"}`}>{a.title}</p><p className="text-[10px] text-zinc-400">{a.description}</p></div>
+                  <div><p className={`text-xs font-semibold ${a.unlocked ? "text-emerald-900" : "text-zinc-500"}`}>{a.title}</p><p className="text-xs text-zinc-400">{a.description}</p></div>
                 </div>
               ))}
             </div>

@@ -180,9 +180,9 @@ export default function RecommendationsPage() {
                       </div>
                       <p className="text-xs text-zinc-500">{rec.description}</p>
                       <div className="mt-2 flex items-center gap-2">
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${priorityBadge(rec.priority)}`}>{rec.priority}</span>
-                        <span className="text-[10px] text-zinc-300">{rec.category}</span>
-                        <span className="text-[10px] text-zinc-300">{rec.generatedDate}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${priorityBadge(rec.priority)}`}>{rec.priority}</span>
+                        <span className="text-xs text-zinc-300">{rec.category}</span>
+                        <span className="text-xs text-zinc-300">{rec.generatedDate}</span>
                       </div>
                     </div>
                   </div>
@@ -190,11 +190,11 @@ export default function RecommendationsPage() {
                   {filter === "active" && (
                     <div className="flex shrink-0 gap-1">
                       <button type="button" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(rec.id, "Completed"); }}
-                        className="rounded-md bg-emerald-100 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-200">
+                        className="rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-200">
                         Complete
                       </button>
                       <button type="button" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(rec.id, "Dismissed"); }}
-                        className="rounded-md bg-zinc-100 px-2.5 py-1 text-[10px] font-semibold text-zinc-500 hover:bg-zinc-200">
+                        className="rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-200">
                         Dismiss
                       </button>
                     </div>

@@ -176,9 +176,9 @@ export default function SessionDetailPage() {
                       <td className="py-2 text-zinc-700">{set.completed && set.completedWeight > 0 ? `${set.completedWeight} kg` : "—"}</td>
                       <td className="py-2">
                         {set.completed ? (
-                          <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">Done</span>
+                          <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Done</span>
                         ) : (
-                          <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500">Skipped</span>
+                          <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">Skipped</span>
                         )}
                       </td>
                       <td className="py-2 text-xs text-zinc-400">{set.notes || "—"}</td>

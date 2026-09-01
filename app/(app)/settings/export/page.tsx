@@ -92,8 +92,8 @@ export default function ExportPage() {
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-medium text-zinc-600">Select Categories</p>
               <div className="flex gap-2">
-                <button type="button" onClick={selectAll} className="text-[10px] font-medium text-zinc-500 hover:text-zinc-900">Select All</button>
-                <button type="button" onClick={selectNone} className="text-[10px] font-medium text-zinc-500 hover:text-zinc-900">Clear</button>
+                <button type="button" onClick={selectAll} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">Select All</button>
+                <button type="button" onClick={selectNone} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">Clear</button>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">

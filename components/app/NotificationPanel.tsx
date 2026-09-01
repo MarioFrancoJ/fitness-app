@@ -155,7 +155,7 @@ export default function NotificationPanel({ isOpen, onClose, onUnreadCountChange
                         {notification.status === "Unread" && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
                       </div>
                       <p className="mt-0.5 text-xs text-zinc-400 line-clamp-2">{notification.message}</p>
-                      <p className="mt-1 text-[10px] text-zinc-300">{timeAgo(notification.created_at)}</p>
+                      <p className="mt-1 text-xs text-zinc-300">{timeAgo(notification.created_at)}</p>
                     </div>
                   </Link>
                 ) : (
@@ -168,7 +168,7 @@ export default function NotificationPanel({ isOpen, onClose, onUnreadCountChange
                         {notification.status === "Unread" && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
                       </div>
                       <p className="mt-0.5 text-xs text-zinc-400 line-clamp-2">{notification.message}</p>
-                      <p className="mt-1 text-[10px] text-zinc-300">{timeAgo(notification.created_at)}</p>
+                      <p className="mt-1 text-xs text-zinc-300">{timeAgo(notification.created_at)}</p>
                     </div>
                   </button>
                 )}

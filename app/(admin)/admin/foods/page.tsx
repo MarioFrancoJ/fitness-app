@@ -147,7 +147,7 @@ export default function AdminNotificationsPage() {
                     <tr key={n.id} className="hover:bg-zinc-50">
                       <td className="px-5 py-2 font-medium text-zinc-900 truncate max-w-[200px]">{n.title}</td>
                       <td className="px-5 py-2 text-zinc-500 text-xs">{n.type}</td>
-                      <td className="px-5 py-2"><span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${priorityBadge(n.priority)}`}>{n.priority}</span></td>
+                      <td className="px-5 py-2"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${priorityBadge(n.priority)}`}>{n.priority}</span></td>
                       <td className="px-5 py-2 text-xs text-zinc-500">{n.status}</td>
                       <td className="px-5 py-2"><button type="button" onClick={() => setDeleteTarget(n.id)} className="text-xs text-red-400 hover:text-red-600">Delete</button></td>
                     </tr>

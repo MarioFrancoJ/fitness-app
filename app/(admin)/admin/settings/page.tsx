@@ -132,7 +132,7 @@ export default function AdminSettingsPage() {
                         <td key={role} className="px-4 py-2 text-center">
                           <div className="flex justify-center gap-1">
                             {perm.roles[role].map((v, i) => (
-                              <span key={i} className={`text-[10px] font-semibold ${v ? (i === 0 ? "text-emerald-600" : i === 1 ? "text-blue-600" : "text-red-500") : "text-zinc-300"}`}>{v ? "✓" : "—"}</span>
+                              <span key={i} className={`text-xs font-semibold ${v ? (i === 0 ? "text-emerald-600" : i === 1 ? "text-blue-600" : "text-red-500") : "text-zinc-300"}`}>{v ? "✓" : "—"}</span>
                             ))}
                           </div>
                         </td>
@@ -142,7 +142,7 @@ export default function AdminSettingsPage() {
                 </tbody>
               </table>
             </div>
-            <p className="mt-3 text-[10px] text-zinc-400">V = View · E = Edit · D = Delete</p>
+            <p className="mt-3 text-xs text-zinc-400">V = View · E = Edit · D = Delete</p>
           </div>
 
           <div><Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save Settings"}</Button></div>

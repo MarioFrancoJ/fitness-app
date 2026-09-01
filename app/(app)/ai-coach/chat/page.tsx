@@ -170,12 +170,12 @@ export default function AiCoachChatPage() {
               ].join(" ")}>
                 {msg.role === "coach" && (
                   <div className="mb-1 flex items-center gap-1.5">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 text-[10px]">🤖</span>
-                    <span className="text-[10px] font-semibold text-zinc-400">Coach</span>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 text-xs">🤖</span>
+                    <span className="text-xs font-semibold text-zinc-400">Coach</span>
                   </div>
                 )}
                 <p className="text-sm leading-relaxed">{msg.content}</p>
-                <p className={`mt-1 text-[10px] ${msg.role === "user" ? "text-zinc-400" : "text-zinc-300"}`}>
+                <p className={`mt-1 text-xs ${msg.role === "user" ? "text-zinc-400" : "text-zinc-300"}`}>
                   {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </p>
               </div>
