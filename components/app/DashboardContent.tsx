@@ -122,46 +122,50 @@ export default function DashboardContent() {
           fitnessGoal: profileData.fitness_goal || "",
         });
 
-      const { data: weightData } = await supabase
+      // NOTE: We intentionally do NOT filter by `is_sandbox` in the query.
+      // Write paths (weight tracker, meal log, workout start) don't always set
+      // that column, and it may be absent/NULL depending on migration state.
+      // A hard `.eq("is_sandbox", false)` would then exclude real user rows and
+      // leave KPIs empty. Instead we select the flag and drop rows only when it
+      // is explicitly `true`, so sandbox isolation still works when present.
+      const { data: weightRows } = await supabase
         .from("weight_entries")
-        .select("weight_kg")
+        .select("weight_kg, is_sandbox")
         .eq("user_id", user.id)
-        .eq("is_sandbox", false)
-        .order("date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const { data: mealsToday } = await supabase
+        .order("date", { ascending: false });
+      const weightData = (weightRows ?? []).filter((r) => r.is_sandbox !== true)[0] ?? null;
+
+      const { data: mealsTodayRows } = await supabase
         .from("meal_logs")
-        .select("calories, protein")
-        .eq("date", today)
-        .eq("is_sandbox", false);
-      const { data: weekSessions } = await supabase
+        .select("calories, protein, is_sandbox")
+        .eq("date", today);
+      const mealsToday = (mealsTodayRows ?? []).filter((m) => m.is_sandbox !== true);
+
+      const { data: weekSessionRows } = await supabase
         .from("training_sessions")
-        .select("id, date, status")
+        .select("id, date, status, is_sandbox")
         .eq("user_id", user.id)
         .eq("status", "Completed")
-        .eq("is_sandbox", false)
         .gte("date", weekStart);
+      const weekSessions = (weekSessionRows ?? []).filter((s) => s.is_sandbox !== true);
 
       setStats({
         lastWeight: weightData?.weight_kg ?? null,
         caloriesToday:
-          mealsToday?.reduce((s, m) => s + m.calories, 0) ?? 0,
+          mealsToday.reduce((s, m) => s + m.calories, 0) ?? 0,
         proteinToday:
-          mealsToday?.reduce((s, m) => s + m.protein, 0) ?? 0,
-        workoutsThisWeek: weekSessions?.length ?? 0,
+          mealsToday.reduce((s, m) => s + m.protein, 0) ?? 0,
+        workoutsThisWeek: weekSessions.length,
       });
 
       // Build daily workout completion map for the week (Mon–Sun)
       const dailyWorkouts: boolean[] = Array(7).fill(false);
-      if (weekSessions) {
-        for (const s of weekSessions) {
-          const sessionDate = new Date(s.date);
-          const diff = Math.floor(
-            (sessionDate.getTime() - monday.getTime()) / (24 * 60 * 60 * 1000)
-          );
-          if (diff >= 0 && diff < 7) dailyWorkouts[diff] = true;
-        }
+      for (const s of weekSessions) {
+        const sessionDate = new Date(s.date);
+        const diff = Math.floor(
+          (sessionDate.getTime() - monday.getTime()) / (24 * 60 * 60 * 1000)
+        );
+        if (diff >= 0 && diff < 7) dailyWorkouts[diff] = true;
       }
 
       const { data: nextWorkout } = await supabase
@@ -197,30 +201,29 @@ export default function DashboardContent() {
         });
       }
 
-      const { data: weekMeals } = await supabase
+      const { data: weekMealRows } = await supabase
         .from("meal_logs")
-        .select("calories, date")
-        .eq("is_sandbox", false)
+        .select("calories, date, is_sandbox")
         .gte("date", weekStart);
+      const weekMeals = (weekMealRows ?? []).filter((m) => m.is_sandbox !== true);
       const daysWithMeals =
-        new Set(weekMeals?.map((m) => m.date) || []).size || 1;
+        new Set(weekMeals.map((m) => m.date)).size || 1;
       const totalWeekCals =
-        weekMeals?.reduce((s, m) => s + m.calories, 0) ?? 0;
-      const { data: recentWeights } = await supabase
+        weekMeals.reduce((s, m) => s + m.calories, 0) ?? 0;
+      const { data: recentWeightRows } = await supabase
         .from("weight_entries")
-        .select("weight_kg")
+        .select("weight_kg, is_sandbox")
         .eq("user_id", user.id)
-        .eq("is_sandbox", false)
-        .order("date", { ascending: false })
-        .limit(2);
+        .order("date", { ascending: false });
+      const recentWeights = (recentWeightRows ?? []).filter((r) => r.is_sandbox !== true).slice(0, 2);
       let weightChange: number | null = null;
-      if (recentWeights && recentWeights.length >= 2)
+      if (recentWeights.length >= 2)
         weightChange =
           Math.round(
             (recentWeights[0].weight_kg - recentWeights[1].weight_kg) * 10
           ) / 10;
       setWeekly({
-        workoutsCompleted: weekSessions?.length ?? 0,
+        workoutsCompleted: weekSessions.length,
         workoutsGoal: 4,
         avgCalories: Math.round(totalWeekCals / daysWithMeals),
         caloriesTarget: 2200,
@@ -265,14 +268,14 @@ export default function DashboardContent() {
 
       // Recent activity
       const activities: ActivityItem[] = [];
-      const { data: recentSessions } = await supabase
+      const { data: recentSessionRows } = await supabase
         .from("training_sessions")
-        .select("id, workout_name, start_time, status")
+        .select("id, workout_name, start_time, status, is_sandbox")
         .eq("user_id", user.id)
         .eq("status", "Completed")
-        .eq("is_sandbox", false)
         .order("start_time", { ascending: false })
-        .limit(3);
+        .limit(10);
+      const recentSessions = (recentSessionRows ?? []).filter((s) => s.is_sandbox !== true).slice(0, 3);
       if (recentSessions)
         for (const s of recentSessions)
           activities.push({
