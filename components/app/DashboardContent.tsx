@@ -79,6 +79,25 @@ function getDayLabels(): string[] {
   return days;
 }
 
+function todayKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// ── Daily Habits config ─────────────────────────────────────────────────────
+
+const WATER_GOAL_ML = 3000;
+const WATER_QUICK_ADD = [250, 500, 1000]; // ml
+
+// Default supplement catalog. Adding a supplement here requires no migration —
+// supplement_logs.taken is a JSONB array of names.
+const DEFAULT_SUPPLEMENTS = [
+  "Creatine",
+  "Whey Protein",
+  "Collagen",
+  "Biotin",
+  "Multivitamin",
+];
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function DashboardContent() {
@@ -563,6 +582,15 @@ export default function DashboardContent() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
+          SECTION 3.5 — DAILY HABITS (water, supplements, meals, workout)
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <DailyHabits
+        mealsLoggedToday={(stats?.caloriesToday ?? 0) > 0}
+        caloriesToday={stats?.caloriesToday ?? 0}
+        workoutDoneToday={weekly?.dailyWorkouts?.[(new Date().getDay() + 6) % 7] ?? false}
+      />
+
+      {/* ═══════════════════════════════════════════════════════════════════════
           SECTION 4 — BOTTOM AREA (Next Meal + Recent Activity)
       ═══════════════════════════════════════════════════════════════════════ */}
       <div className="grid gap-golden-4 lg:grid-cols-2">
@@ -684,6 +712,217 @@ export default function DashboardContent() {
 // ══════════════════════════════════════════════════════════════════════════════
 // SUB-COMPONENTS
 // ══════════════════════════════════════════════════════════════════════════════
+
+// ── Daily Habits (water + supplements + meal/workout status) ──────────────────
+
+function DailyHabits({
+  mealsLoggedToday,
+  caloriesToday,
+  workoutDoneToday,
+}: {
+  mealsLoggedToday: boolean;
+  caloriesToday: number;
+  workoutDoneToday: boolean;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [intakeMl, setIntakeMl] = useState(0);
+  const [goalMl, setGoalMl] = useState(WATER_GOAL_ML);
+  const [takenSupps, setTakenSupps] = useState<string[]>([]);
+
+  // Load today's water + supplement logs
+  useEffect(() => {
+    async function load() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+      const date = todayKey();
+
+      const [waterRes, suppRes] = await Promise.all([
+        supabase
+          .from("water_logs")
+          .select("intake_ml, goal_ml")
+          .eq("user_id", user.id)
+          .eq("date", date)
+          .maybeSingle(),
+        supabase
+          .from("supplement_logs")
+          .select("taken")
+          .eq("user_id", user.id)
+          .eq("date", date)
+          .maybeSingle(),
+      ]);
+
+      if (waterRes.data) {
+        setIntakeMl(waterRes.data.intake_ml ?? 0);
+        setGoalMl(waterRes.data.goal_ml ?? WATER_GOAL_ML);
+      }
+      if (suppRes.data && Array.isArray(suppRes.data.taken)) {
+        setTakenSupps(suppRes.data.taken as string[]);
+      }
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  // Persist water intake (upsert on user_id + date)
+  const addWater = useCallback(async (ml: number) => {
+    if (saving) return;
+    const next = Math.max(0, intakeMl + ml);
+    setIntakeMl(next); // optimistic
+    setSaving(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
+    await supabase
+      .from("water_logs")
+      .upsert(
+        { user_id: user.id, date: todayKey(), intake_ml: next, goal_ml: goalMl },
+        { onConflict: "user_id,date" }
+      );
+    setSaving(false);
+  }, [intakeMl, goalMl, saving]);
+
+  // Toggle a supplement (upsert the taken array)
+  const toggleSupplement = useCallback(async (name: string) => {
+    const next = takenSupps.includes(name)
+      ? takenSupps.filter((s) => s !== name)
+      : [...takenSupps, name];
+    setTakenSupps(next); // optimistic
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase
+      .from("supplement_logs")
+      .upsert(
+        { user_id: user.id, date: todayKey(), taken: next },
+        { onConflict: "user_id,date" }
+      );
+  }, [takenSupps]);
+
+  const waterPct = Math.min(Math.round((intakeMl / goalMl) * 100), 100);
+  const waterReached = intakeMl >= goalMl;
+  const suppsDone = takenSupps.filter((s) => DEFAULT_SUPPLEMENTS.includes(s)).length;
+  const suppsComplete = suppsDone >= DEFAULT_SUPPLEMENTS.length;
+
+  return (
+    <div className="rounded-golden-xl border border-zinc-200 bg-white p-golden-4 shadow-sm">
+      <div className="mb-golden-3 flex items-center justify-between">
+        <h2 className="text-golden-base font-bold text-zinc-900">Daily Habits</h2>
+        <span className="text-golden-xs text-zinc-400">Resets daily</span>
+      </div>
+
+      <div className="grid gap-golden-4 lg:grid-cols-2">
+        {/* Water tracking */}
+        <div className="rounded-golden-lg border border-zinc-100 bg-zinc-50/50 p-golden-3">
+          <div className="mb-golden-2 flex items-center justify-between">
+            <span className="inline-flex items-center gap-golden-1 text-golden-sm font-semibold text-zinc-700">
+              💧 Water
+            </span>
+            <span className="text-golden-sm font-semibold text-zinc-900">
+              {(intakeMl / 1000).toFixed(2)}L <span className="font-medium text-zinc-400">/ {(goalMl / 1000).toFixed(1)}L</span>
+            </span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${waterReached ? "bg-emerald-500" : "bg-blue-500"}`}
+              style={{ width: `${waterPct}%` }}
+            />
+          </div>
+          <div className="mt-golden-3 flex flex-wrap gap-golden-2">
+            {WATER_QUICK_ADD.map((ml) => (
+              <button
+                key={ml}
+                type="button"
+                onClick={() => addWater(ml)}
+                disabled={loading}
+                className="rounded-golden-md border border-zinc-200 bg-white px-golden-3 py-golden-1 text-golden-sm font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-50"
+              >
+                +{ml >= 1000 ? `${ml / 1000}L` : `${ml}ml`}
+              </button>
+            ))}
+            {intakeMl > 0 && (
+              <button
+                type="button"
+                onClick={() => addWater(-250)}
+                disabled={loading}
+                className="rounded-golden-md border border-zinc-200 bg-white px-golden-2 py-golden-1 text-golden-sm font-medium text-zinc-400 transition-colors hover:text-zinc-700 disabled:opacity-50"
+                aria-label="Remove 250ml"
+              >
+                −
+              </button>
+            )}
+          </div>
+          {waterReached && (
+            <p className="mt-golden-2 text-golden-xs font-medium text-emerald-600">Goal reached! 🎉</p>
+          )}
+        </div>
+
+        {/* Supplement tracking */}
+        <div className="rounded-golden-lg border border-zinc-100 bg-zinc-50/50 p-golden-3">
+          <div className="mb-golden-2 flex items-center justify-between">
+            <span className="inline-flex items-center gap-golden-1 text-golden-sm font-semibold text-zinc-700">
+              💊 Supplements
+            </span>
+            <span className={`text-golden-sm font-semibold ${suppsComplete ? "text-emerald-600" : "text-zinc-900"}`}>
+              {suppsDone}/{DEFAULT_SUPPLEMENTS.length} taken
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-golden-2">
+            {DEFAULT_SUPPLEMENTS.map((name) => {
+              const taken = takenSupps.includes(name);
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => toggleSupplement(name)}
+                  disabled={loading}
+                  aria-pressed={taken}
+                  className={[
+                    "inline-flex items-center gap-golden-1 rounded-golden-md border px-golden-3 py-golden-1 text-golden-sm font-medium transition-colors disabled:opacity-50",
+                    taken
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50",
+                  ].join(" ")}
+                >
+                  <span>{taken ? "✓" : "+"}</span>
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Today's status summary */}
+      <div className="mt-golden-4 grid grid-cols-2 gap-golden-2 sm:grid-cols-4">
+        <HabitStatus label="Water" done={waterReached} detail={`${(intakeMl / 1000).toFixed(1)}L`} />
+        <HabitStatus label="Supplements" done={suppsComplete} detail={`${suppsDone}/${DEFAULT_SUPPLEMENTS.length}`} />
+        <HabitStatus label="Meals" done={mealsLoggedToday} detail={mealsLoggedToday ? `${caloriesToday} kcal` : "None"} />
+        <HabitStatus label="Workout" done={workoutDoneToday} detail={workoutDoneToday ? "Done" : "Pending"} />
+      </div>
+    </div>
+  );
+}
+
+function HabitStatus({ label, done, detail }: { label: string; done: boolean; detail: string }) {
+  return (
+    <div className="flex items-center gap-golden-2 rounded-golden-md bg-zinc-50 px-golden-3 py-golden-2">
+      <span
+        className={[
+          "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-golden-xs font-bold",
+          done ? "bg-emerald-500 text-white" : "bg-zinc-200 text-zinc-400",
+        ].join(" ")}
+      >
+        {done ? "✓" : ""}
+      </span>
+      <div className="min-w-0">
+        <p className="truncate text-golden-xs font-semibold text-zinc-700">{label}</p>
+        <p className="truncate text-golden-xs text-zinc-400">{detail}</p>
+      </div>
+    </div>
+  );
+}
 
 // ── Quick Actions Dropdown / Bottom Sheet ─────────────────────────────────────
 
