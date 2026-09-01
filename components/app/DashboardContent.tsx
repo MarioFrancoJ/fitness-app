@@ -686,9 +686,9 @@ export default function DashboardContent() {
 
 const QUICK_ACTIONS = [
   { label: "Log Meal", icon: "🥗", href: "/nutrition" },
-  { label: "Log Weight", icon: "⚖️", href: "/progress/new" },
-  { label: "Add Measurement", icon: "📏", href: "/progress/new" },
-  { label: "Upload Progress Photo", icon: "📸", href: "/progress/photos/upload" },
+  { label: "Log Weight", icon: "⚖️", href: "/progress/weight" },
+  { label: "Add Measurement", icon: "📏", href: "/progress/measurements" },
+  { label: "Upload Progress Photo", icon: "📸", href: "/progress/photos" },
   { label: "Start Workout", icon: "💪", href: "/training/start" },
   { label: "Create Recipe", icon: "🍳", href: "/nutrition/recipes" },
 ];
