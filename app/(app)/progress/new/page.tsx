@@ -41,29 +41,48 @@ export default function NewProgressPage() {
 
       const today = new Date().toISOString().slice(0, 10);
 
-      // Insert weight entry
-      await supabase.from("weight_entries").insert({ user_id: user.id, date: today, weight_kg: w, notes: notes.trim() || null });
+      // Insert weight entry — check the returned error (Supabase does not throw)
+      const { error: weightError } = await supabase
+        .from("weight_entries")
+        .insert({ user_id: user.id, date: today, weight_kg: w, notes: notes.trim() || null });
+
+      if (weightError) {
+        console.error("Failed to save weight entry:", weightError);
+        setError(`Failed to save weight: ${weightError.message}`);
+        setIsSubmitting(false);
+        return;
+      }
 
       // Insert measurement entry (if any measurement provided)
       const hasMeasurements = waist || chest || hips || neck || leftArm || rightArm || leftLeg || rightLeg;
       if (hasMeasurements) {
-        await supabase.from("measurement_entries").insert({
-          user_id: user.id,
-          date: today,
-          weight_kg: w,
-          neck_cm: parseFloat(neck) || null,
-          chest_cm: parseFloat(chest) || null,
-          waist_cm: parseFloat(waist) || null,
-          hips_cm: parseFloat(hips) || null,
-          left_arm_cm: parseFloat(leftArm) || null,
-          right_arm_cm: parseFloat(rightArm) || null,
-          left_thigh_cm: parseFloat(leftLeg) || null,
-          right_thigh_cm: parseFloat(rightLeg) || null,
-        });
+        const { error: measurementError } = await supabase
+          .from("measurement_entries")
+          .insert({
+            user_id: user.id,
+            date: today,
+            weight_kg: w,
+            neck_cm: parseFloat(neck) || null,
+            chest_cm: parseFloat(chest) || null,
+            waist_cm: parseFloat(waist) || null,
+            hips_cm: parseFloat(hips) || null,
+            left_arm_cm: parseFloat(leftArm) || null,
+            right_arm_cm: parseFloat(rightArm) || null,
+            left_thigh_cm: parseFloat(leftLeg) || null,
+            right_thigh_cm: parseFloat(rightLeg) || null,
+          });
+
+        if (measurementError) {
+          console.error("Failed to save measurement entry:", measurementError);
+          setError(`Failed to save measurements: ${measurementError.message}`);
+          setIsSubmitting(false);
+          return;
+        }
       }
 
       router.push("/progress");
     } catch (err) {
+      console.error("Unexpected error saving measurement:", err);
       setError("Failed to save. Please try again.");
       setIsSubmitting(false);
     }
