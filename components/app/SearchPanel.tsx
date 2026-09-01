@@ -173,7 +173,7 @@ export default function SearchPanel({ open, onClose }: SearchPanelProps) {
                 const meta = CATEGORY_META[category];
                 return (
                   <div key={category}>
-                    <p className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                    <p className="px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-zinc-400">
                       {meta.icon} {meta.label}
                     </p>
                     {items.map((item) => {
@@ -190,7 +190,7 @@ export default function SearchPanel({ open, onClose }: SearchPanelProps) {
                             <p className="truncate text-sm font-medium text-zinc-900">{item.title}</p>
                             <p className="truncate text-xs text-zinc-400">{item.subtitle}</p>
                           </div>
-                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-medium ${meta.color}`}>
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${meta.color}`}>
                             {meta.label.slice(0, -1)}
                           </span>
                         </Link>
@@ -212,7 +212,7 @@ export default function SearchPanel({ open, onClose }: SearchPanelProps) {
 
       {/* Footer hint */}
       <div className="border-t border-zinc-100 px-4 py-2">
-        <div className="flex items-center gap-3 text-[10px] text-zinc-400">
+        <div className="flex items-center gap-3 text-xs text-zinc-400">
           <span><kbd className="rounded border border-zinc-200 bg-zinc-50 px-1 font-mono">↑↓</kbd> navigate</span>
           <span><kbd className="rounded border border-zinc-200 bg-zinc-50 px-1 font-mono">↵</kbd> open</span>
           <span><kbd className="rounded border border-zinc-200 bg-zinc-50 px-1 font-mono">Esc</kbd> close</span>

@@ -26,7 +26,7 @@
      φ³  = 4.236 → 59px (2xl)
      φ⁴  = 6.854 → 96px (3xl — display only)
   ──────────────────────────────────────────────────────────────────────── */
-  --text-golden-xs: 0.5625rem;    /* 9px   — captions, labels */
+  --text-golden-xs: 0.75rem;      /* 12px  — captions, labels (min legible size) */
   --text-golden-sm: 0.75rem;      /* 12px  — small text, meta */
   --text-golden-base: 0.875rem;   /* 14px  — body text */
   --text-golden-md: 1rem;         /* 16px  — emphasized body */

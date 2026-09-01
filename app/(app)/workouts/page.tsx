@@ -55,7 +55,7 @@ function WorkoutCard({ workout, href }: { workout: WorkoutItem; href: string }) 
       <div className="mb-2 flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold text-zinc-900">{workout.name}</h3>
         {workout.difficulty && (
-          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${difficultyColor(workout.difficulty)}`}>
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${difficultyColor(workout.difficulty)}`}>
             {workout.difficulty}
           </span>
         )}
@@ -287,7 +287,7 @@ export default function WorkoutsPage() {
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <h3 className="text-sm font-semibold text-zinc-900">{tpl.name}</h3>
                   {tpl.difficulty && (
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${difficultyColor(tpl.difficulty)}`}>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${difficultyColor(tpl.difficulty)}`}>
                       {tpl.difficulty}
                     </span>
                   )}

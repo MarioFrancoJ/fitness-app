@@ -219,7 +219,7 @@ export default function TrainingHistoryPage() {
                       <p className="truncate text-sm font-semibold text-zinc-900">
                         {s.workout_name || "Custom Workout"}
                       </p>
-                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${badge.bg}`}>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${badge.bg}`}>
                         {badge.label}
                       </span>
                     </div>
@@ -237,7 +237,7 @@ export default function TrainingHistoryPage() {
                   <Link
                     href={`/training/session/${s.id}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="shrink-0 rounded-md border border-zinc-200 px-2.5 py-1 text-[11px] font-semibold text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-100"
+                    className="shrink-0 rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-semibold text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-100"
                   >
                     Details →
                   </Link>

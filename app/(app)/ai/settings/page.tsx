@@ -151,19 +151,19 @@ export default function AISettingsPage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-lg bg-zinc-50 p-3 text-center">
             <p className="text-lg font-bold text-zinc-900">{usage.monthlyRequests}</p>
-            <p className="text-[10px] text-zinc-400">Requests</p>
+            <p className="text-xs text-zinc-400">Requests</p>
           </div>
           <div className="rounded-lg bg-zinc-50 p-3 text-center">
             <p className="text-lg font-bold text-zinc-900">{usage.monthlyTokens.toLocaleString()}</p>
-            <p className="text-[10px] text-zinc-400">Tokens</p>
+            <p className="text-xs text-zinc-400">Tokens</p>
           </div>
           <div className="rounded-lg bg-zinc-50 p-3 text-center">
             <p className="text-lg font-bold text-zinc-900">{usage.dailyRequests}</p>
-            <p className="text-[10px] text-zinc-400">Today</p>
+            <p className="text-xs text-zinc-400">Today</p>
           </div>
           <div className="rounded-lg bg-zinc-50 p-3 text-center">
             <p className="text-lg font-bold text-emerald-600">${usage.estimatedMonthlyCost.toFixed(4)}</p>
-            <p className="text-[10px] text-zinc-400">Est. Cost</p>
+            <p className="text-xs text-zinc-400">Est. Cost</p>
           </div>
         </div>
       </div>

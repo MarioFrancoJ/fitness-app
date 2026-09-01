@@ -164,9 +164,9 @@ export default function AIDashboardPage() {
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-zinc-900">{feature.label}</p>
                   {feature.enabled ? (
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">Active</span>
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Active</span>
                   ) : (
-                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500">Coming Soon</span>
+                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">Coming Soon</span>
                   )}
                 </div>
                 <p className="mt-1 text-xs text-zinc-400">{feature.description}</p>

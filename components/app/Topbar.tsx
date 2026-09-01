@@ -54,7 +54,7 @@ function SandboxToggle() {
       onClick={handleToggle}
       disabled={toggling}
       className={[
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-colors",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold transition-colors",
         isSandbox
           ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
           : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200",
@@ -160,7 +160,7 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
           >
             <IconSearch />
             <span>Search...</span>
-            <kbd className="ml-auto rounded border border-zinc-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-zinc-400">/</kbd>
+            <kbd className="ml-auto rounded border border-zinc-200 bg-white px-1.5 py-0.5 font-mono text-xs text-zinc-400">/</kbd>
           </button>
           <SearchPanel open={searchOpen} onClose={() => setSearchOpen(false)} />
         </div>
@@ -201,7 +201,7 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
           >
             <IconBell />
             {unread > 0 && (
-              <span aria-label={`${unread} unread`} className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+              <span aria-label={`${unread} unread`} className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
                 {unread > 9 ? "9+" : unread}
               </span>
             )}
@@ -213,7 +213,7 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
         {/* SuperAdmin badge + Sandbox toggle */}
         {isSuperAdmin && (
           <div className="hidden items-center gap-2 sm:inline-flex">
-            <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">
+            <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-bold text-purple-700">
               ⚡ SuperAdmin
             </span>
             <SandboxToggle />

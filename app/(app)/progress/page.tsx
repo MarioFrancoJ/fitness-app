@@ -133,7 +133,7 @@ function LineChart({
           return (
             <g key={pct}>
               <line x1={PADDING} y1={y} x2={WIDTH - PADDING} y2={y} stroke="#f4f4f5" strokeWidth={1} />
-              <text x={PADDING - 5} y={y + 4} textAnchor="end" className="text-[9px]" fill="#a1a1aa">
+              <text x={PADDING - 5} y={y + 4} textAnchor="end" className="text-xs" fill="#a1a1aa">
                 {val.toFixed(1)}
               </text>
             </g>

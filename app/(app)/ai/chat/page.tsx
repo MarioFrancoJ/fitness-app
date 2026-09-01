@@ -165,12 +165,12 @@ export default function AIChatPage() {
               ].join(" ")}>
                 {msg.role === "coach" && (
                   <div className="mb-1 flex items-center gap-1.5">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-blue-100 text-[10px]">AI</span>
-                    <span className="text-[10px] font-semibold text-zinc-400">Coach</span>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-blue-100 text-xs">AI</span>
+                    <span className="text-xs font-semibold text-zinc-400">Coach</span>
                   </div>
                 )}
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                <p className={`mt-1 text-[10px] ${msg.role === "user" ? "text-zinc-400" : "text-zinc-300"}`}>{timeStr(msg.timestamp)}</p>
+                <p className={`mt-1 text-xs ${msg.role === "user" ? "text-zinc-400" : "text-zinc-300"}`}>{timeStr(msg.timestamp)}</p>
               </div>
             </div>
           ))}

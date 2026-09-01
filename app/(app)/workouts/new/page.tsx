@@ -295,7 +295,7 @@ export default function NewWorkoutPage() {
                 <div key={day.dayName} className="rounded-lg border border-zinc-100 bg-zinc-50 p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <p className="text-xs font-semibold text-zinc-700">{day.dayName}</p>
-                    <button type="button" onClick={() => handleRemoveDay(dayIdx)} className="text-[10px] text-red-400 hover:text-red-600">Remove Day</button>
+                    <button type="button" onClick={() => handleRemoveDay(dayIdx)} className="text-xs text-red-400 hover:text-red-600">Remove Day</button>
                   </div>
 
                   {/* Exercises list */}
@@ -315,7 +315,7 @@ export default function NewWorkoutPage() {
                   {addingDayIdx === dayIdx ? (
                     <div className="flex flex-wrap items-end gap-2 rounded-md bg-white p-3">
                       <div className="flex flex-col gap-1 min-w-[160px] flex-1">
-                        <label className="text-[10px] text-zinc-400">Exercise</label>
+                        <label className="text-xs text-zinc-400">Exercise</label>
                         <select value={addExId} onChange={(e) => setAddExId(e.target.value)}
                           className="h-8 w-full rounded border border-zinc-200 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-200">
                           <option value="">Select…</option>
@@ -323,22 +323,22 @@ export default function NewWorkoutPage() {
                         </select>
                       </div>
                       <div className="flex flex-col gap-1 w-14">
-                        <label className="text-[10px] text-zinc-400">Sets</label>
+                        <label className="text-xs text-zinc-400">Sets</label>
                         <input type="number" value={addSets} onChange={(e) => setAddSets(e.target.value)} min={1}
                           className="h-8 w-full rounded border border-zinc-200 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                       </div>
                       <div className="flex flex-col gap-1 w-14">
-                        <label className="text-[10px] text-zinc-400">Reps</label>
+                        <label className="text-xs text-zinc-400">Reps</label>
                         <input type="number" value={addReps} onChange={(e) => setAddReps(e.target.value)} min={1}
                           className="h-8 w-full rounded border border-zinc-200 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                       </div>
                       <div className="flex flex-col gap-1 w-16">
-                        <label className="text-[10px] text-zinc-400">Rest (s)</label>
+                        <label className="text-xs text-zinc-400">Rest (s)</label>
                         <input type="number" value={addRest} onChange={(e) => setAddRest(e.target.value)} min={0}
                           className="h-8 w-full rounded border border-zinc-200 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                       </div>
                       <div className="flex flex-col gap-1 flex-1 min-w-[100px]">
-                        <label className="text-[10px] text-zinc-400">Notes</label>
+                        <label className="text-xs text-zinc-400">Notes</label>
                         <input type="text" value={addNotes} onChange={(e) => setAddNotes(e.target.value)} placeholder="Optional"
                           className="h-8 w-full rounded border border-zinc-200 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                       </div>

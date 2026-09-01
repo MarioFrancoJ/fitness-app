@@ -113,12 +113,12 @@ export default function AdminLaunchPage() {
 
       {/* KPIs from Supabase */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-zinc-900">{stats.totalUsers}</p><p className="text-[10px] text-zinc-400">Users</p></div>
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-emerald-600">{stats.totalWorkouts}</p><p className="text-[10px] text-zinc-400">Workouts</p></div>
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-blue-600">{stats.totalRecipes}</p><p className="text-[10px] text-zinc-400">Recipes</p></div>
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-zinc-900">{stats.totalExercises}</p><p className="text-[10px] text-zinc-400">Exercises</p></div>
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-violet-600">{stats.betaCount}</p><p className="text-[10px] text-zinc-400">Beta Signups</p></div>
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-amber-600">{stats.feedbackCount}</p><p className="text-[10px] text-zinc-400">Feedback</p></div>
+        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-zinc-900">{stats.totalUsers}</p><p className="text-xs text-zinc-400">Users</p></div>
+        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-emerald-600">{stats.totalWorkouts}</p><p className="text-xs text-zinc-400">Workouts</p></div>
+        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-blue-600">{stats.totalRecipes}</p><p className="text-xs text-zinc-400">Recipes</p></div>
+        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-zinc-900">{stats.totalExercises}</p><p className="text-xs text-zinc-400">Exercises</p></div>
+        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-violet-600">{stats.betaCount}</p><p className="text-xs text-zinc-400">Beta Signups</p></div>
+        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-amber-600">{stats.feedbackCount}</p><p className="text-xs text-zinc-400">Feedback</p></div>
       </div>
 
       {/* Production Checklist */}

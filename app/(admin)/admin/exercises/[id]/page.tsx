@@ -84,7 +84,7 @@ export default function AdminExerciseDetailPage() {
             <ol className="flex flex-col gap-2">
               {exercise.instructions.map((step, i) => (
                 <li key={i} className="flex gap-2 text-sm text-zinc-700">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-[10px] font-bold text-white">{i + 1}</span>
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-bold text-white">{i + 1}</span>
                   <span>{step}</span>
                 </li>
               ))}

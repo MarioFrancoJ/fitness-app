@@ -604,11 +604,11 @@ function SetRow({ set, exIdx, setIdx, onComplete, onUndo }: {
       </td>
       <td className="py-2">
         {set.completed ? (
-          <button type="button" onClick={() => onUndo(exIdx, setIdx)} className="rounded-md bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-200">
+          <button type="button" onClick={() => onUndo(exIdx, setIdx)} className="rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-200">
             ✓ Done
           </button>
         ) : (
-          <button type="button" onClick={() => onComplete(exIdx, setIdx, reps, weight)} className="rounded-md bg-zinc-100 px-2 py-1 text-[10px] font-semibold text-zinc-600 hover:bg-zinc-200">
+          <button type="button" onClick={() => onComplete(exIdx, setIdx, reps, weight)} className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200">
             Complete
           </button>
         )}

@@ -247,7 +247,7 @@ export default function TrainingPage() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-700 text-sm font-bold">PR</div>
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-zinc-900 truncate">{pr.exerciseName}</p>
-                  <p className="text-[10px] text-zinc-400">
+                  <p className="text-xs text-zinc-400">
                     {pr.highestWeight > 0 ? `${pr.highestWeight} kg` : ""}{pr.highestWeight > 0 && pr.mostReps > 0 ? " · " : ""}{pr.mostReps > 0 ? `${pr.mostReps} reps` : ""}
                   </p>
                 </div>

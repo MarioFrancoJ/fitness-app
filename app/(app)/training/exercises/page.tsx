@@ -177,7 +177,7 @@ export default function ExercisesPage() {
                       className="flex flex-col rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
                       <div className="mb-2 flex items-start justify-between gap-2">
                         <h3 className="text-sm font-semibold text-zinc-900">{ex.name}</h3>
-                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${difficultyColor(ex.difficulty)}`}>{ex.difficulty}</span>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${difficultyColor(ex.difficulty)}`}>{ex.difficulty}</span>
                       </div>
                       <div className="mt-auto flex items-center gap-2">
                         <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">{ex.muscleGroup}</span>
@@ -201,7 +201,7 @@ export default function ExercisesPage() {
               className="flex flex-col rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
               <div className="mb-2 flex items-start justify-between gap-2">
                 <h3 className="text-sm font-semibold text-zinc-900">{ex.name}</h3>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${difficultyColor(ex.difficulty)}`}>{ex.difficulty}</span>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${difficultyColor(ex.difficulty)}`}>{ex.difficulty}</span>
               </div>
               <p className="mb-2 text-xs text-zinc-400 line-clamp-2">{ex.description}</p>
               <div className="mt-auto flex items-center gap-2 border-t border-zinc-100 pt-3">

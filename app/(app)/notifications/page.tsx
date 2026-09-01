@@ -241,7 +241,7 @@ export default function NotificationsPage() {
                     <p className={`text-sm font-semibold truncate ${notif.status === "Unread" ? "text-zinc-900" : "text-zinc-600"}`}>{notif.title}</p>
                   </div>
                   <p className="mt-0.5 text-xs text-zinc-500">{notif.message}</p>
-                  <div className="mt-2 flex items-center gap-3 text-[10px] text-zinc-400">
+                  <div className="mt-2 flex items-center gap-3 text-xs text-zinc-400">
                     <span>{notif.type}</span>
                     <span>{timeAgo(notif.created_at)}</span>
                     {notif.action_url && (
@@ -255,14 +255,14 @@ export default function NotificationsPage() {
                 {/* Actions */}
                 <div className="flex shrink-0 gap-1">
                   {notif.status === "Unread" ? (
-                    <button type="button" onClick={() => handleMarkRead(notif.id)} className="rounded-md px-2 py-1 text-[10px] font-semibold text-zinc-500 hover:bg-zinc-100">Read</button>
+                    <button type="button" onClick={() => handleMarkRead(notif.id)} className="rounded-md px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-100">Read</button>
                   ) : notif.status === "Read" ? (
-                    <button type="button" onClick={() => handleMarkUnread(notif.id)} className="rounded-md px-2 py-1 text-[10px] font-semibold text-zinc-500 hover:bg-zinc-100">Unread</button>
+                    <button type="button" onClick={() => handleMarkUnread(notif.id)} className="rounded-md px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-100">Unread</button>
                   ) : null}
                   {notif.status !== "Archived" && (
-                    <button type="button" onClick={() => handleArchive(notif.id)} className="rounded-md px-2 py-1 text-[10px] font-semibold text-zinc-500 hover:bg-zinc-100">Archive</button>
+                    <button type="button" onClick={() => handleArchive(notif.id)} className="rounded-md px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-100">Archive</button>
                   )}
-                  <button type="button" onClick={() => handleDelete(notif.id)} className="rounded-md px-2 py-1 text-[10px] font-semibold text-red-400 hover:bg-red-50">Delete</button>
+                  <button type="button" onClick={() => handleDelete(notif.id)} className="rounded-md px-2 py-1 text-xs font-semibold text-red-400 hover:bg-red-50">Delete</button>
                 </div>
               </div>
             ))}

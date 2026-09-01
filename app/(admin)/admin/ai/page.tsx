@@ -224,10 +224,10 @@ export default function AdminAIPage() {
 
         {/* Usage Stats */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"><p className="text-lg font-bold text-zinc-900">{usageStats.monthlyRequests}</p><p className="text-[10px] text-zinc-400">Monthly Requests</p></div>
-          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"><p className="text-lg font-bold text-zinc-900">{usageStats.monthlyTokens.toLocaleString()}</p><p className="text-[10px] text-zinc-400">Monthly Tokens</p></div>
-          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"><p className="text-lg font-bold text-zinc-900">{usageStats.dailyRequests}</p><p className="text-[10px] text-zinc-400">Today</p></div>
-          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"><p className="text-lg font-bold text-emerald-600">${usageStats.estimatedCost.toFixed(4)}</p><p className="text-[10px] text-zinc-400">Est. Cost</p></div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"><p className="text-lg font-bold text-zinc-900">{usageStats.monthlyRequests}</p><p className="text-xs text-zinc-400">Monthly Requests</p></div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"><p className="text-lg font-bold text-zinc-900">{usageStats.monthlyTokens.toLocaleString()}</p><p className="text-xs text-zinc-400">Monthly Tokens</p></div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"><p className="text-lg font-bold text-zinc-900">{usageStats.dailyRequests}</p><p className="text-xs text-zinc-400">Today</p></div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"><p className="text-lg font-bold text-emerald-600">${usageStats.estimatedCost.toFixed(4)}</p><p className="text-xs text-zinc-400">Est. Cost</p></div>
         </div>
 
         {/* Rules */}
@@ -268,7 +268,7 @@ export default function AdminAIPage() {
                       <td className="px-5 py-3"><button type="button" onClick={() => handleToggle(rule.id)} className={["relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors", rule.enabled ? "bg-zinc-900" : "bg-zinc-200"].join(" ")}><span className={["inline-block h-4 w-4 rounded-full bg-white shadow transition-transform", rule.enabled ? "translate-x-4" : "translate-x-0"].join(" ")} /></button></td>
                       <td className="px-5 py-3"><p className="font-medium text-zinc-900">{rule.name}</p><p className="text-xs text-zinc-400">{rule.description}</p></td>
                       <td className="px-5 py-3 text-zinc-600 text-xs">{rule.category}</td>
-                      <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${priorityBadge(rule.priority)}`}>{rule.priority}</span></td>
+                      <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${priorityBadge(rule.priority)}`}>{rule.priority}</span></td>
                       <td className="px-5 py-3"><div className="flex gap-2"><button type="button" onClick={() => handleEdit(rule)} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">Edit</button><button type="button" onClick={() => setDeleteTarget(rule.id)} className="text-xs font-medium text-zinc-500 hover:text-red-600">Delete</button></div></td>
                     </tr>
                   ))}

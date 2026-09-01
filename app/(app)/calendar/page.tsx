@@ -485,7 +485,7 @@ export default function CalendarPage() {
                   </span>
 
                   {/* Activity indicators */}
-                  <div className="flex flex-wrap gap-0.5 text-[10px] leading-none">
+                  <div className="flex flex-wrap gap-0.5 text-xs leading-none">
                     {dayActivity?.workouts.length ? (
                       <span title="Workout">💪</span>
                     ) : null}
@@ -552,7 +552,7 @@ export default function CalendarPage() {
               {/* Activity section */}
               {activityForSelectedDate && (
                 <div className="flex flex-col gap-2">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Activity</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Activity</p>
 
                   {/* Workouts */}
                   {activityForSelectedDate.workouts.map((w, i) => (
@@ -560,7 +560,7 @@ export default function CalendarPage() {
                       <span className="text-sm">💪</span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium text-blue-900">{w.name}</p>
-                        <p className="text-[10px] text-blue-600">
+                        <p className="text-xs text-blue-600">
                           {w.duration ? `${w.duration} min` : "Duration N/A"}
                           {w.status !== "Completed" && ` · ${w.status}`}
                         </p>
@@ -603,7 +603,7 @@ export default function CalendarPage() {
               {/* Calendar events section */}
               {eventsForSelectedDate.length > 0 && (
                 <div className="flex flex-col gap-2">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Scheduled Events</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Scheduled Events</p>
                   {eventsForSelectedDate.map((event) => (
                     <button
                       key={event.id}
@@ -617,7 +617,7 @@ export default function CalendarPage() {
                       />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium text-zinc-900 truncate">{event.title}</p>
-                        <p className="mt-0.5 text-[10px] text-zinc-400">
+                        <p className="mt-0.5 text-xs text-zinc-400">
                           {TYPE_ICONS[event.event_type] || "📌"} {event.event_type}
                           {!event.all_day && ` · ${formatTime(event.start_date)}`}
                           {event.all_day && " · All day"}

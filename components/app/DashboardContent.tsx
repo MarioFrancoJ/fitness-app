@@ -422,16 +422,21 @@ export default function DashboardContent() {
               {/* Next up — exercise preview */}
               {focus.exerciseNames.length > 0 && (
                 <div className="mt-golden-4">
-                  <p className="mb-golden-2 text-golden-xs font-bold uppercase tracking-widest text-zinc-400">Next up</p>
+                  <p className="mb-golden-2 text-golden-sm font-bold uppercase tracking-widest text-zinc-500">Next up</p>
                   <div className="flex flex-col gap-golden-1">
                     {focus.exerciseNames.map((name, i) => (
                       <div key={i} className="flex items-center gap-golden-2 rounded-golden-md bg-zinc-50 px-golden-3 py-golden-2">
-                        <span className="text-golden-sm font-semibold text-zinc-400">{i + 1}</span>
+                        <span className="text-golden-sm font-semibold text-zinc-500">{i + 1}</span>
                         <span className="text-golden-sm font-medium text-zinc-700">{name}</span>
                       </div>
                     ))}
                     {focus.exerciseCount > 3 && (
-                      <p className="pl-golden-3 text-golden-xs text-zinc-400">+{focus.exerciseCount - 3} more</p>
+                      <Link
+                        href="/training/start"
+                        className="mt-golden-1 inline-flex items-center gap-1 pl-golden-3 text-golden-sm font-semibold text-blue-600 transition-colors hover:text-blue-700"
+                      >
+                        View {focus.exerciseCount - 3} more exercise{focus.exerciseCount - 3 !== 1 ? "s" : ""} →
+                      </Link>
                     )}
                   </div>
                 </div>
@@ -439,9 +444,9 @@ export default function DashboardContent() {
 
               {/* Weekly goal bar */}
               <div className="mt-golden-4">
-                <div className="mb-golden-1 flex items-center justify-between text-golden-xs text-zinc-500">
+                <div className="mb-golden-1 flex items-center justify-between text-golden-sm text-zinc-600">
                   <span className="font-medium">Weekly goal</span>
-                  <span className="font-semibold text-zinc-700">{weekly?.workoutsCompleted ?? 0} of {weekly?.workoutsGoal ?? 4} workouts</span>
+                  <span className="font-semibold text-zinc-900">{weekly?.workoutsCompleted ?? 0} of {weekly?.workoutsGoal ?? 4} workouts</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
                   <div
@@ -489,7 +494,7 @@ export default function DashboardContent() {
                   <span
                     className={[
                       "text-golden-xs font-medium",
-                      isToday ? "text-zinc-900" : "text-zinc-400",
+                      isToday ? "text-zinc-900" : "text-zinc-500",
                     ].join(" ")}
                   >
                     {day}
@@ -965,10 +970,10 @@ function ProgressRow({
   const pct = target > 0 ? Math.min(Math.round((current / target) * 100), 100) : 0;
   return (
     <div>
-      <div className="mb-golden-1 flex items-center justify-between">
+      <div className="mb-golden-1 flex items-center justify-between gap-golden-2">
         <span className="text-golden-sm font-medium text-zinc-600">{label}</span>
-        <span className="text-golden-xs font-semibold text-zinc-700">
-          {current} / {target} {suffix}
+        <span className="text-golden-sm font-semibold text-zinc-900">
+          {current.toLocaleString()} / {target.toLocaleString()} {suffix}
         </span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">

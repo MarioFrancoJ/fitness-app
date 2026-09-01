@@ -490,11 +490,11 @@ export default function MealPlannerPage() {
                           {recipe ? (
                             <>
                               <div>
-                                <p className="text-[11px] font-medium text-zinc-900 leading-tight line-clamp-2">{recipe.name}</p>
-                                <p className="mt-0.5 text-[9px] text-zinc-400">{recipe.calories}kcal</p>
+                                <p className="text-xs font-medium text-zinc-900 leading-tight line-clamp-2">{recipe.name}</p>
+                                <p className="mt-0.5 text-xs text-zinc-400">{recipe.calories}kcal</p>
                               </div>
                               <div className="mt-1 flex gap-1">
-                                <button type="button" onClick={() => updateSlot(day, slot, null)} aria-label="Remove" className="text-[9px] text-red-400 hover:text-red-600">Remove</button>
+                                <button type="button" onClick={() => updateSlot(day, slot, null)} aria-label="Remove" className="text-xs text-red-400 hover:text-red-600">Remove</button>
                               </div>
                             </>
                           ) : (
@@ -502,7 +502,7 @@ export default function MealPlannerPage() {
                               value=""
                               onChange={(e) => updateSlot(day, slot, e.target.value || null)}
                               aria-label={`Select recipe for ${day} ${slot}`}
-                              className="h-full w-full border-0 bg-transparent text-[10px] text-zinc-400 focus:outline-none focus:ring-0"
+                              className="h-full w-full border-0 bg-transparent text-xs text-zinc-400 focus:outline-none focus:ring-0"
                             >
                               <option value="">+ Add</option>
                               {recipes.map((r) => (
@@ -526,7 +526,7 @@ export default function MealPlannerPage() {
                     return (
                       <div key={day} className="rounded-lg bg-zinc-50 border border-zinc-100 p-2 text-center">
                         <p className="text-xs font-bold text-zinc-900">{s.calories}<span className="font-normal text-zinc-400"> kcal</span></p>
-                        <div className="mt-0.5 flex justify-center gap-1 text-[9px]">
+                        <div className="mt-0.5 flex justify-center gap-1 text-xs">
                           <span className="text-blue-600">P{s.protein}g</span>
                           <span className="text-amber-500">C{s.carbs}g</span>
                           <span className="text-emerald-600">F{s.fat}g</span>
@@ -541,11 +541,11 @@ export default function MealPlannerPage() {
                   <div />
                   {DAYS.map((day) => (
                     <div key={day} className="flex justify-center gap-1">
-                      <button type="button" onClick={() => copyDay(day)} className="text-[9px] text-zinc-400 hover:text-zinc-700">Copy</button>
+                      <button type="button" onClick={() => copyDay(day)} className="text-xs text-zinc-400 hover:text-zinc-700">Copy</button>
                       {clipboardDay && (
-                        <button type="button" onClick={() => pasteDay(day)} className="text-[9px] text-emerald-500 hover:text-emerald-700">Paste</button>
+                        <button type="button" onClick={() => pasteDay(day)} className="text-xs text-emerald-500 hover:text-emerald-700">Paste</button>
                       )}
-                      <button type="button" onClick={() => clearDay(day)} className="text-[9px] text-red-400 hover:text-red-600">Clear</button>
+                      <button type="button" onClick={() => clearDay(day)} className="text-xs text-red-400 hover:text-red-600">Clear</button>
                     </div>
                   ))}
                 </div>
