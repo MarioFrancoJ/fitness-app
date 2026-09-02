@@ -61,6 +61,7 @@ const NAV_SECTIONS: NavSection[] = [
   { id: "nutrition", label: "Nutrition", icon: <IconLeaf />, matchPrefixes: ["/nutrition"], items: [
     { label: "Meals", href: "/nutrition", icon: <IconMeal /> },
     { label: "Recipes", href: "/nutrition/recipes", icon: <IconBook /> },
+    { label: "Meal Planner", href: "/nutrition/meal-planner", icon: <IconCalendar /> },
     { label: "Shopping List", href: "/nutrition/shopping-list", icon: <IconCart /> },
   ]},
   { id: "progress", label: "Progress", icon: <IconTrendUp />, matchPrefixes: ["/progress"], items: [
