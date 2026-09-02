@@ -18,7 +18,7 @@ interface DayActivity {
   waterMl: number | null;
   waterGoalMl: number | null;
   supplements: string[];
-  plannedMeals: { slot: string; name: string; servings: number }[];
+  plannedMeals: { recipeId: string; slot: string; name: string; servings: number }[];
 }
 
 type ActivityMap = Record<string, DayActivity>;
@@ -269,7 +269,7 @@ export default function CalendarPage() {
           const name = nameById.get(e.recipeId);
           if (!name) continue; // recipe removed — skip stale reference
           const day = ensureDay(e.date);
-          day.plannedMeals.push({ slot: e.slot, name, servings: e.servings });
+          day.plannedMeals.push({ recipeId: e.recipeId, slot: e.slot, name, servings: e.servings });
         }
       }
     }
@@ -740,7 +740,11 @@ export default function CalendarPage() {
                     </Link>
                   </div>
                   {activityForSelectedDate.plannedMeals.map((pm, i) => (
-                    <div key={i} className="flex items-center gap-2 rounded-lg bg-rose-50 px-3 py-2">
+                    <Link
+                      key={i}
+                      href={`/nutrition/recipes/${pm.recipeId}`}
+                      className="flex items-center gap-2 rounded-lg bg-rose-50 px-3 py-2 transition-colors hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+                    >
                       <span className="text-sm">🗓️</span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium text-rose-900">
@@ -748,7 +752,8 @@ export default function CalendarPage() {
                         </p>
                         <p className="text-xs text-rose-500">{pm.slot} · planned</p>
                       </div>
-                    </div>
+                      <span className="shrink-0 text-rose-400" aria-hidden="true">›</span>
+                    </Link>
                   ))}
                 </div>
               )}
