@@ -573,6 +573,26 @@ export default function MealPlannerPage() {
           </button>
         </div>
 
+        {/* Weekly KPIs — shown above the grid for the whole selected week */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-xl font-bold text-zinc-900">{weekTotals.calories}</p>
+            <p className="text-xs text-zinc-400">Weekly Calories</p>
+          </div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-xl font-bold text-blue-600">{weekTotals.protein}g</p>
+            <p className="text-xs text-zinc-400">Weekly Protein</p>
+          </div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-xl font-bold text-amber-600">{weekTotals.carbs}g</p>
+            <p className="text-xs text-zinc-400">Weekly Carbs</p>
+          </div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-xl font-bold text-emerald-600">{weekTotals.fat}g</p>
+            <p className="text-xs text-zinc-400">Weekly Fat</p>
+          </div>
+        </div>
+
         {/* ── MOBILE / TABLET: day-tab experience (unchanged) ── */}
         <div className="flex flex-col gap-6 lg:hidden">
         {/* Day tabs */}
@@ -721,12 +741,39 @@ export default function MealPlannerPage() {
               <div className="grid grid-cols-[88px_repeat(7,1fr)] gap-1">
                 <div />
                 {DAYS.map((day) => (
-                  <div key={day} className="flex flex-col items-center gap-0.5 rounded-t-lg bg-zinc-900 px-1 py-1.5">
+                  <div key={day} className="flex flex-col items-center gap-1.5 rounded-t-lg bg-zinc-900 px-1 py-2">
                     <span className="text-xs font-semibold text-white">{day.slice(0, 3)}</span>
-                    <div className="flex gap-1 text-[10px] leading-none">
-                      <button type="button" onClick={() => copyDayOf(day)} disabled={!dayHasMeals(day)} className="text-zinc-300 transition-colors hover:text-white disabled:opacity-30" title={`Copy ${day}`}>Copy</button>
-                      <button type="button" onClick={() => pasteDayInto(day)} disabled={!clipboardDay} className="text-emerald-300 transition-colors hover:text-emerald-100 disabled:opacity-30" title={`Paste to ${day}`}>Paste</button>
-                      <button type="button" onClick={() => clearDayOf(day)} disabled={!dayHasMeals(day)} className="text-red-300 transition-colors hover:text-red-100 disabled:opacity-30" title={`Clear ${day}`}>Clear</button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => copyDayOf(day)}
+                        disabled={!dayHasMeals(day)}
+                        title={`Copy ${day}`}
+                        aria-label={`Copy ${day}`}
+                        className="flex h-5 w-5 items-center justify-center rounded bg-white/10 text-zinc-200 transition-colors hover:bg-white/20 hover:text-white disabled:opacity-25"
+                      >
+                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3" aria-hidden="true"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h5A1.5 1.5 0 0 1 15 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-5A1.5 1.5 0 0 1 7 12.5v-9Z" /><path d="M5 6.5A1.5 1.5 0 0 0 3.5 8v8A1.5 1.5 0 0 0 5 17.5h5A1.5 1.5 0 0 0 11.5 16H8.5A2.5 2.5 0 0 1 6 13.5V6.5H5Z" /></svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => pasteDayInto(day)}
+                        disabled={!clipboardDay}
+                        title={`Paste to ${day}`}
+                        aria-label={`Paste to ${day}`}
+                        className="flex h-5 w-5 items-center justify-center rounded bg-emerald-500/20 text-emerald-200 transition-colors hover:bg-emerald-500/40 hover:text-white disabled:opacity-25"
+                      >
+                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3" aria-hidden="true"><path d="M8 2a2 2 0 0 0-1.94 1.5H5.5A1.5 1.5 0 0 0 4 5v11a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 16 16V5a1.5 1.5 0 0 0-1.5-1.5h-.56A2 2 0 0 0 12 2H8Zm0 1.5h4a.5.5 0 0 1 .5.5v.5h-5V4a.5.5 0 0 1 .5-.5Z" /></svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => clearDayOf(day)}
+                        disabled={!dayHasMeals(day)}
+                        title={`Clear ${day}`}
+                        aria-label={`Clear ${day}`}
+                        className="flex h-5 w-5 items-center justify-center rounded bg-red-500/20 text-red-200 transition-colors hover:bg-red-500/40 hover:text-white disabled:opacity-25"
+                      >
+                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3" aria-hidden="true"><path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41 41 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5Z" clipRule="evenodd" /></svg>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -802,26 +849,6 @@ export default function MealPlannerPage() {
           </div>
         )}
 
-        {/* Weekly summary */}
-        <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-5">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-            Weekly Totals
-          </p>
-          <div className="flex flex-wrap gap-6 text-sm">
-            <span className="text-zinc-700">
-              <strong className="text-zinc-900">{weekTotals.calories}</strong> kcal
-            </span>
-            <span className="text-zinc-700">
-              <strong className="text-blue-600">{weekTotals.protein}g</strong> protein
-            </span>
-            <span className="text-zinc-700">
-              <strong className="text-amber-600">{weekTotals.carbs}g</strong> carbs
-            </span>
-            <span className="text-zinc-700">
-              <strong className="text-emerald-600">{weekTotals.fat}g</strong> fat
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* Templates modal */}
