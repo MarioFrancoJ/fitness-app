@@ -111,6 +111,8 @@ export default function MealPlannerPage() {
   const [loading, setLoading] = useState(true);
   const [weekLoading, setWeekLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Clipboard for Copy Day / Paste Day (holds one day's 4-slot map).
+  const [clipboardDay, setClipboardDay] = useState<Record<Meal, PlanSlotValue> | null>(null);
   // The Monday of the week currently being edited. Starts on the current week.
   const [weekStart, setWeekStart] = useState<string>(() => currentWeekStart());
 
@@ -238,6 +240,32 @@ export default function MealPlannerPage() {
     showToast("Meal plan cleared");
   }
 
+  // ── Day tools (Copy / Paste / Clear the selected day) ────────────────────────
+
+  function copyDay() {
+    // Snapshot the selected day's 4 slots into the clipboard.
+    setClipboardDay({ ...plan[selectedDay] });
+    showToast(`${selectedDay} copied`);
+  }
+
+  function pasteDay() {
+    if (!clipboardDay) return;
+    const updated = { ...plan, [selectedDay]: { ...clipboardDay } };
+    setPlan(updated);
+    savePlan(updated);
+    showToast(`Pasted to ${selectedDay}`);
+  }
+
+  function clearDay() {
+    const updated = { ...plan, [selectedDay]: { Breakfast: null, Lunch: null, Dinner: null, Snack: null } };
+    setPlan(updated);
+    savePlan(updated);
+    showToast(`${selectedDay} cleared`);
+  }
+
+  // Whether the selected day has anything to copy/clear.
+  const selectedDayHasMeals = MEALS.some((m) => readSlot(plan[selectedDay][m]) !== null);
+
   const totals = useMemo(() => dayTotals(plan, selectedDay, recipes), [plan, selectedDay, recipes]);
 
   // Weekly totals
@@ -335,6 +363,38 @@ export default function MealPlannerPage() {
               {day.slice(0, 3)}
             </button>
           ))}
+        </div>
+
+        {/* Day tools — Copy / Paste / Clear the selected day */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-zinc-400">{selectedDay}:</span>
+          <button
+            type="button"
+            onClick={copyDay}
+            disabled={!selectedDayHasMeals}
+            className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-40"
+          >
+            Copy Day
+          </button>
+          <button
+            type="button"
+            onClick={pasteDay}
+            disabled={!clipboardDay}
+            className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-emerald-600 transition-colors hover:border-emerald-200 hover:bg-emerald-50 disabled:opacity-40"
+          >
+            Paste Day
+          </button>
+          <button
+            type="button"
+            onClick={clearDay}
+            disabled={!selectedDayHasMeals}
+            className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:border-red-200 hover:bg-red-50 disabled:opacity-40"
+          >
+            Clear Day
+          </button>
+          {clipboardDay && (
+            <span className="text-xs text-zinc-400">Day copied — Paste applies it to the selected day</span>
+          )}
         </div>
 
         {/* Day totals */}
