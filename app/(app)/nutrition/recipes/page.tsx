@@ -74,68 +74,68 @@ function RecipeCard({ recipe, onAddToPlan }: { recipe: Recipe; onAddToPlan: (r: 
   }
 
   return (
-    <div className="flex flex-col justify-between rounded-xl border border-zinc-200 bg-white shadow-sm transition-shadow hover:shadow-md">
-      {/* Image */}
+    <div className="flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+      {/* Image — dominant element, 4:3, object-cover. Goal + meal-type badges
+          sit over the photo for a cleaner, more visual card. */}
       <Link href={`/nutrition/recipes/${recipe.id}`} className="block">
-        <div className="relative h-32 w-full overflow-hidden rounded-t-xl bg-zinc-100">
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-zinc-100">
           {recipe.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={recipe.imageUrl} alt={recipe.name} className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-zinc-300">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-8 w-8" strokeWidth="1.5" aria-hidden="true">
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-zinc-50 to-zinc-100 text-zinc-300">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-10 w-10" strokeWidth="1.5" aria-hidden="true">
                 <rect x="3" y="3" width="18" height="18" rx="3" />
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <path d="m21 15-5-5L5 21" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
           )}
-          {recipe.mealType && (
-            <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-golden-xs font-medium text-zinc-700 shadow-sm">
-              {recipe.mealType}
+          {/* Badges over the image */}
+          <div className="absolute inset-x-2 top-2 flex items-start justify-between gap-2">
+            <span className={`rounded-full px-2 py-0.5 text-golden-xs font-semibold shadow-sm ${goalColor(recipe.goal)}`}>
+              {recipe.goal}
             </span>
-          )}
+            {recipe.mealType && (
+              <span className="rounded-full bg-white/90 px-2 py-0.5 text-golden-xs font-medium text-zinc-700 shadow-sm backdrop-blur-sm">
+                {recipe.mealType}
+              </span>
+            )}
+          </div>
         </div>
       </Link>
 
       <div className="flex flex-1 flex-col p-golden-3">
-        {/* Top */}
+        {/* Text block */}
         <Link href={`/nutrition/recipes/${recipe.id}`} className="block">
-          <div className="mb-2 flex items-start justify-between gap-2">
-            <h3 className="text-golden-lg font-semibold leading-snug text-zinc-900">{recipe.name}</h3>
-            <span className={`shrink-0 rounded-full px-2 py-0.5 text-golden-xs font-medium ${goalColor(recipe.goal)}`}>
-              {recipe.goal}
-            </span>
-          </div>
-          {recipe.description && (
-            <p className="mb-3 text-golden-xs text-zinc-400 line-clamp-2">{recipe.description}</p>
-          )}
-          {/* Calories: key metric, but secondary to the recipe name */}
-          <p className="text-golden-lg font-bold text-zinc-900">
-            {recipe.calories} <span className="text-golden-sm font-normal text-zinc-400">kcal</span>
+          {/* Title — second most important element after the photo */}
+          <h3 className="line-clamp-2 text-golden-lg font-bold leading-snug text-zinc-900">
+            {recipe.name}
+          </h3>
+
+          {/* Secondary meta — single line with dot separators */}
+          <p className="mt-1 truncate text-golden-xs text-zinc-400">
+            {[
+              recipe.prepTime > 0 ? `${recipe.prepTime} min` : null,
+              `${recipe.servings} serving${recipe.servings > 1 ? "s" : ""}`,
+              `${recipe.ingredients.length} ingredient${recipe.ingredients.length === 1 ? "" : "s"}`,
+            ]
+              .filter(Boolean)
+              .join(" • ")}
           </p>
 
-          {/* Meta */}
-          <div className="mt-3 flex gap-3 text-golden-xs text-zinc-400">
-            {recipe.prepTime > 0 && <span>{recipe.prepTime} min</span>}
-            <span>{recipe.servings} serving{recipe.servings > 1 ? "s" : ""}</span>
-            <span>{recipe.ingredients.length} ingredients</span>
-          </div>
-
-          {/* Macros */}
-          <div className="mt-3 grid grid-cols-3 gap-2 border-t border-zinc-100 pt-3">
-            <div className="text-center">
-              <p className="text-golden-sm font-bold text-blue-600">{recipe.protein}g</p>
-              <p className="text-golden-xs text-zinc-400">Protein</p>
-            </div>
-            <div className="text-center">
-              <p className="text-golden-sm font-bold text-amber-600">{recipe.carbs}g</p>
-              <p className="text-golden-xs text-zinc-400">Carbs</p>
-            </div>
-            <div className="text-center">
-              <p className="text-golden-sm font-bold text-emerald-600">{recipe.fat}g</p>
-              <p className="text-golden-xs text-zinc-400">Fat</p>
-            </div>
+          {/* Compact nutrition: calories + macros on one line */}
+          <div className="mt-golden-2 flex items-baseline justify-between gap-2 border-t border-zinc-100 pt-golden-2">
+            <p className="text-golden-md font-bold text-zinc-900">
+              {recipe.calories} <span className="text-golden-xs font-normal text-zinc-400">kcal</span>
+            </p>
+            <p className="truncate text-golden-xs font-semibold">
+              <span className="text-blue-600">{recipe.protein}P</span>
+              <span className="text-zinc-300"> • </span>
+              <span className="text-amber-600">{recipe.carbs}C</span>
+              <span className="text-zinc-300"> • </span>
+              <span className="text-emerald-600">{recipe.fat}F</span>
+            </p>
           </div>
         </Link>
 
@@ -185,7 +185,7 @@ function RecipeSection({ title, recipes, onAddToPlan }: { title: string; recipes
       <h2 className="mb-3 text-golden-sm font-semibold text-zinc-900">
         {title} <span className="font-normal text-zinc-400">({recipes.length})</span>
       </h2>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {recipes.map((r) => <RecipeCard key={r.id} recipe={r} onAddToPlan={onAddToPlan} />)}
       </div>
     </div>
@@ -378,7 +378,7 @@ export default function RecipesPage() {
           <p className="text-golden-sm text-zinc-400">No recipes match your filters.</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((r) => <RecipeCard key={r.id} recipe={r} onAddToPlan={openPlanModal} />)}
         </div>
       )}
