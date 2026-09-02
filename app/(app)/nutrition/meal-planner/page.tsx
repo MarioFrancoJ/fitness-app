@@ -9,7 +9,9 @@ import { readSlot, getWeekBounds, type PlanSlotValue } from "@/lib/nutrition";
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
-const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
+// 5 meal slots in chronological order. Legacy plans stored a "Snack" key; it is
+// read as "Snack PM" for backward compatibility (see normalizeDaySlots).
+const MEALS = ["Breakfast", "Snack AM", "Lunch", "Dinner", "Snack PM"] as const;
 
 type Day = (typeof DAYS)[number];
 type Meal = (typeof MEALS)[number];
@@ -43,22 +45,36 @@ const TEMPLATES: PlanTemplate[] = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+function emptySlots(): Record<Meal, PlanSlotValue> {
+  return { "Breakfast": null, "Snack AM": null, "Lunch": null, "Dinner": null, "Snack PM": null };
+}
+
 function emptyPlan(): MealPlan {
   const plan = {} as MealPlan;
   for (const day of DAYS) {
-    plan[day] = { Breakfast: null, Lunch: null, Dinner: null, Snack: null };
+    plan[day] = emptySlots();
   }
   return plan;
 }
 
-/** Monday (YYYY-MM-DD) of the week containing `ref`. Parses/works in UTC to
- * avoid timezone drift, consistent with lib/nutrition helpers. */
-function mondayOf(ref: Date): string {
-  const d = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), ref.getUTCDate()));
-  const dow = d.getUTCDay(); // 0=Sun..6=Sat
-  const offset = dow === 0 ? -6 : 1 - dow;
-  d.setUTCDate(d.getUTCDate() + offset);
-  return d.toISOString().slice(0, 10);
+/** Normalize a stored plan_data blob to the current 5-slot model.
+ * Backward-compat: a legacy "Snack" key maps to "Snack PM". Unknown keys are
+ * ignored. Every day always gets all 5 slots (missing ones default to null). */
+function normalizePlan(raw: unknown): MealPlan {
+  const plan = emptyPlan();
+  if (!raw || typeof raw !== "object") return plan;
+  const data = raw as Record<string, Record<string, PlanSlotValue>>;
+  for (const day of DAYS) {
+    const slots = data[day];
+    if (!slots || typeof slots !== "object") continue;
+    for (const [key, value] of Object.entries(slots)) {
+      const target = key === "Snack" ? "Snack PM" : key;
+      if ((MEALS as readonly string[]).includes(target)) {
+        plan[day][target as Meal] = value ?? null;
+      }
+    }
+  }
+  return plan;
 }
 
 /** This week's Monday key (today). */
@@ -90,18 +106,15 @@ function formatWeekRange(weekStart: string): string {
   return `${startStr} – ${endStr}, ${end.getUTCFullYear()}`;
 }
 
-// ── Meal-slot identity (color system only — no emojis, keeps a pro look) ──────
-const MEAL_META: Record<string, { accent: string; tint: string; dot: string }> = {
-  Breakfast: { accent: "text-amber-600", tint: "bg-amber-50", dot: "bg-amber-500" },
-  Lunch: { accent: "text-emerald-600", tint: "bg-emerald-50", dot: "bg-emerald-500" },
-  Dinner: { accent: "text-indigo-600", tint: "bg-indigo-50", dot: "bg-indigo-500" },
-  Snack: { accent: "text-rose-600", tint: "bg-rose-50", dot: "bg-rose-500" },
+// ── Meal-slot identity (color system only — no emojis, no dots) ──────────────
+// 5 slots, each with a distinct but coherent tint + text color.
+const MEAL_META: Record<string, { accent: string; tint: string }> = {
+  "Breakfast": { accent: "text-amber-600", tint: "bg-amber-50" },
+  "Snack AM": { accent: "text-orange-600", tint: "bg-orange-50" },
+  "Lunch": { accent: "text-emerald-600", tint: "bg-emerald-50" },
+  "Dinner": { accent: "text-indigo-600", tint: "bg-indigo-50" },
+  "Snack PM": { accent: "text-rose-600", tint: "bg-rose-50" },
 };
-
-/** A small color dot used as the slot's visual identity (replaces the emoji). */
-function SlotDot({ meal, className = "h-2 w-2" }: { meal: string; className?: string }) {
-  return <span aria-hidden="true" className={`inline-block shrink-0 rounded-full ${MEAL_META[meal].dot} ${className}`} />;
-}
 
 /** Small recipe photo thumbnail (falls back to a soft food glyph). */
 function MealThumb({ imageUrl, name, className = "" }: { imageUrl: string | null; name: string; className?: string }) {
@@ -163,6 +176,9 @@ export default function MealPlannerPage() {
   const [pickerTarget, setPickerTarget] = useState<{ day: Day; meal: Meal } | null>(null);
   // Which day's "···" menu is open (desktop grid), null = none.
   const [openDayMenu, setOpenDayMenu] = useState<Day | null>(null);
+  // Desktop drag & drop: the slot currently being dragged, and the hovered drop target.
+  const [dragFrom, setDragFrom] = useState<{ day: Day; meal: Meal } | null>(null);
+  const [dragOver, setDragOver] = useState<{ day: Day; meal: Meal } | null>(null);
   // Whether the currently loaded week's plan is an explicit saved plan.
   const [isSaved, setIsSaved] = useState(false);
   const [savedPlans, setSavedPlans] = useState<{ id: string; weekStart: string; weekEnd: string }[]>([]);
@@ -225,7 +241,7 @@ export default function MealPlannerPage() {
 
       if (planData && planData.plan_data) {
         setPlanId(planData.id);
-        setPlan(planData.plan_data as MealPlan);
+        setPlan(normalizePlan(planData.plan_data));
         setIsSaved(planData.is_saved ?? false);
       } else {
         setPlanId(null);
@@ -316,7 +332,7 @@ export default function MealPlannerPage() {
   }
 
   function clearDay() {
-    const updated = { ...plan, [selectedDay]: { Breakfast: null, Lunch: null, Dinner: null, Snack: null } };
+    const updated = { ...plan, [selectedDay]: emptySlots() };
     setPlan(updated);
     savePlan(updated);
     showToast(`${selectedDay} cleared`);
@@ -338,6 +354,28 @@ export default function MealPlannerPage() {
     setPlan(updated);
     savePlan(updated);
   }
+
+  // Drag & drop (desktop): move a slot's value to another slot. If the target
+  // is occupied the two values swap; otherwise the source is emptied. Recalcs
+  // (totals/KPIs) are derived from `plan`, so they update automatically.
+  function moveSlot(from: { day: Day; meal: Meal }, to: { day: Day; meal: Meal }) {
+    if (from.day === to.day && from.meal === to.meal) return;
+    const fromVal = plan[from.day][from.meal];
+    if (!readSlot(fromVal)) return; // nothing to move
+    const toVal = plan[to.day][to.meal];
+    const updated: MealPlan = {
+      ...plan,
+      [from.day]: { ...plan[from.day], [from.meal]: toVal ?? null },
+      [to.day]: { ...plan[to.day], [to.meal]: fromVal },
+    };
+    // When from/to share a day, the two spreads above must be merged so both
+    // edits land on the same day object.
+    if (from.day === to.day) {
+      updated[from.day] = { ...plan[from.day], [from.meal]: toVal ?? null, [to.meal]: fromVal };
+    }
+    setPlan(updated);
+    savePlan(updated);
+  }
   function copyDayOf(day: Day) {
     setClipboardDay({ ...plan[day] });
     showToast(`${day} copied`);
@@ -350,7 +388,7 @@ export default function MealPlannerPage() {
     showToast(`Pasted to ${day}`);
   }
   function clearDayOf(day: Day) {
-    const updated = { ...plan, [day]: { Breakfast: null, Lunch: null, Dinner: null, Snack: null } };
+    const updated = { ...plan, [day]: emptySlots() };
     setPlan(updated);
     savePlan(updated);
     showToast(`${day} cleared`);
@@ -705,8 +743,7 @@ export default function MealPlannerPage() {
               return (
                 <div key={meal} className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
                   <div className="mb-3 flex items-center justify-between">
-                    <p className={`inline-flex items-center gap-2 text-sm font-semibold ${MEAL_META[meal].accent}`}>
-                      <SlotDot meal={meal} className="h-2.5 w-2.5" />
+                    <p className={`text-sm font-semibold ${MEAL_META[meal].accent}`}>
                       {meal}
                     </p>
                     {selected && (
@@ -798,17 +835,41 @@ export default function MealPlannerPage() {
                 const m = MEAL_META[meal];
                 return (
                 <div key={meal} className="mt-2 grid grid-cols-[104px_repeat(7,1fr)] gap-2">
-                  <div className={`flex items-center gap-2 rounded-xl ${m.tint} px-3`}>
-                    <SlotDot meal={meal} className="h-2.5 w-2.5" />
+                  <div className={`flex items-center rounded-xl ${m.tint} px-3`}>
                     <span className={`text-sm font-semibold ${m.accent}`}>{meal}</span>
                   </div>
                   {DAYS.map((day) => {
                     const slotData = getSlot(plan[day][meal], recipes);
                     const selected = slotData?.recipe;
                     const servings = slotData?.servings ?? 1;
+                    const isDropTarget = dragOver?.day === day && dragOver?.meal === meal;
+                    const isDragging = dragFrom?.day === day && dragFrom?.meal === meal;
+                    // Shared drop-target props (both filled cards and empty tiles accept a drop).
+                    const dropProps = {
+                      onDragOver: (e: React.DragEvent) => { if (dragFrom) { e.preventDefault(); setDragOver({ day, meal }); } },
+                      onDragLeave: () => { setDragOver((d) => (d?.day === day && d?.meal === meal ? null : d)); },
+                      onDrop: (e: React.DragEvent) => {
+                        e.preventDefault();
+                        if (dragFrom) moveSlot(dragFrom, { day, meal });
+                        setDragFrom(null);
+                        setDragOver(null);
+                      },
+                    };
                     return selected ? (
-                      // Filled slot = a little menu card with the recipe photo
-                      <div key={`${day}-${meal}`} className="group relative overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+                      // Filled slot = a draggable menu card with the recipe photo
+                      <div
+                        key={`${day}-${meal}`}
+                        draggable
+                        onDragStart={() => setDragFrom({ day, meal })}
+                        onDragEnd={() => { setDragFrom(null); setDragOver(null); }}
+                        {...dropProps}
+                        title="Drag to move to another slot"
+                        className={[
+                          "group relative cursor-grab overflow-hidden rounded-xl border bg-white shadow-sm transition-all active:cursor-grabbing",
+                          isDragging ? "opacity-40" : "hover:shadow-md",
+                          isDropTarget ? "border-zinc-900 ring-2 ring-zinc-900/20" : "border-zinc-200",
+                        ].join(" ")}
+                      >
                         <div className="relative h-16 w-full">
                           <MealThumb imageUrl={selected.imageUrl} name={selected.name} className="h-16 w-full" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
@@ -832,8 +893,12 @@ export default function MealPlannerPage() {
                         key={`${day}-${meal}`}
                         type="button"
                         onClick={() => setPickerTarget({ day, meal })}
+                        {...dropProps}
                         aria-label={`Add recipe for ${day} ${meal}`}
-                        className="flex min-h-[92px] w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-zinc-200 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-600"
+                        className={[
+                          "flex min-h-[92px] w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-xs font-medium transition-colors",
+                          isDropTarget ? "border-zinc-900 bg-zinc-50 text-zinc-700" : "border-zinc-200 text-zinc-400 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-600",
+                        ].join(" ")}
                       >
                         <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path d="M10 5a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 10 5Z" /></svg>
                         Add
