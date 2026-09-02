@@ -50,43 +50,6 @@ function goalColor(goal: RecipeGoal): string {
   }
 }
 
-// ── Minimalist macro icons (inline SVG, currentColor — no extra dependency).
-// Small, monochrome, no fills/badges: they inherit the muted text color so they
-// read as quiet markers, never competing with the photo.
-const macroIconClass = "h-3 w-3 shrink-0";
-
-function IconProtein() {
-  // Simple drumstick/meat silhouette
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={macroIconClass} aria-hidden="true">
-      <path d="M15.5 3.5a4.5 4.5 0 0 0-6.4 6.3l-1 1a2.5 2.5 0 1 0-1.4 4.2 2.5 2.5 0 1 0 4.2-1.4l1-1a4.5 4.5 0 0 0 6.3-6.4l-1.3 1.3a1.8 1.8 0 0 1-2.5-2.5Z" />
-    </svg>
-  );
-}
-
-function IconCarb() {
-  // Wheat/grain
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={macroIconClass} aria-hidden="true">
-      <path d="M12 21V9" />
-      <path d="M12 9c0-2 1.2-3.5 3-4-.2 1.8-1.2 3.3-3 4Z" />
-      <path d="M12 9c0-2-1.2-3.5-3-4 .2 1.8 1.2 3.3 3 4Z" />
-      <path d="M12 14c0-1.8 1.1-3.2 2.8-3.7-.2 1.7-1.1 3-2.8 3.7Z" />
-      <path d="M12 14c0-1.8-1.1-3.2-2.8-3.7.2 1.7 1.1 3 2.8 3.7Z" />
-    </svg>
-  );
-}
-
-function IconFat() {
-  // Avocado / droplet-ish
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={macroIconClass} aria-hidden="true">
-      <path d="M12 3c-1 2-4 4-4 8a4 4 0 0 0 8 0c0-4-3-6-4-8Z" />
-      <circle cx="12" cy="12" r="1.6" />
-    </svg>
-  );
-}
-
 // ── Recipe Card ───────────────────────────────────────────────────────────────
 
 function RecipeCard({ recipe, onAddToPlan }: { recipe: Recipe; onAddToPlan: (r: Recipe) => void }) {
@@ -161,19 +124,16 @@ function RecipeCard({ recipe, onAddToPlan }: { recipe: Recipe; onAddToPlan: (r: 
               .join(" • ")}
           </p>
 
-          {/* Nutrition — calories are the primary datum, macros a quiet line below.
-              Icons are monochrome and inherit the muted text color (no badges,
-              no accent colors) so they never compete with the photo. */}
+          {/* Nutrition — calories are the primary datum, macros a quiet
+              text-only line below (no icons). */}
           <div className="mt-golden-2 border-t border-zinc-100 pt-golden-2">
             <p className="text-golden-lg font-bold leading-none text-zinc-900">
               {recipe.calories}
               <span className="ml-1 text-golden-xs font-medium text-zinc-400">kcal</span>
             </p>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-golden-xs font-medium text-zinc-500">
-              <span className="inline-flex items-center gap-1 whitespace-nowrap"><IconProtein /> {recipe.protein}g Prot.</span>
-              <span className="inline-flex items-center gap-1 whitespace-nowrap"><IconCarb /> {recipe.carbs}g Carb.</span>
-              <span className="inline-flex items-center gap-1 whitespace-nowrap"><IconFat /> {recipe.fat}g Fat</span>
-            </div>
+            <p className="mt-1.5 truncate text-golden-xs font-medium text-zinc-500">
+              {recipe.protein}g Prot. <span className="text-zinc-300">•</span> {recipe.carbs}g Carb. <span className="text-zinc-300">•</span> {recipe.fat}g Fat
+            </p>
           </div>
         </Link>
 
