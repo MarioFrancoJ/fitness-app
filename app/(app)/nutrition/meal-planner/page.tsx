@@ -90,13 +90,18 @@ function formatWeekRange(weekStart: string): string {
   return `${startStr} – ${endStr}, ${end.getUTCFullYear()}`;
 }
 
-// ── Meal-slot identity (gives Breakfast/Lunch/Dinner/Snack a visual mood) ─────
-const MEAL_META: Record<string, { icon: string; accent: string; tint: string }> = {
-  Breakfast: { icon: "🍳", accent: "text-amber-600", tint: "bg-amber-50" },
-  Lunch: { icon: "🥗", accent: "text-emerald-600", tint: "bg-emerald-50" },
-  Dinner: { icon: "🍽️", accent: "text-indigo-600", tint: "bg-indigo-50" },
-  Snack: { icon: "🍎", accent: "text-rose-600", tint: "bg-rose-50" },
+// ── Meal-slot identity (color system only — no emojis, keeps a pro look) ──────
+const MEAL_META: Record<string, { accent: string; tint: string; dot: string }> = {
+  Breakfast: { accent: "text-amber-600", tint: "bg-amber-50", dot: "bg-amber-500" },
+  Lunch: { accent: "text-emerald-600", tint: "bg-emerald-50", dot: "bg-emerald-500" },
+  Dinner: { accent: "text-indigo-600", tint: "bg-indigo-50", dot: "bg-indigo-500" },
+  Snack: { accent: "text-rose-600", tint: "bg-rose-50", dot: "bg-rose-500" },
 };
+
+/** A small color dot used as the slot's visual identity (replaces the emoji). */
+function SlotDot({ meal, className = "h-2 w-2" }: { meal: string; className?: string }) {
+  return <span aria-hidden="true" className={`inline-block shrink-0 rounded-full ${MEAL_META[meal].dot} ${className}`} />;
+}
 
 /** Small recipe photo thumbnail (falls back to a soft food glyph). */
 function MealThumb({ imageUrl, name, className = "" }: { imageUrl: string | null; name: string; className?: string }) {
@@ -156,6 +161,8 @@ export default function MealPlannerPage() {
   const [showLoad, setShowLoad] = useState(false);
   // Which (day, meal) slot the recipe picker is choosing for (null = closed).
   const [pickerTarget, setPickerTarget] = useState<{ day: Day; meal: Meal } | null>(null);
+  // Which day's "···" menu is open (desktop grid), null = none.
+  const [openDayMenu, setOpenDayMenu] = useState<Day | null>(null);
   // Whether the currently loaded week's plan is an explicit saved plan.
   const [isSaved, setIsSaved] = useState(false);
   const [savedPlans, setSavedPlans] = useState<{ id: string; weekStart: string; weekEnd: string }[]>([]);
@@ -637,35 +644,29 @@ export default function MealPlannerPage() {
           ))}
         </div>
 
-        {/* Day tools — Copy / Paste / Clear the selected day */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-zinc-400">{selectedDay}:</span>
+        {/* Selected day header + "···" day actions (Copy / Paste / Clear) */}
+        <div className="relative flex items-center justify-between">
+          <span className="text-sm font-semibold text-zinc-800">{selectedDay}</span>
           <button
             type="button"
-            onClick={copyDay}
-            disabled={!selectedDayHasMeals}
-            className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-40"
+            onClick={() => setOpenDayMenu((d) => (d === selectedDay ? null : selectedDay))}
+            aria-label={`${selectedDay} options`}
+            aria-haspopup="menu"
+            aria-expanded={openDayMenu === selectedDay}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
           >
-            Copy Day
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path d="M10 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM10 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM11.5 15.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" /></svg>
           </button>
-          <button
-            type="button"
-            onClick={pasteDay}
-            disabled={!clipboardDay}
-            className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-emerald-600 transition-colors hover:border-emerald-200 hover:bg-emerald-50 disabled:opacity-40"
-          >
-            Paste Day
-          </button>
-          <button
-            type="button"
-            onClick={clearDay}
-            disabled={!selectedDayHasMeals}
-            className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:border-red-200 hover:bg-red-50 disabled:opacity-40"
-          >
-            Clear Day
-          </button>
-          {clipboardDay && (
-            <span className="text-xs text-zinc-400">Day copied — Paste applies it to the selected day</span>
+          {openDayMenu === selectedDay && (
+            <DayMenu
+              day={selectedDay}
+              canCopyOrClear={selectedDayHasMeals}
+              canPaste={clipboardDay !== null}
+              onCopy={() => { copyDay(); setOpenDayMenu(null); }}
+              onPaste={() => { pasteDay(); setOpenDayMenu(null); }}
+              onClear={() => { clearDay(); setOpenDayMenu(null); }}
+              onClose={() => setOpenDayMenu(null)}
+            />
           )}
         </div>
 
@@ -704,8 +705,8 @@ export default function MealPlannerPage() {
               return (
                 <div key={meal} className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
                   <div className="mb-3 flex items-center justify-between">
-                    <p className={`inline-flex items-center gap-1.5 text-sm font-semibold ${MEAL_META[meal].accent}`}>
-                      <span className="text-base leading-none">{MEAL_META[meal].icon}</span>
+                    <p className={`inline-flex items-center gap-2 text-sm font-semibold ${MEAL_META[meal].accent}`}>
+                      <SlotDot meal={meal} className="h-2.5 w-2.5" />
                       {meal}
                     </p>
                     {selected && (
@@ -765,40 +766,29 @@ export default function MealPlannerPage() {
               <div className="grid grid-cols-[104px_repeat(7,1fr)] gap-2">
                 <div />
                 {DAYS.map((day) => (
-                  <div key={day} className="flex items-center justify-between px-1 pb-1">
+                  <div key={day} className="relative flex items-center justify-between px-1 pb-1">
                     <span className="text-sm font-bold tracking-tight text-zinc-800">{day.slice(0, 3)}</span>
-                    <div className="flex items-center gap-0.5">
-                      <button
-                        type="button"
-                        onClick={() => copyDayOf(day)}
-                        disabled={!dayHasMeals(day)}
-                        title={`Copy ${day}`}
-                        aria-label={`Copy ${day}`}
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-30"
-                      >
-                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h5A1.5 1.5 0 0 1 15 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-5A1.5 1.5 0 0 1 7 12.5v-9Z" /><path d="M5 6.5A1.5 1.5 0 0 0 3.5 8v8A1.5 1.5 0 0 0 5 17.5h5A1.5 1.5 0 0 0 11.5 16H8.5A2.5 2.5 0 0 1 6 13.5V6.5H5Z" /></svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => pasteDayInto(day)}
-                        disabled={!clipboardDay}
-                        title={`Paste to ${day}`}
-                        aria-label={`Paste to ${day}`}
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-emerald-500 transition-colors hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-30"
-                      >
-                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true"><path d="M8 2a2 2 0 0 0-1.94 1.5H5.5A1.5 1.5 0 0 0 4 5v11a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 16 16V5a1.5 1.5 0 0 0-1.5-1.5h-.56A2 2 0 0 0 12 2H8Zm0 1.5h4a.5.5 0 0 1 .5.5v.5h-5V4a.5.5 0 0 1 .5-.5Z" /></svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => clearDayOf(day)}
-                        disabled={!dayHasMeals(day)}
-                        title={`Clear ${day}`}
-                        aria-label={`Clear ${day}`}
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-red-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-30"
-                      >
-                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true"><path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41 41 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5Z" clipRule="evenodd" /></svg>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setOpenDayMenu((d) => (d === day ? null : day))}
+                      aria-label={`${day} options`}
+                      aria-haspopup="menu"
+                      aria-expanded={openDayMenu === day}
+                      className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+                    >
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path d="M10 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM10 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM11.5 15.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" /></svg>
+                    </button>
+                    {openDayMenu === day && (
+                      <DayMenu
+                        day={day}
+                        canCopyOrClear={dayHasMeals(day)}
+                        canPaste={clipboardDay !== null}
+                        onCopy={() => { copyDayOf(day); setOpenDayMenu(null); }}
+                        onPaste={() => { pasteDayInto(day); setOpenDayMenu(null); }}
+                        onClear={() => { clearDayOf(day); setOpenDayMenu(null); }}
+                        onClose={() => setOpenDayMenu(null)}
+                      />
+                    )}
                   </div>
                 ))}
               </div>
@@ -809,7 +799,7 @@ export default function MealPlannerPage() {
                 return (
                 <div key={meal} className="mt-2 grid grid-cols-[104px_repeat(7,1fr)] gap-2">
                   <div className={`flex items-center gap-2 rounded-xl ${m.tint} px-3`}>
-                    <span className="text-base leading-none">{m.icon}</span>
+                    <SlotDot meal={meal} className="h-2.5 w-2.5" />
                     <span className={`text-sm font-semibold ${m.accent}`}>{meal}</span>
                   </div>
                   {DAYS.map((day) => {
@@ -854,24 +844,29 @@ export default function MealPlannerPage() {
                 );
               })}
 
-              {/* Per-day totals row */}
-              <div className="mt-2 grid grid-cols-[104px_repeat(7,1fr)] gap-2">
-                <div className="flex items-center pl-3">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Totals</span>
-                </div>
-                {DAYS.map((day) => {
-                  const t = dayTotals(plan, day, recipes);
-                  return (
-                    <div key={`${day}-totals`} className="rounded-xl bg-zinc-50 p-1.5 text-center">
-                      <p className="text-xs font-bold text-zinc-900">{t.calories}<span className="font-normal text-zinc-400"> kcal</span></p>
-                      <div className="mt-0.5 flex justify-center gap-1.5 text-[11px]">
-                        <span className="text-blue-600">{t.protein}P</span>
-                        <span className="text-amber-600">{t.carbs}C</span>
-                        <span className="text-emerald-600">{t.fat}F</span>
+              {/* Per-day totals — visually tied to the grid (shared divider,
+                  card-consistent cells, clearer hierarchy) */}
+              <div className="mt-3 border-t border-zinc-200 pt-3">
+                <div className="grid grid-cols-[104px_repeat(7,1fr)] gap-2">
+                  <div className="flex items-center pl-3">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Day total</span>
+                  </div>
+                  {DAYS.map((day) => {
+                    const t = dayTotals(plan, day, recipes);
+                    return (
+                      <div key={`${day}-totals`} className="rounded-xl border border-zinc-100 bg-zinc-50/70 px-2 py-2 text-center">
+                        <p className="text-sm font-bold text-zinc-900">
+                          {t.calories}<span className="text-xs font-medium text-zinc-400"> kcal</span>
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-[11px] font-medium">
+                          <span className="text-blue-600">{t.protein}g Prot.</span>
+                          <span className="text-amber-600">{t.carbs}g Carb.</span>
+                          <span className="text-emerald-600">{t.fat}g Fat</span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
@@ -943,6 +938,60 @@ export default function MealPlannerPage() {
         </div>
       )}
     </>
+  );
+}
+
+// ── Per-day "···" menu (Copy / Paste / Clear) ────────────────────────────────
+
+function DayMenu({
+  day,
+  canCopyOrClear,
+  canPaste,
+  onCopy,
+  onPaste,
+  onClear,
+  onClose,
+}: {
+  day: Day;
+  canCopyOrClear: boolean;
+  canPaste: boolean;
+  onCopy: () => void;
+  onPaste: () => void;
+  onClear: () => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("mousedown", onDocClick);
+    window.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDocClick); window.removeEventListener("keydown", onKey); };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      role="menu"
+      aria-label={`${day} actions`}
+      className="absolute right-0 top-8 z-30 w-40 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1 shadow-lg"
+    >
+      <button type="button" role="menuitem" onClick={onCopy} disabled={!canCopyOrClear} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-40">
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-zinc-400" aria-hidden="true"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h5A1.5 1.5 0 0 1 15 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-5A1.5 1.5 0 0 1 7 12.5v-9Z" /><path d="M5 6.5A1.5 1.5 0 0 0 3.5 8v8A1.5 1.5 0 0 0 5 17.5h5A1.5 1.5 0 0 0 11.5 16H8.5A2.5 2.5 0 0 1 6 13.5V6.5H5Z" /></svg>
+        Copy day
+      </button>
+      <button type="button" role="menuitem" onClick={onPaste} disabled={!canPaste} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-40">
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-emerald-500" aria-hidden="true"><path d="M8 2a2 2 0 0 0-1.94 1.5H5.5A1.5 1.5 0 0 0 4 5v11a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 16 16V5a1.5 1.5 0 0 0-1.5-1.5h-.56A2 2 0 0 0 12 2H8Zm0 1.5h4a.5.5 0 0 1 .5.5v.5h-5V4a.5.5 0 0 1 .5-.5Z" /></svg>
+        Paste day
+      </button>
+      <div className="my-1 h-px bg-zinc-100" />
+      <button type="button" role="menuitem" onClick={onClear} disabled={!canCopyOrClear} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-40">
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41 41 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5Z" clipRule="evenodd" /></svg>
+        Clear day
+      </button>
+    </div>
   );
 }
 
