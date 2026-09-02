@@ -39,14 +39,13 @@ interface NavSection {
 }
 
 const NAV_SECTIONS: NavSection[] = [
-  { id: "training", label: "Training", icon: <IconDumbbell />, matchPrefixes: ["/workouts", "/training", "/calendar"], items: [
+  { id: "training", label: "Training", icon: <IconDumbbell />, matchPrefixes: ["/workouts", "/training"], items: [
     { label: "Start Workout", href: "/training/start", icon: <IconPlay /> },
     { label: "Workouts", href: "/workouts", icon: <IconDumbbell /> },
     { label: "Workout Builder", href: "/training/workout-builder", icon: <IconHammer /> },
     { label: "Exercises", href: "/training/exercises", icon: <IconList /> },
     { label: "Templates", href: "/training/templates", icon: <IconList /> },
     { label: "History", href: "/training/history", icon: <IconClock /> },
-    { label: "Calendar", href: "/calendar", icon: <IconCalendar /> },
   ]},
   { id: "nutrition", label: "Nutrition", icon: <IconLeaf />, matchPrefixes: ["/nutrition"], items: [
     { label: "Meals", href: "/nutrition", icon: <IconLeaf /> },
@@ -71,6 +70,7 @@ const NAV_SECTIONS: NavSection[] = [
 ];
 
 const STORAGE_KEY = "sidebar-collapsed";
+const CALENDAR_HREF = "/calendar";
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -120,6 +120,12 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     if (hasChild) return false;
     return pathname.startsWith(href + "/");
   }
+
+  // Calendar is a top-level cross-module timeline (not nested under Training).
+  // It sits between Progress and AI in the sidebar order.
+  const calendarActive = pathname === CALENDAR_HREF || pathname.startsWith(CALENDAR_HREF + "/");
+  const sectionsBeforeCalendar = NAV_SECTIONS.filter((s) => ["training", "nutrition", "progress"].includes(s.id));
+  const sectionsAfterCalendar = NAV_SECTIONS.filter((s) => ["ai", "account"].includes(s.id));
   function toggleSection(id: string) { setExpandedId((prev) => (prev === id ? null : id)); }
   const handleNavClick = () => { if (onClose) onClose(); setPopoverId(null); };
 
@@ -196,14 +202,56 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
           {/* Sections */}
           <div className="mt-2 flex flex-col gap-0.5">
-            {NAV_SECTIONS.map((section) => {
-              const isExpanded = expandedId === section.id;
-              const isPopoverOpen = popoverId === section.id;
-              const sectionActive = section.matchPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
+            {sectionsBeforeCalendar.map(renderSection)}
 
-              // ── COLLAPSED MODE ──
-              if (collapsed) {
-                return (
+            {/* Calendar — top-level cross-module timeline */}
+            <Link
+              href={CALENDAR_HREF}
+              onClick={handleNavClick}
+              title={collapsed ? "Calendar" : undefined}
+              className={[
+                "flex items-center rounded-lg transition-colors",
+                collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5 text-sm font-medium",
+                calendarActive
+                  ? "bg-zinc-900 text-white"
+                  : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
+              ].join(" ")}
+              aria-current={calendarActive ? "page" : undefined}
+            >
+              <IconCalendar />
+              {!collapsed && "Calendar"}
+            </Link>
+
+            {sectionsAfterCalendar.map(renderSection)}
+          </div>
+        </nav>
+
+        {/* Collapse toggle — desktop only */}
+        <div className="hidden border-t border-zinc-100 p-2 md:block">
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="flex w-full items-center justify-center gap-2 rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <IconExpand /> : <IconCollapse />}
+            {!collapsed && <span className="text-xs font-medium">Collapse</span>}
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+
+  // ── Section renderer (shared by before/after Calendar groups) ───────────────
+  function renderSection(section: NavSection) {
+    const isExpanded = expandedId === section.id;
+    const isPopoverOpen = popoverId === section.id;
+    const sectionActive = section.matchPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
+
+    // ── COLLAPSED MODE ──
+    if (collapsed) {
+      return (
                   <div
                     key={section.id}
                     className="relative"
@@ -298,24 +346,5 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                   )}
                 </div>
               );
-            })}
-          </div>
-        </nav>
-
-        {/* Collapse toggle — desktop only */}
-        <div className="hidden border-t border-zinc-100 p-2 md:block">
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            className="flex w-full items-center justify-center gap-2 rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? <IconExpand /> : <IconCollapse />}
-            {!collapsed && <span className="text-xs font-medium">Collapse</span>}
-          </button>
-        </div>
-      </aside>
-    </>
-  );
+  }
 }
