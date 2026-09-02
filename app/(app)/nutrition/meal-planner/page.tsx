@@ -297,6 +297,40 @@ export default function MealPlannerPage() {
   // Whether the selected day has anything to copy/clear.
   const selectedDayHasMeals = MEALS.some((m) => readSlot(plan[selectedDay][m]) !== null);
 
+  // ── Day-parameterized helpers (used by the desktop 7-day grid) ───────────────
+  // Same behavior as the selected-day handlers, but target an explicit day so
+  // the grid can edit any cell directly. All persist via the week-scoped savePlan.
+  function setSlotFor(day: Day, meal: Meal, recipeId: string) {
+    const updated = { ...plan, [day]: { ...plan[day], [meal]: recipeId || null } };
+    setPlan(updated);
+    savePlan(updated);
+  }
+  function clearSlotFor(day: Day, meal: Meal) {
+    const updated = { ...plan, [day]: { ...plan[day], [meal]: null } };
+    setPlan(updated);
+    savePlan(updated);
+  }
+  function copyDayOf(day: Day) {
+    setClipboardDay({ ...plan[day] });
+    showToast(`${day} copied`);
+  }
+  function pasteDayInto(day: Day) {
+    if (!clipboardDay) return;
+    const updated = { ...plan, [day]: { ...clipboardDay } };
+    setPlan(updated);
+    savePlan(updated);
+    showToast(`Pasted to ${day}`);
+  }
+  function clearDayOf(day: Day) {
+    const updated = { ...plan, [day]: { Breakfast: null, Lunch: null, Dinner: null, Snack: null } };
+    setPlan(updated);
+    savePlan(updated);
+    showToast(`${day} cleared`);
+  }
+  function dayHasMeals(day: Day) {
+    return MEALS.some((m) => readSlot(plan[day][m]) !== null);
+  }
+
   // ── Templates (fill the whole week by goal, 4-slot model) ────────────────────
 
   // Does the CURRENT week have any planned meal on any day/slot?
@@ -539,6 +573,8 @@ export default function MealPlannerPage() {
           </button>
         </div>
 
+        {/* ── MOBILE / TABLET: day-tab experience (unchanged) ── */}
+        <div className="flex flex-col gap-6 lg:hidden">
         {/* Day tabs */}
         <div className="flex gap-1 overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 p-1">
           {DAYS.map((day) => (
@@ -667,6 +703,102 @@ export default function MealPlannerPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+        </div>
+        {/* ── /MOBILE ── */}
+
+        {/* ── DESKTOP: full 7-day week grid (all days + 4 slots + day totals) ── */}
+        {recipes.length === 0 ? (
+          <div className="hidden lg:flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white py-16">
+            <p className="mb-1 text-base font-semibold text-zinc-900">No recipes available</p>
+            <p className="text-sm text-zinc-500">Create recipes first to start building your meal plan.</p>
+          </div>
+        ) : (
+          <div className="hidden lg:block overflow-x-auto">
+            <div className="min-w-[880px]">
+              {/* Header row: day names + per-day tools */}
+              <div className="grid grid-cols-[88px_repeat(7,1fr)] gap-1">
+                <div />
+                {DAYS.map((day) => (
+                  <div key={day} className="flex flex-col items-center gap-0.5 rounded-t-lg bg-zinc-900 px-1 py-1.5">
+                    <span className="text-xs font-semibold text-white">{day.slice(0, 3)}</span>
+                    <div className="flex gap-1 text-[10px] leading-none">
+                      <button type="button" onClick={() => copyDayOf(day)} disabled={!dayHasMeals(day)} className="text-zinc-300 transition-colors hover:text-white disabled:opacity-30" title={`Copy ${day}`}>Copy</button>
+                      <button type="button" onClick={() => pasteDayInto(day)} disabled={!clipboardDay} className="text-emerald-300 transition-colors hover:text-emerald-100 disabled:opacity-30" title={`Paste to ${day}`}>Paste</button>
+                      <button type="button" onClick={() => clearDayOf(day)} disabled={!dayHasMeals(day)} className="text-red-300 transition-colors hover:text-red-100 disabled:opacity-30" title={`Clear ${day}`}>Clear</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* One row per meal slot */}
+              {MEALS.map((meal) => (
+                <div key={meal} className="mt-1 grid grid-cols-[88px_repeat(7,1fr)] gap-1">
+                  <div className="flex items-center justify-end pr-2">
+                    <span className="text-xs font-medium text-zinc-500">{meal}</span>
+                  </div>
+                  {DAYS.map((day) => {
+                    const slotData = getSlot(plan[day][meal], recipes);
+                    const selected = slotData?.recipe;
+                    const servings = slotData?.servings ?? 1;
+                    return (
+                      <div key={`${day}-${meal}`} className="flex min-h-[64px] flex-col justify-between rounded-lg border border-zinc-100 bg-white p-1.5 shadow-sm">
+                        {selected ? (
+                          <>
+                            <div className="min-w-0">
+                              <p className="line-clamp-2 text-xs font-medium leading-tight text-zinc-900">
+                                {selected.name}{servings > 1 ? ` ×${servings}` : ""}
+                              </p>
+                              <p className="mt-0.5 text-[11px] text-zinc-400">{selected.calories * servings} kcal</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => clearSlotFor(day, meal)}
+                              className="mt-1 self-start text-[11px] font-medium text-red-400 transition-colors hover:text-red-600"
+                            >
+                              Remove
+                            </button>
+                          </>
+                        ) : (
+                          <select
+                            value=""
+                            onChange={(e) => setSlotFor(day, meal, e.target.value)}
+                            aria-label={`Select recipe for ${day} ${meal}`}
+                            className="h-full w-full rounded-md border-0 bg-transparent text-xs text-zinc-400 focus:outline-none focus:ring-0"
+                          >
+                            <option value="">+ Add</option>
+                            {recipes.map((r) => (
+                              <option key={r.id} value={r.id}>{r.name} ({r.calories} kcal)</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+
+              {/* Per-day totals row */}
+              <div className="mt-1 grid grid-cols-[88px_repeat(7,1fr)] gap-1">
+                <div className="flex items-center justify-end pr-2">
+                  <span className="text-xs font-semibold text-zinc-500">Totals</span>
+                </div>
+                {DAYS.map((day) => {
+                  const t = dayTotals(plan, day, recipes);
+                  return (
+                    <div key={`${day}-totals`} className="rounded-lg border border-zinc-100 bg-zinc-50 p-1.5 text-center">
+                      <p className="text-xs font-bold text-zinc-900">{t.calories}<span className="font-normal text-zinc-400"> kcal</span></p>
+                      <div className="mt-0.5 flex justify-center gap-1 text-[11px]">
+                        <span className="text-blue-600">P{t.protein}</span>
+                        <span className="text-amber-600">C{t.carbs}</span>
+                        <span className="text-emerald-600">F{t.fat}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 
