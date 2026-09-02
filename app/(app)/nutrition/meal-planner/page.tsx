@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
@@ -130,6 +130,8 @@ export default function MealPlannerPage() {
   const [clipboardDay, setClipboardDay] = useState<Record<Meal, PlanSlotValue> | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showLoad, setShowLoad] = useState(false);
+  // Which (day, meal) slot the recipe picker is choosing for (null = closed).
+  const [pickerTarget, setPickerTarget] = useState<{ day: Day; meal: Meal } | null>(null);
   // Whether the currently loaded week's plan is an explicit saved plan.
   const [isSaved, setIsSaved] = useState(false);
   const [savedPlans, setSavedPlans] = useState<{ id: string; weekStart: string; weekEnd: string }[]>([]);
@@ -251,12 +253,6 @@ export default function MealPlannerPage() {
   function goCurrentWeek() { setWeekStart(currentWeekStart()); }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
-
-  function handleSelect(meal: Meal, recipeId: string) {
-    const updated = { ...plan, [selectedDay]: { ...plan[selectedDay], [meal]: recipeId || null } };
-    setPlan(updated);
-    savePlan(updated);
-  }
 
   function handleClear(meal: Meal) {
     const updated = { ...plan, [selectedDay]: { ...plan[selectedDay], [meal]: null } };
@@ -555,9 +551,10 @@ export default function MealPlannerPage() {
               <button
                 type="button"
                 onClick={goCurrentWeek}
-                className="rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-200"
+                className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
               >
-                Today
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true"><path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5Z" clipRule="evenodd" /></svg>
+                Go to Current Week
               </button>
             )}
           </div>
@@ -576,20 +573,20 @@ export default function MealPlannerPage() {
         {/* Weekly KPIs — shown above the grid for the whole selected week */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xl font-bold text-zinc-900">{weekTotals.calories}</p>
-            <p className="text-xs text-zinc-400">Weekly Calories</p>
+            <p className="text-2xl font-bold text-zinc-900">{weekTotals.calories}</p>
+            <p className="mt-0.5 text-xs font-medium text-zinc-400">Weekly Calories</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xl font-bold text-blue-600">{weekTotals.protein}g</p>
-            <p className="text-xs text-zinc-400">Weekly Protein</p>
+            <p className="text-2xl font-bold text-blue-600">{weekTotals.protein}g</p>
+            <p className="mt-0.5 text-xs font-medium text-zinc-400">Weekly Protein</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xl font-bold text-amber-600">{weekTotals.carbs}g</p>
-            <p className="text-xs text-zinc-400">Weekly Carbs</p>
+            <p className="text-2xl font-bold text-amber-600">{weekTotals.carbs}g</p>
+            <p className="mt-0.5 text-xs font-medium text-zinc-400">Weekly Carbs</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xl font-bold text-emerald-600">{weekTotals.fat}g</p>
-            <p className="text-xs text-zinc-400">Weekly Fat</p>
+            <p className="text-2xl font-bold text-emerald-600">{weekTotals.fat}g</p>
+            <p className="mt-0.5 text-xs font-medium text-zinc-400">Weekly Fat</p>
           </div>
         </div>
 
@@ -699,26 +696,22 @@ export default function MealPlannerPage() {
                       <p className="text-sm font-medium text-zinc-900">
                         {selected.name}{selectedServings > 1 ? ` ×${selectedServings}` : ""}
                       </p>
-                      <p className="mt-1 text-xs text-zinc-400">
-                        {selected.calories * selectedServings} kcal · P {selected.protein * selectedServings}g · C {selected.carbs * selectedServings}g · F {selected.fat * selectedServings}g
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {selected.calories * selectedServings} kcal
+                      </p>
+                      <p className="mt-0.5 text-xs text-zinc-400">
+                        {selected.protein * selectedServings}g Prot. · {selected.carbs * selectedServings}g Carb. · {selected.fat * selectedServings}g Fat
                       </p>
                     </div>
                   ) : (
-                    <select
-                      value=""
-                      onChange={(e) => handleSelect(meal, e.target.value)}
-                      aria-label={`Select recipe for ${meal}`}
-                      className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                    <button
+                      type="button"
+                      onClick={() => setPickerTarget({ day: selectedDay, meal })}
+                      className="flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 text-sm font-medium text-zinc-500 transition-colors hover:border-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
                     >
-                      <option value="" disabled>
-                        Select a recipe...
-                      </option>
-                      {recipes.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name} ({r.calories} kcal)
-                        </option>
-                      ))}
-                    </select>
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path d="M10 5a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 10 5Z" /></svg>
+                      Add recipe
+                    </button>
                   )}
                 </div>
               );
@@ -808,17 +801,15 @@ export default function MealPlannerPage() {
                             </button>
                           </>
                         ) : (
-                          <select
-                            value=""
-                            onChange={(e) => setSlotFor(day, meal, e.target.value)}
-                            aria-label={`Select recipe for ${day} ${meal}`}
-                            className="h-full w-full rounded-md border-0 bg-transparent text-xs text-zinc-400 focus:outline-none focus:ring-0"
+                          <button
+                            type="button"
+                            onClick={() => setPickerTarget({ day, meal })}
+                            aria-label={`Add recipe for ${day} ${meal}`}
+                            className="flex h-full min-h-[52px] w-full items-center justify-center gap-1 rounded-md text-xs font-medium text-zinc-400 transition-colors hover:bg-zinc-50 hover:text-zinc-700"
                           >
-                            <option value="">+ Add</option>
-                            {recipes.map((r) => (
-                              <option key={r.id} value={r.id}>{r.name} ({r.calories} kcal)</option>
-                            ))}
-                          </select>
+                            <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true"><path d="M10 5a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 10 5Z" /></svg>
+                            Add
+                          </button>
                         )}
                       </div>
                     );
@@ -850,6 +841,20 @@ export default function MealPlannerPage() {
         )}
 
       </div>
+
+      {/* Recipe picker (searchable, scales to a large library) */}
+      {pickerTarget && (
+        <RecipePicker
+          recipes={recipes}
+          day={pickerTarget.day}
+          meal={pickerTarget.meal}
+          onSelect={(recipeId) => {
+            setSlotFor(pickerTarget.day, pickerTarget.meal, recipeId);
+            setPickerTarget(null);
+          }}
+          onClose={() => setPickerTarget(null)}
+        />
+      )}
 
       {/* Templates modal */}
       {showTemplates && (
@@ -901,6 +906,138 @@ export default function MealPlannerPage() {
         </div>
       )}
     </>
+  );
+}
+
+// ── Recipe picker modal (searchable — scales to a large recipe library) ──────
+
+function RecipePicker({
+  recipes,
+  day,
+  meal,
+  onSelect,
+  onClose,
+}: {
+  recipes: RecipeSummary[];
+  day: Day;
+  meal: Meal;
+  onSelect: (recipeId: string) => void;
+  onClose: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [goalFilter, setGoalFilter] = useState<"All" | string>("All");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const goals = useMemo(
+    () => Array.from(new Set(recipes.map((r) => r.goal).filter(Boolean))),
+    [recipes]
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return recipes.filter((r) => {
+      const matchesQuery = !q || r.name.toLowerCase().includes(q);
+      const matchesGoal = goalFilter === "All" || r.goal === goalFilter;
+      return matchesQuery && matchesGoal;
+    });
+  }, [recipes, query, goalFilter]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Choose a recipe for ${day} ${meal}`}
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[85vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:max-w-lg sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header + search */}
+        <div className="border-b border-zinc-100 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-zinc-900">Add a recipe</h2>
+              <p className="text-xs text-zinc-400">{day} · {meal}</p>
+            </div>
+            <button type="button" onClick={onClose} aria-label="Close" className="rounded-md p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+            </button>
+          </div>
+          <div className="relative">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" aria-hidden="true"><path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" /></svg>
+            <input
+              ref={inputRef}
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search recipes..."
+              aria-label="Search recipes"
+              className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+            />
+          </div>
+          {goals.length > 1 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {(["All", ...goals] as const).map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGoalFilter(g)}
+                  aria-pressed={goalFilter === g}
+                  className={[
+                    "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                    goalFilter === g ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400",
+                  ].join(" ")}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Results */}
+        <div className="flex-1 overflow-y-auto p-2">
+          {filtered.length === 0 ? (
+            <p className="px-3 py-6 text-center text-sm text-zinc-400">No recipes match “{query}”.</p>
+          ) : (
+            <ul className="flex flex-col">
+              {filtered.map((r) => (
+                <li key={r.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(r.id)}
+                    className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-zinc-50"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-zinc-900">{r.name}</span>
+                      <span className="block text-xs text-zinc-400">
+                        {r.calories} kcal · {r.protein}g Prot. · {r.carbs}g Carb. · {r.fat}g Fat
+                      </span>
+                    </span>
+                    {r.goal && (
+                      <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">{r.goal}</span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="border-t border-zinc-100 px-4 py-2 text-center text-xs text-zinc-400">
+          {filtered.length} of {recipes.length} recipes
+        </div>
+      </div>
+    </div>
   );
 }
 
