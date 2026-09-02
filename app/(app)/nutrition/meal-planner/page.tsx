@@ -129,6 +129,10 @@ export default function MealPlannerPage() {
   // Clipboard for Copy Day / Paste Day (holds one day's 4-slot map).
   const [clipboardDay, setClipboardDay] = useState<Record<Meal, PlanSlotValue> | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showLoad, setShowLoad] = useState(false);
+  // Whether the currently loaded week's plan is an explicit saved plan.
+  const [isSaved, setIsSaved] = useState(false);
+  const [savedPlans, setSavedPlans] = useState<{ id: string; weekStart: string; weekEnd: string }[]>([]);
   // The Monday of the week currently being edited. Starts on the current week.
   const [weekStart, setWeekStart] = useState<string>(() => currentWeekStart());
 
@@ -177,7 +181,7 @@ export default function MealPlannerPage() {
       // same week never breaks the load (maybeSingle would otherwise error).
       const { data: planData } = await supabase
         .from("meal_plans")
-        .select("id, plan_data")
+        .select("id, plan_data, is_saved")
         .eq("user_id", user.id)
         .eq("week_start_date", start)
         .eq("week_end_date", end)
@@ -188,9 +192,11 @@ export default function MealPlannerPage() {
       if (planData && planData.plan_data) {
         setPlanId(planData.id);
         setPlan(planData.plan_data as MealPlan);
+        setIsSaved(planData.is_saved ?? false);
       } else {
         setPlanId(null);
         setPlan(emptyPlan());
+        setIsSaved(false);
       }
       setWeekLoading(false);
     }
@@ -199,7 +205,10 @@ export default function MealPlannerPage() {
 
   // ── Persist to Supabase (always the SELECTED week) ───────────────────────────
 
-  const savePlan = useCallback(async (updatedPlan: MealPlan) => {
+  // Persist the selected week. Auto-saves are drafts (is_saved stays false);
+  // only an explicit "Save Plan" passes markSaved=true. An already-saved plan
+  // is never silently demoted to draft by an auto-save.
+  const savePlan = useCallback(async (updatedPlan: MealPlan, markSaved?: boolean) => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -211,8 +220,12 @@ export default function MealPlannerPage() {
     if (planId) {
       await supabase
         .from("meal_plans")
-        .update({ plan_data: updatedPlan as any })
+        .update({
+          plan_data: updatedPlan as any,
+          ...(markSaved ? { is_saved: true } : {}),
+        })
         .eq("id", planId);
+      if (markSaved) setIsSaved(true);
     } else {
       const { data: inserted } = await supabase
         .from("meal_plans")
@@ -221,12 +234,13 @@ export default function MealPlannerPage() {
           week_start_date: start,
           week_end_date: end,
           plan_data: updatedPlan as any,
-          is_saved: true,
+          is_saved: markSaved ?? false,
         })
         .select("id")
         .single();
 
       if (inserted) setPlanId(inserted.id);
+      if (markSaved) setIsSaved(true);
     }
     setSaving(false);
   }, [weekStart, planId]);
@@ -313,6 +327,106 @@ export default function MealPlannerPage() {
     showToast(`${template.name} template applied`);
   }
 
+  // ── Save / Load / Duplicate ──────────────────────────────────────────────────
+
+  // Explicitly mark the current week's plan as saved (is_saved = true).
+  async function handleSavePlan() {
+    await savePlan(plan, true);
+    showToast(isSaved ? "Plan updated" : "Plan saved");
+  }
+
+  // Open the Load modal, fetching this user's saved plans (is_saved = true).
+  async function handleOpenLoad() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("meal_plans")
+      .select("id, week_start_date, week_end_date")
+      .eq("user_id", user.id)
+      .eq("is_saved", true)
+      .order("week_start_date", { ascending: false })
+      .limit(20);
+
+    setSavedPlans((data ?? []).map((p) => ({
+      id: p.id,
+      weekStart: p.week_start_date,
+      weekEnd: p.week_end_date,
+    })));
+    setShowLoad(true);
+  }
+
+  // Load a saved plan: navigate to its week (which reloads plan + is_saved).
+  function handleLoadPlan(weekStartKey: string) {
+    setShowLoad(false);
+    setWeekStart(weekStartKey);
+    setSelectedDay("Monday");
+    showToast("Plan loaded");
+  }
+
+  // Duplicate the current week's plan into the NEXT EMPTY week (going forward).
+  // Uses load-or-create so it never violates the unique (user, week) index.
+  async function handleDuplicateWeek() {
+    if (!weekHasMeals) { showToast("This week is empty — nothing to duplicate"); return; }
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Look ahead up to 52 weeks for the first week with no planned meals.
+    let cursor = shiftWeek(weekStart, 1);
+    let targetStart: string | null = null;
+    for (let i = 0; i < 52; i++) {
+      const end = weekEnd(cursor);
+      const { data: existing } = await supabase
+        .from("meal_plans")
+        .select("id, plan_data")
+        .eq("user_id", user.id)
+        .eq("week_start_date", cursor)
+        .eq("week_end_date", end)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const occupied =
+        existing?.plan_data &&
+        DAYS.some((d) => MEALS.some((m) => readSlot((existing.plan_data as MealPlan)[d]?.[m]) !== null));
+
+      if (!occupied) { targetStart = cursor; break; }
+      cursor = shiftWeek(cursor, 1);
+    }
+
+    if (!targetStart) { showToast("No empty week found in the next year"); return; }
+
+    const targetEnd = weekEnd(targetStart);
+    // Write the copied plan into the target week as a DRAFT (is_saved = false).
+    const { data: existingTarget } = await supabase
+      .from("meal_plans")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("week_start_date", targetStart)
+      .eq("week_end_date", targetEnd)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingTarget?.id) {
+      await supabase.from("meal_plans").update({ plan_data: plan as any }).eq("id", existingTarget.id);
+    } else {
+      await supabase.from("meal_plans").insert({
+        user_id: user.id,
+        week_start_date: targetStart,
+        week_end_date: targetEnd,
+        plan_data: plan as any,
+        is_saved: false,
+      });
+    }
+
+    showToast(`Duplicated to ${formatWeekRange(targetStart)}`);
+    setWeekStart(targetStart); // jump to the new week so the user sees it
+  }
+
   const totals = useMemo(() => dayTotals(plan, selectedDay, recipes), [plan, selectedDay, recipes]);
 
   // Weekly totals
@@ -355,6 +469,27 @@ export default function MealPlannerPage() {
             </button>
             <button
               type="button"
+              onClick={handleOpenLoad}
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+            >
+              Load Plan
+            </button>
+            <button
+              type="button"
+              onClick={handleDuplicateWeek}
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+            >
+              Duplicate Week
+            </button>
+            <button
+              type="button"
+              onClick={handleSavePlan}
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
+            >
+              {isSaved ? "Update Plan" : "Save Plan"}
+            </button>
+            <button
+              type="button"
               onClick={handleClearAll}
               className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
             >
@@ -377,6 +512,9 @@ export default function MealPlannerPage() {
 
           <div className="flex items-center gap-2 text-center">
             <span className="text-sm font-semibold text-zinc-900">{formatWeekRange(weekStart)}</span>
+            {isSaved && (
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600">Saved</span>
+            )}
             {isCurrentWeek ? (
               <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-600">Current Week</span>
             ) : (
@@ -561,6 +699,47 @@ export default function MealPlannerPage() {
           onApply={applyTemplate}
           onClose={() => setShowTemplates(false)}
         />
+      )}
+
+      {/* Load saved plans modal */}
+      {showLoad && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Load a saved plan"
+          onClick={() => setShowLoad(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxHeight: "80vh", overflowY: "auto" }}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-zinc-900">Saved Plans</h2>
+              <button type="button" onClick={() => setShowLoad(false)} aria-label="Close" className="text-zinc-400 hover:text-zinc-700">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+              </button>
+            </div>
+            {savedPlans.length === 0 ? (
+              <p className="text-sm text-zinc-400">No saved plans yet. Use “Save Plan” to keep the current week.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {savedPlans.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleLoadPlan(p.weekStart)}
+                    className="flex items-center justify-between rounded-lg border border-zinc-200 p-3 text-left transition-colors hover:border-zinc-400 hover:bg-zinc-50"
+                  >
+                    <span className="text-sm font-medium text-zinc-900">{formatWeekRange(p.weekStart)}</span>
+                    <span className="text-xs font-medium text-zinc-500">Load</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </>
   );
