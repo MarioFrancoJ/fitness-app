@@ -13,6 +13,9 @@ interface DayActivity {
   mealsCount: number;
   weight: number | null;
   hasPhoto: boolean;
+  waterMl: number | null;
+  waterGoalMl: number | null;
+  supplements: string[];
 }
 
 type ActivityMap = Record<string, DayActivity>;
@@ -106,7 +109,7 @@ export default function CalendarPage() {
     if (eventData) setEvents(eventData as CalendarEvent[]);
 
     // Load activities for visible month only
-    const [sessionsRes, mealsRes, weightRes, photosRes] = await Promise.all([
+    const [sessionsRes, mealsRes, weightRes, photosRes, waterRes, suppRes] = await Promise.all([
       supabase
         .from("training_sessions")
         .select("date, workout_name, duration_minutes, status")
@@ -135,6 +138,20 @@ export default function CalendarPage() {
         .gte("upload_date", start)
         .lte("upload_date", end)
         .eq("is_sandbox", false),
+      // Water + supplement logs. These tables have no is_sandbox column
+      // (migration 00009), so they are NOT filtered by it.
+      supabase
+        .from("water_logs")
+        .select("date, intake_ml, goal_ml")
+        .eq("user_id", user.id)
+        .gte("date", start)
+        .lte("date", end),
+      supabase
+        .from("supplement_logs")
+        .select("date, taken")
+        .eq("user_id", user.id)
+        .gte("date", start)
+        .lte("date", end),
     ]);
 
     // Build activity map
@@ -142,7 +159,15 @@ export default function CalendarPage() {
 
     function ensureDay(dateStr: string): DayActivity {
       if (!map[dateStr]) {
-        map[dateStr] = { workouts: [], mealsCount: 0, weight: null, hasPhoto: false };
+        map[dateStr] = {
+          workouts: [],
+          mealsCount: 0,
+          weight: null,
+          hasPhoto: false,
+          waterMl: null,
+          waterGoalMl: null,
+          supplements: [],
+        };
       }
       return map[dateStr];
     }
@@ -176,6 +201,27 @@ export default function CalendarPage() {
       for (const p of photosRes.data) {
         const day = ensureDay(p.upload_date);
         day.hasPhoto = true;
+      }
+    }
+
+    // Water: only surface days with actual intake (intake_ml > 0)
+    if (waterRes.data) {
+      for (const w of waterRes.data) {
+        const intake = w.intake_ml ?? 0;
+        if (intake <= 0) continue;
+        const day = ensureDay(w.date);
+        day.waterMl = intake;
+        day.waterGoalMl = w.goal_ml ?? null;
+      }
+    }
+
+    // Supplements: only surface days with at least one supplement taken
+    if (suppRes.data) {
+      for (const s of suppRes.data) {
+        const taken = Array.isArray(s.taken) ? (s.taken as unknown[]).filter((t): t is string => typeof t === "string") : [];
+        if (taken.length === 0) continue;
+        const day = ensureDay(s.date);
+        day.supplements = taken;
       }
     }
 
@@ -458,7 +504,9 @@ export default function CalendarPage() {
                 dayActivity.workouts.length > 0 ||
                 dayActivity.mealsCount > 0 ||
                 dayActivity.weight !== null ||
-                dayActivity.hasPhoto
+                dayActivity.hasPhoto ||
+                dayActivity.waterMl !== null ||
+                dayActivity.supplements.length > 0
               );
 
               return (
@@ -497,6 +545,12 @@ export default function CalendarPage() {
                     ) : null}
                     {dayActivity?.hasPhoto ? (
                       <span title="Progress photo">📸</span>
+                    ) : null}
+                    {dayActivity?.waterMl ? (
+                      <span title="Water logged">💧</span>
+                    ) : null}
+                    {dayActivity?.supplements.length ? (
+                      <span title="Supplements taken">💊</span>
                     ) : null}
                   </div>
 
@@ -594,6 +648,29 @@ export default function CalendarPage() {
                       <span className="text-sm">📸</span>
                       <p className="text-xs font-medium text-purple-900">
                         Progress photo uploaded
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Water */}
+                  {activityForSelectedDate.waterMl !== null && (
+                    <div className="flex items-center gap-2 rounded-lg bg-sky-50 px-3 py-2">
+                      <span className="text-sm">💧</span>
+                      <p className="text-xs font-medium text-sky-900">
+                        {activityForSelectedDate.waterGoalMl !== null &&
+                        activityForSelectedDate.waterMl >= activityForSelectedDate.waterGoalMl
+                          ? `Water Goal Reached: ${activityForSelectedDate.waterMl}ml`
+                          : `Water: ${activityForSelectedDate.waterMl}ml`}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Supplements */}
+                  {activityForSelectedDate.supplements.length > 0 && (
+                    <div className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-2">
+                      <span className="text-sm">💊</span>
+                      <p className="text-xs font-medium text-indigo-900">
+                        Supplements: {activityForSelectedDate.supplements.join(", ")}
                       </p>
                     </div>
                   )}
