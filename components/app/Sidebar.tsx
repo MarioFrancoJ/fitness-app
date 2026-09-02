@@ -21,7 +21,7 @@ function IconPlay() { return <NavIcon name="start-workout.svg" />; }
 function IconLeaf() { return <NavIcon name="nutrition.svg" />; }
 function IconMeal() { return <NavIcon name="meal.svg" />; }
 function IconBook() { return <NavIcon name="recipes.svg" />; }
-function IconCart() { return <NavIcon name="shooping-list.svg" />; }
+function IconCart() { return <NavIcon name="shopping-list.svg" />; }
 function IconTrendUp() { return <NavIcon name="progress.svg" />; }
 function IconOverview() { return <NavIcon name="overview.svg" />; }
 function IconCamera() { return <NavIcon name="photo.svg" />; }
@@ -33,7 +33,7 @@ function IconAiCoach() { return <NavIcon name="ai-coach.svg" />; }
 function IconStar() { return <NavIcon name="recommendations.svg" />; }
 function IconUser() { return <NavIcon name="account.svg" />; }
 function IconProfile() { return <NavIcon name="profile.svg" />; }
-function IconSubscription() { return <NavIcon name="suscription.svg" />; }
+function IconSubscription() { return <NavIcon name="subscription.svg" />; }
 function IconChevron({ open }: { open: boolean }) { return <svg viewBox="0 0 20 20" fill="currentColor" className={`h-3.5 w-3.5 text-zinc-400 transition-transform duration-200 ${open ? "rotate-90" : ""}`} aria-hidden="true"><path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" /></svg>; }
 function IconCollapse() { return <NavIcon name="collapsed-menu.svg" />; }
 function IconExpand() { return <NavIcon name="expanded-menu.svg" />; }
@@ -91,6 +91,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [popoverId, setPopoverId] = useState<string | null>(null);
+  // Anchor rect for the collapsed-mode flyout. The popover is rendered with
+  // position:fixed (not absolute) so the nav's overflow-y-auto can't clip it.
+  const [popoverAnchor, setPopoverAnchor] = useState<{ top: number; left: number } | null>(null);
   const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load collapsed preference from localStorage
@@ -140,10 +143,24 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   function toggleSection(id: string) { setExpandedId((prev) => (prev === id ? null : id)); }
   const handleNavClick = () => { if (onClose) onClose(); setPopoverId(null); };
 
-  // Popover handlers (collapsed mode)
-  function openPopover(id: string) {
+  // Popover handlers (collapsed mode). We measure the trigger button's on-screen
+  // rect and position the flyout with fixed coords → immune to overflow clipping.
+  function anchorFromElement(el: HTMLElement | null) {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setPopoverAnchor({ top: r.top, left: r.right + 8 });
+  }
+  function openPopover(id: string, el?: HTMLElement | null) {
     if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
+    if (el) anchorFromElement(el);
     setPopoverId(id);
+  }
+  function togglePopover(id: string, el: HTMLElement | null) {
+    setPopoverId((prev) => {
+      if (prev === id) return null;
+      anchorFromElement(el);
+      return id;
+    });
   }
   function scheduleClosePopover() {
     closeTimerRef.current = setTimeout(() => setPopoverId(null), 200);
@@ -153,10 +170,10 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   }
 
   // Keyboard handler for popover
-  function handlePopoverKeyDown(e: React.KeyboardEvent, sectionId: string) {
+  function handlePopoverKeyDown(e: React.KeyboardEvent<HTMLButtonElement>, sectionId: string) {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      setPopoverId((prev) => (prev === sectionId ? null : sectionId));
+      togglePopover(sectionId, e.currentTarget);
     } else if (e.key === "Escape") {
       setPopoverId(null);
     }
@@ -266,12 +283,12 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                   <div
                     key={section.id}
                     className="relative"
-                    onMouseEnter={() => openPopover(section.id)}
+                    onMouseEnter={(e) => openPopover(section.id, e.currentTarget.querySelector("button"))}
                     onMouseLeave={scheduleClosePopover}
                   >
                     <button
                       type="button"
-                      onClick={() => setPopoverId((prev) => (prev === section.id ? null : section.id))}
+                      onClick={(e) => togglePopover(section.id, e.currentTarget)}
                       onKeyDown={(e) => handlePopoverKeyDown(e, section.id)}
                       title={section.label}
                       className={[
@@ -284,10 +301,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                       {section.icon}
                     </button>
 
-                    {/* Popover */}
-                    {isPopoverOpen && (
+                    {/* Popover — fixed position so the nav's overflow can't clip it */}
+                    {isPopoverOpen && popoverAnchor && (
                       <div
-                        className="absolute left-full top-0 z-[60] ml-2 w-48 rounded-xl border border-zinc-200 bg-white py-1 shadow-lg"
+                        className="fixed z-[60] w-48 rounded-xl border border-zinc-200 bg-white py-1 shadow-lg"
+                        style={{ top: popoverAnchor.top, left: popoverAnchor.left }}
                         onMouseEnter={cancelClosePopover}
                         onMouseLeave={scheduleClosePopover}
                         role="menu"
