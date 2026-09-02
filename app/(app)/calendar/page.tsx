@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import EventModal, { type CalendarEvent, type EventFormData } from "@/components/calendar/EventModal";
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
+import Link from "next/link";
+import { planEntryDate } from "@/lib/nutrition";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -16,6 +18,7 @@ interface DayActivity {
   waterMl: number | null;
   waterGoalMl: number | null;
   supplements: string[];
+  plannedMeals: { slot: string; name: string }[];
 }
 
 type ActivityMap = Record<string, DayActivity>;
@@ -109,7 +112,7 @@ export default function CalendarPage() {
     if (eventData) setEvents(eventData as CalendarEvent[]);
 
     // Load activities for visible month only
-    const [sessionsRes, mealsRes, weightRes, photosRes, waterRes, suppRes] = await Promise.all([
+    const [sessionsRes, mealsRes, weightRes, photosRes, waterRes, suppRes, plansRes] = await Promise.all([
       supabase
         .from("training_sessions")
         .select("date, workout_name, duration_minutes, status")
@@ -152,6 +155,15 @@ export default function CalendarPage() {
         .eq("user_id", user.id)
         .gte("date", start)
         .lte("date", end),
+      // Meal plans whose week overlaps the visible month. plan_data is a
+      // JSONB blob mapping day -> slot -> recipe id; we resolve those to
+      // concrete dates so planned meals show up on the calendar.
+      supabase
+        .from("meal_plans")
+        .select("week_start_date, plan_data")
+        .eq("user_id", user.id)
+        .lte("week_start_date", end)
+        .gte("week_end_date", start),
     ]);
 
     // Build activity map
@@ -167,6 +179,7 @@ export default function CalendarPage() {
           waterMl: null,
           waterGoalMl: null,
           supplements: [],
+          plannedMeals: [],
         };
       }
       return map[dateStr];
@@ -222,6 +235,41 @@ export default function CalendarPage() {
         if (taken.length === 0) continue;
         const day = ensureDay(s.date);
         day.supplements = taken;
+      }
+    }
+
+    // Planned meals: resolve each plan's day/slot -> recipe id -> date + name.
+    if (plansRes.data && plansRes.data.length > 0) {
+      // Collect every recipe id referenced across the plans in view.
+      const entries: { date: string; slot: string; recipeId: string }[] = [];
+      for (const p of plansRes.data) {
+        const weekStart = p.week_start_date as string;
+        const planData = (p.plan_data as Record<string, Record<string, string | null>>) || {};
+        for (const [dayName, slots] of Object.entries(planData)) {
+          const date = planEntryDate(weekStart, dayName);
+          if (!date || date < start || date > end) continue;
+          for (const [slot, recipeId] of Object.entries(slots || {})) {
+            if (recipeId) entries.push({ date, slot, recipeId });
+          }
+        }
+      }
+
+      if (entries.length > 0) {
+        const uniqueIds = Array.from(new Set(entries.map((e) => e.recipeId)));
+        const { data: recipeRows } = await supabase
+          .from("recipes")
+          .select("id, name")
+          .in("id", uniqueIds);
+        const nameById = new Map<string, string>(
+          (recipeRows || []).map((r) => [r.id, r.name])
+        );
+
+        for (const e of entries) {
+          const name = nameById.get(e.recipeId);
+          if (!name) continue; // recipe removed — skip stale reference
+          const day = ensureDay(e.date);
+          day.plannedMeals.push({ slot: e.slot, name });
+        }
       }
     }
 
@@ -506,7 +554,8 @@ export default function CalendarPage() {
                 dayActivity.weight !== null ||
                 dayActivity.hasPhoto ||
                 dayActivity.waterMl !== null ||
-                dayActivity.supplements.length > 0
+                dayActivity.supplements.length > 0 ||
+                dayActivity.plannedMeals.length > 0
               );
 
               return (
@@ -551,6 +600,9 @@ export default function CalendarPage() {
                     ) : null}
                     {dayActivity?.supplements.length ? (
                       <span title="Supplements taken">💊</span>
+                    ) : null}
+                    {dayActivity?.plannedMeals.length ? (
+                      <span title="Planned meal">🗓️</span>
                     ) : null}
                   </div>
 
@@ -674,6 +726,27 @@ export default function CalendarPage() {
                       </p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Planned meals (from the Meal Planner — an intention, not a log) */}
+              {activityForSelectedDate && activityForSelectedDate.plannedMeals.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Planned Meals</p>
+                    <Link href="/nutrition/meal-planner" className="text-xs font-medium text-zinc-500 hover:text-zinc-900">
+                      Open planner →
+                    </Link>
+                  </div>
+                  {activityForSelectedDate.plannedMeals.map((pm, i) => (
+                    <div key={i} className="flex items-center gap-2 rounded-lg bg-rose-50 px-3 py-2">
+                      <span className="text-sm">🗓️</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium text-rose-900">{pm.name}</p>
+                        <p className="text-xs text-rose-500">{pm.slot} · planned</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 

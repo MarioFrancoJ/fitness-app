@@ -67,7 +67,7 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
     const slot = defaultSlotForRecipe(recipe.mealType);
     const res = await addRecipeToMealPlan(recipe.id, { slot });
     setBusy(null);
-    if (res.ok) success(`Added "${recipe.name}" to this week's ${slot} slot.`);
+    if (res.ok) success(`Added "${recipe.name}" to ${res.day} · ${res.slot}. See it in the Meal Planner & Calendar.`);
     else toastError(res.error || "Could not add to meal plan.");
   }
 
@@ -111,7 +111,7 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
         {/* Top */}
         <Link href={`/nutrition/recipes/${recipe.id}`} className="block">
           <div className="mb-2 flex items-start justify-between gap-2">
-            <h3 className="text-golden-sm font-semibold text-zinc-900">{recipe.name}</h3>
+            <h3 className="text-golden-lg font-semibold leading-snug text-zinc-900">{recipe.name}</h3>
             <span className={`shrink-0 rounded-full px-2 py-0.5 text-golden-xs font-medium ${goalColor(recipe.goal)}`}>
               {recipe.goal}
             </span>
@@ -119,7 +119,8 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
           {recipe.description && (
             <p className="mb-3 text-golden-xs text-zinc-400 line-clamp-2">{recipe.description}</p>
           )}
-          <p className="text-2xl font-bold text-zinc-900">
+          {/* Calories: key metric, but secondary to the recipe name */}
+          <p className="text-golden-lg font-bold text-zinc-900">
             {recipe.calories} <span className="text-golden-sm font-normal text-zinc-400">kcal</span>
           </p>
 
