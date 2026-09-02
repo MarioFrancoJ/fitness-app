@@ -158,15 +158,36 @@ export default function SyncRecipeImagesPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={scan} disabled={scanning || applying}>
-            {scanning ? "Scanning…" : "Re-run Dry Run"}
+            {scanning ? "Scanning…" : "Preview (Dry Run)"}
           </Button>
           <Button
             onClick={handleApply}
             disabled={scanning || applying || !report || report.autoMatched.length === 0}
           >
-            {applying ? "Applying…" : `Apply ${report?.autoMatched.length ?? 0} match${(report?.autoMatched.length ?? 0) === 1 ? "" : "es"}`}
+            {applying
+              ? "Applying…"
+              : (report?.autoMatched.length ?? 0) > 0
+              ? `Apply & Save ${report?.autoMatched.length} match${report?.autoMatched.length === 1 ? "" : "es"}`
+              : "Apply & Save"}
           </Button>
         </div>
+      </div>
+
+      {/* Two-step flow explainer — makes it obvious that Preview does NOT save */}
+      <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+        <p className="font-semibold">How this works — 2 steps:</p>
+        <ol className="mt-1 list-decimal space-y-0.5 pl-5">
+          <li><strong>Preview (Dry Run)</strong> — shows the matches below. <em>Nothing is saved yet.</em></li>
+          <li>
+            <strong>Apply &amp; Save</strong> — writes the <span className="font-medium">Auto Matched</span> images to the recipes
+            (recipe cards &amp; detail pages update). Existing images are never overwritten.
+          </li>
+        </ol>
+        {report && report.autoMatched.length > 0 && (
+          <p className="mt-2 font-medium text-blue-900">
+            👉 {report.autoMatched.length} image{report.autoMatched.length === 1 ? " is" : "s are"} ready to save — click <strong>Apply &amp; Save</strong>.
+          </p>
+        )}
       </div>
 
       {error && (
@@ -186,10 +207,10 @@ export default function SyncRecipeImagesPage() {
         <div className="flex flex-col gap-6">
           <ReportSection
             title="Auto Matched"
-            hint={`Score ≥ ${scorePct(AUTO_THRESHOLD)}% — will be assigned on Apply`}
+            hint={`Score ≥ ${scorePct(AUTO_THRESHOLD)}% — saved when you click "Apply & Save"`}
             tone="emerald"
             rows={report.autoMatched.map((r) => ({ a: r.recipeName, b: r.imageName, c: `${scorePct(r.score)}%` }))}
-            emptyText="No new auto matches."
+            emptyText="No new auto matches (already applied, or no images to assign)."
           />
 
           <ReportSection
