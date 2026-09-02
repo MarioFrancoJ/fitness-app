@@ -28,7 +28,44 @@ export const PLAN_DAYS = [
 ] as const;
 export type PlanDay = (typeof PLAN_DAYS)[number];
 
-type PlanData = Record<string, Record<string, string | null>>;
+/**
+ * A slot in plan_data can hold either:
+ *  - legacy: a bare recipe-id string (older data / other writers)
+ *  - structured: { recipeId, servings } (assignment-based planning)
+ *  - null (empty)
+ * `readSlot()` normalizes both forms so every reader is agnostic to shape.
+ * This keeps the model backward-compatible while adding per-slot servings,
+ * and leaves room to grow (e.g. drag-and-drop ordering) without a migration.
+ */
+export interface PlanSlotEntry {
+  recipeId: string;
+  servings: number;
+}
+export type PlanSlotValue = string | PlanSlotEntry | null;
+type PlanData = Record<string, Record<string, PlanSlotValue>>;
+
+/** Normalize any slot value into { recipeId, servings } | null. */
+export function readSlot(value: PlanSlotValue | undefined): PlanSlotEntry | null {
+  if (!value) return null;
+  if (typeof value === "string") return { recipeId: value, servings: 1 };
+  if (typeof value === "object" && typeof value.recipeId === "string") {
+    return { recipeId: value.recipeId, servings: value.servings > 0 ? value.servings : 1 };
+  }
+  return null;
+}
+
+/** Convenience: extract just the recipe id from a slot (legacy-friendly). */
+export function readSlotRecipeId(value: PlanSlotValue | undefined): string | null {
+  return readSlot(value)?.recipeId ?? null;
+}
+
+// ── Assignment-based planning ────────────────────────────────────────────────
+
+export interface MealPlanAssignment {
+  day: PlanDay;
+  slot: MealSlot;
+  servings: number;
+}
 
 export interface RecipeIngredientInput {
   name: string;
@@ -167,6 +204,111 @@ export async function addRecipeToMealPlan(
   }
 
   return { ok: true, day, slot: opts.slot, weekStart: start };
+}
+
+/**
+ * Assignment-based meal planning: write MANY (day, slot, servings) entries for
+ * a single recipe in ONE save. This is the long-term planning API.
+ *
+ * Behavior:
+ *  - Loads (or creates) the current week's meal_plans row.
+ *  - Writes each assignment as a structured { recipeId, servings } slot value.
+ *  - Deduplicates: if the SAME recipe is already in a day/slot, it is skipped
+ *    (reported in `skipped`) rather than duplicated. If a DIFFERENT recipe
+ *    occupies the slot, it is overwritten (reported in `replaced`).
+ *  - Supports different servings per assignment.
+ *
+ * Returns counts so the UI can show "Recipe added to N meal plan slots" and
+ * warn about skipped duplicates.
+ */
+export async function saveMealPlanAssignments(
+  recipeId: string,
+  assignments: MealPlanAssignment[]
+): Promise<
+  MutationResult & {
+    added?: number;
+    skipped?: { day: PlanDay; slot: MealSlot }[];
+    replaced?: number;
+    weekStart?: string;
+  }
+> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "You must be signed in." };
+
+  if (!assignments || assignments.length === 0) {
+    return { ok: false, error: "Add at least one assignment." };
+  }
+
+  const { start, end } = getWeekBounds();
+
+  const { data: existing, error: loadErr } = await supabase
+    .from("meal_plans")
+    .select("id, plan_data")
+    .eq("user_id", user.id)
+    .eq("week_start_date", start)
+    .eq("week_end_date", end)
+    .maybeSingle();
+
+  if (loadErr) return { ok: false, error: loadErr.message };
+
+  const plan: PlanData = (existing?.plan_data as PlanData) ?? emptyPlan();
+
+  // Collapse duplicate assignments in the SAME request (same day+slot); keep
+  // the last servings value the user set for that cell.
+  const requested = new Map<string, MealPlanAssignment>();
+  for (const a of assignments) {
+    requested.set(`${a.day}|${a.slot}`, {
+      day: a.day,
+      slot: a.slot,
+      servings: a.servings > 0 ? a.servings : 1,
+    });
+  }
+
+  let added = 0;
+  let replaced = 0;
+  const skipped: { day: PlanDay; slot: MealSlot }[] = [];
+
+  for (const a of requested.values()) {
+    if (!plan[a.day]) {
+      plan[a.day] = { Breakfast: null, Lunch: null, Dinner: null, Snack: null };
+    }
+    const current = readSlot(plan[a.day][a.slot]);
+    if (current?.recipeId === recipeId) {
+      // Same recipe already scheduled here — do not duplicate.
+      skipped.push({ day: a.day, slot: a.slot });
+      continue;
+    }
+    if (current) replaced++;
+    plan[a.day][a.slot] = { recipeId, servings: a.servings };
+    added++;
+  }
+
+  if (added === 0) {
+    // Nothing new to write (all duplicates) — surface as a soft warning.
+    return { ok: true, added: 0, skipped, replaced, weekStart: start };
+  }
+
+  if (existing?.id) {
+    const { error } = await supabase
+      .from("meal_plans")
+      .update({ plan_data: plan as never })
+      .eq("id", existing.id);
+    if (error) return { ok: false, error: error.message };
+  } else {
+    const { error } = await supabase
+      .from("meal_plans")
+      .insert({
+        user_id: user.id,
+        week_start_date: start,
+        week_end_date: end,
+        plan_data: plan as never,
+        is_saved: true,
+      });
+    if (error) return { ok: false, error: error.message };
+  }
+
+  return { ok: true, added, skipped, replaced, weekStart: start };
 }
 
 // ── 2. Recipe → Meal log ──────────────────────────────────────────────────────

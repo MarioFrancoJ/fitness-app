@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
+import { readSlot, type PlanSlotValue } from "@/lib/nutrition";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -211,14 +212,16 @@ export default function ShoppingListPage() {
       return;
     }
 
-    // Extract recipe IDs from plan
-    const plan = planData.plan_data as Record<string, Record<string, string | null>>;
+    // Extract recipe IDs from plan. Slots may be legacy strings or structured
+    // { recipeId, servings }; the multiplier is the sum of servings.
+    const plan = planData.plan_data as Record<string, Record<string, PlanSlotValue>>;
     const recipeCounts: Record<string, number> = {};
 
     for (const day of Object.values(plan)) {
-      for (const id of Object.values(day)) {
-        if (id) {
-          recipeCounts[id] = (recipeCounts[id] || 0) + 1;
+      for (const rawSlot of Object.values(day)) {
+        const entry = readSlot(rawSlot);
+        if (entry) {
+          recipeCounts[entry.recipeId] = (recipeCounts[entry.recipeId] || 0) + entry.servings;
         }
       }
     }

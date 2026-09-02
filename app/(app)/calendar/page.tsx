@@ -6,7 +6,7 @@ import EventModal, { type CalendarEvent, type EventFormData } from "@/components
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
 import Link from "next/link";
-import { planEntryDate } from "@/lib/nutrition";
+import { planEntryDate, readSlot, type PlanSlotValue } from "@/lib/nutrition";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -18,7 +18,7 @@ interface DayActivity {
   waterMl: number | null;
   waterGoalMl: number | null;
   supplements: string[];
-  plannedMeals: { slot: string; name: string }[];
+  plannedMeals: { slot: string; name: string; servings: number }[];
 }
 
 type ActivityMap = Record<string, DayActivity>;
@@ -241,15 +241,16 @@ export default function CalendarPage() {
     // Planned meals: resolve each plan's day/slot -> recipe id -> date + name.
     if (plansRes.data && plansRes.data.length > 0) {
       // Collect every recipe id referenced across the plans in view.
-      const entries: { date: string; slot: string; recipeId: string }[] = [];
+      const entries: { date: string; slot: string; recipeId: string; servings: number }[] = [];
       for (const p of plansRes.data) {
         const weekStart = p.week_start_date as string;
-        const planData = (p.plan_data as Record<string, Record<string, string | null>>) || {};
+        const planData = (p.plan_data as Record<string, Record<string, PlanSlotValue>>) || {};
         for (const [dayName, slots] of Object.entries(planData)) {
           const date = planEntryDate(weekStart, dayName);
           if (!date || date < start || date > end) continue;
-          for (const [slot, recipeId] of Object.entries(slots || {})) {
-            if (recipeId) entries.push({ date, slot, recipeId });
+          for (const [slot, rawValue] of Object.entries(slots || {})) {
+            const entry = readSlot(rawValue);
+            if (entry) entries.push({ date, slot, recipeId: entry.recipeId, servings: entry.servings });
           }
         }
       }
@@ -268,7 +269,7 @@ export default function CalendarPage() {
           const name = nameById.get(e.recipeId);
           if (!name) continue; // recipe removed — skip stale reference
           const day = ensureDay(e.date);
-          day.plannedMeals.push({ slot: e.slot, name });
+          day.plannedMeals.push({ slot: e.slot, name, servings: e.servings });
         }
       }
     }
@@ -742,7 +743,9 @@ export default function CalendarPage() {
                     <div key={i} className="flex items-center gap-2 rounded-lg bg-rose-50 px-3 py-2">
                       <span className="text-sm">🗓️</span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-medium text-rose-900">{pm.name}</p>
+                        <p className="truncate text-xs font-medium text-rose-900">
+                          {pm.name}{pm.servings > 1 ? ` ×${pm.servings}` : ""}
+                        </p>
                         <p className="text-xs text-rose-500">{pm.slot} · planned</p>
                       </div>
                     </div>

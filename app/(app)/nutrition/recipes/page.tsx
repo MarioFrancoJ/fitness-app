@@ -6,11 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import EmptyState from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
-import {
-  addRecipeToMealPlan,
-  addRecipeIngredientsToShoppingList,
-  defaultSlotForRecipe,
-} from "@/lib/nutrition";
+import { addRecipeIngredientsToShoppingList } from "@/lib/nutrition";
+import MealPlanModal, { type MealPlanModalRecipe } from "@/components/nutrition/MealPlanModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -55,20 +52,14 @@ function goalColor(goal: RecipeGoal): string {
 
 // ── Recipe Card ───────────────────────────────────────────────────────────────
 
-function RecipeCard({ recipe }: { recipe: Recipe }) {
+function RecipeCard({ recipe, onAddToPlan }: { recipe: Recipe; onAddToPlan: (r: Recipe) => void }) {
   const { success, error: toastError } = useToast();
-  const [busy, setBusy] = useState<null | "plan" | "shop">(null);
+  const [busy, setBusy] = useState<null | "shop">(null);
 
-  async function handleAddToPlan(e: React.MouseEvent) {
+  function handleAddToPlan(e: React.MouseEvent) {
     e.preventDefault(); // don't navigate — the card is wrapped in a Link
     e.stopPropagation();
-    if (busy) return;
-    setBusy("plan");
-    const slot = defaultSlotForRecipe(recipe.mealType);
-    const res = await addRecipeToMealPlan(recipe.id, { slot });
-    setBusy(null);
-    if (res.ok) success(`Added "${recipe.name}" to ${res.day} · ${res.slot}. See it in the Meal Planner & Calendar.`);
-    else toastError(res.error || "Could not add to meal plan.");
+    onAddToPlan(recipe);
   }
 
   async function handleQuickShop(e: React.MouseEvent) {
@@ -159,10 +150,9 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
           <button
             type="button"
             onClick={handleAddToPlan}
-            disabled={busy !== null}
-            className="flex-1 rounded-golden-md bg-zinc-900 px-golden-2 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:opacity-50"
+            className="flex-1 rounded-golden-md bg-zinc-900 px-golden-2 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-zinc-800"
           >
-            {busy === "plan" ? "Adding…" : "+ Meal Plan"}
+            + Meal Plan
           </button>
           <button
             type="button"
@@ -188,7 +178,7 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
 
 // ── Section ───────────────────────────────────────────────────────────────────
 
-function RecipeSection({ title, recipes }: { title: string; recipes: Recipe[] }) {
+function RecipeSection({ title, recipes, onAddToPlan }: { title: string; recipes: Recipe[]; onAddToPlan: (r: Recipe) => void }) {
   if (recipes.length === 0) return null;
   return (
     <div>
@@ -196,7 +186,7 @@ function RecipeSection({ title, recipes }: { title: string; recipes: Recipe[] })
         {title} <span className="font-normal text-zinc-400">({recipes.length})</span>
       </h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {recipes.map((r) => <RecipeCard key={r.id} recipe={r} />)}
+        {recipes.map((r) => <RecipeCard key={r.id} recipe={r} onAddToPlan={onAddToPlan} />)}
       </div>
     </div>
   );
@@ -205,11 +195,17 @@ function RecipeSection({ title, recipes }: { title: string; recipes: Recipe[] })
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RecipesPage() {
+  const { success, error: toastError } = useToast();
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [search, setSearch] = useState("");
   const [goalFilter, setGoalFilter] = useState<"All" | RecipeGoal>("All");
   const [mealTypeFilter, setMealTypeFilter] = useState<"All" | MealType>("All");
   const [loading, setLoading] = useState(true);
+  const [planRecipe, setPlanRecipe] = useState<MealPlanModalRecipe | null>(null);
+
+  function openPlanModal(r: Recipe) {
+    setPlanRecipe({ id: r.id, name: r.name, mealType: r.mealType, calories: r.calories, goal: r.goal });
+  }
 
   useEffect(() => {
     async function loadRecipes() {
@@ -373,9 +369,9 @@ export default function RecipesPage() {
         />
       ) : showGrouped ? (
         <div className="flex flex-col gap-8">
-          <RecipeSection title="Muscle Gain" recipes={byGoal["Muscle Gain"]} />
-          <RecipeSection title="Fat Loss" recipes={byGoal["Fat Loss"]} />
-          <RecipeSection title="Maintenance" recipes={byGoal["Maintenance"]} />
+          <RecipeSection title="Muscle Gain" recipes={byGoal["Muscle Gain"]} onAddToPlan={openPlanModal} />
+          <RecipeSection title="Fat Loss" recipes={byGoal["Fat Loss"]} onAddToPlan={openPlanModal} />
+          <RecipeSection title="Maintenance" recipes={byGoal["Maintenance"]} onAddToPlan={openPlanModal} />
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex h-48 items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-sm">
@@ -383,9 +379,17 @@ export default function RecipesPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((r) => <RecipeCard key={r.id} recipe={r} />)}
+          {filtered.map((r) => <RecipeCard key={r.id} recipe={r} onAddToPlan={openPlanModal} />)}
         </div>
       )}
+
+      <MealPlanModal
+        isOpen={planRecipe !== null}
+        onClose={() => setPlanRecipe(null)}
+        recipe={planRecipe}
+        onSuccess={(msg) => success(msg)}
+        onError={(msg) => toastError(msg)}
+      />
     </div>
   );
 }
