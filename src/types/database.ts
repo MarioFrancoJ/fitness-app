@@ -357,6 +357,8 @@ export type Database = {
           time: string | null
           photo_url: string | null
           is_sandbox: boolean
+          recipe_id: string | null
+          servings: number
           created_at: string
         }
         Insert: {
@@ -373,6 +375,8 @@ export type Database = {
           time?: string | null
           photo_url?: string | null
           is_sandbox?: boolean
+          recipe_id?: string | null
+          servings?: number
           created_at?: string
         }
         Update: {
@@ -389,6 +393,8 @@ export type Database = {
           time?: string | null
           photo_url?: string | null
           is_sandbox?: boolean
+          recipe_id?: string | null
+          servings?: number
           created_at?: string
         }
         Relationships: [
@@ -759,6 +765,7 @@ export type Database = {
           protein: number | null
           carbs: number | null
           fat: number | null
+          meal_type: Database["public"]["Enums"]["meal_type"] | null
           created_by: string | null
           created_at: string
           updated_at: string
@@ -775,6 +782,7 @@ export type Database = {
           protein?: number | null
           carbs?: number | null
           fat?: number | null
+          meal_type?: Database["public"]["Enums"]["meal_type"] | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -791,6 +799,7 @@ export type Database = {
           protein?: number | null
           carbs?: number | null
           fat?: number | null
+          meal_type?: Database["public"]["Enums"]["meal_type"] | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
