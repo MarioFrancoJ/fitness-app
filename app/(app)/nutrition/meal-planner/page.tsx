@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
-import { readSlot, type PlanSlotValue } from "@/lib/nutrition";
+import { readSlot, getWeekBounds, type PlanSlotValue } from "@/lib/nutrition";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,15 +35,43 @@ function emptyPlan(): MealPlan {
   return plan;
 }
 
-function getWeekDates(): { start: string; end: string } {
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + mondayOffset);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) };
+/** Monday (YYYY-MM-DD) of the week containing `ref`. Parses/works in UTC to
+ * avoid timezone drift, consistent with lib/nutrition helpers. */
+function mondayOf(ref: Date): string {
+  const d = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), ref.getUTCDate()));
+  const dow = d.getUTCDay(); // 0=Sun..6=Sat
+  const offset = dow === 0 ? -6 : 1 - dow;
+  d.setUTCDate(d.getUTCDate() + offset);
+  return d.toISOString().slice(0, 10);
+}
+
+/** This week's Monday key (today). */
+function currentWeekStart(): string {
+  return getWeekBounds(new Date()).start;
+}
+
+/** Shift a Monday key by ±7*n days, returning the new Monday key. */
+function shiftWeek(weekStart: string, weeks: number): string {
+  const d = new Date(`${weekStart}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + weeks * 7);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Sunday key for a given Monday key. */
+function weekEnd(weekStart: string): string {
+  const d = new Date(`${weekStart}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 6);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Human label e.g. "Aug 25 – Aug 31, 2026" for a Monday key. */
+function formatWeekRange(weekStart: string): string {
+  const start = new Date(`${weekStart}T00:00:00Z`);
+  const end = new Date(`${weekEnd(weekStart)}T00:00:00Z`);
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", timeZone: "UTC" };
+  const startStr = start.toLocaleDateString("en-US", opts);
+  const endStr = end.toLocaleDateString("en-US", opts);
+  return `${startStr} – ${endStr}, ${end.getUTCFullYear()}`;
 }
 
 /** Resolve a slot value (legacy string or structured) into recipe + servings. */
@@ -81,15 +109,20 @@ export default function MealPlannerPage() {
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [selectedDay, setSelectedDay] = useState<Day>("Monday");
   const [loading, setLoading] = useState(true);
+  const [weekLoading, setWeekLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  // The Monday of the week currently being edited. Starts on the current week.
+  const [weekStart, setWeekStart] = useState<string>(() => currentWeekStart());
 
+  const isCurrentWeek = weekStart === currentWeekStart();
+
+  // Load recipes once (they don't change per week).
   useEffect(() => {
-    async function loadData() {
+    async function loadRecipes() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      // Load recipes for dropdown
       const { data: recipesData } = await supabase
         .from("recipes")
         .select("id, name, calories, protein, carbs, fat")
@@ -105,45 +138,63 @@ export default function MealPlannerPage() {
           fat: r.fat || 0,
         })));
       }
+      setLoading(false);
+    }
+    loadRecipes();
+  }, []);
 
-      // Load current week's meal plan
-      const { start, end } = getWeekDates();
+  // Load the plan for the selected week whenever it changes.
+  useEffect(() => {
+    async function loadWeek() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      setWeekLoading(true);
+      const start = weekStart;
+      const end = weekEnd(weekStart);
+
+      // Tolerant read: order by updated_at so any historical duplicate for the
+      // same week never breaks the load (maybeSingle would otherwise error).
       const { data: planData } = await supabase
         .from("meal_plans")
         .select("id, plan_data")
         .eq("user_id", user.id)
         .eq("week_start_date", start)
         .eq("week_end_date", end)
+        .order("updated_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (planData && planData.plan_data) {
         setPlanId(planData.id);
         setPlan(planData.plan_data as MealPlan);
+      } else {
+        setPlanId(null);
+        setPlan(emptyPlan());
       }
-
-      setLoading(false);
+      setWeekLoading(false);
     }
-    loadData();
-  }, []);
+    loadWeek();
+  }, [weekStart]);
 
-  // ── Persist to Supabase ─────────────────────────────────────────────────────
+  // ── Persist to Supabase (always the SELECTED week) ───────────────────────────
 
-  async function savePlan(updatedPlan: MealPlan) {
+  const savePlan = useCallback(async (updatedPlan: MealPlan) => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     setSaving(true);
-    const { start, end } = getWeekDates();
+    const start = weekStart;
+    const end = weekEnd(weekStart);
 
     if (planId) {
-      // Update existing
       await supabase
         .from("meal_plans")
         .update({ plan_data: updatedPlan as any })
         .eq("id", planId);
     } else {
-      // Insert new
       const { data: inserted } = await supabase
         .from("meal_plans")
         .insert({
@@ -159,7 +210,12 @@ export default function MealPlannerPage() {
       if (inserted) setPlanId(inserted.id);
     }
     setSaving(false);
-  }
+  }, [weekStart, planId]);
+
+  // ── Week navigation ──────────────────────────────────────────────────────────
+  function goPrevWeek() { setWeekStart((w) => shiftWeek(w, -1)); }
+  function goNextWeek() { setWeekStart((w) => shiftWeek(w, 1)); }
+  function goCurrentWeek() { setWeekStart(currentWeekStart()); }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -210,6 +266,7 @@ export default function MealPlannerPage() {
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Meal Planner</h1>
             <p className="mt-1 text-sm text-zinc-500">
               Plan your meals for the week by assigning recipes to each slot.
+              {weekLoading && <span className="ml-2 text-xs text-zinc-400">(Loading week...)</span>}
               {saving && <span className="ml-2 text-xs text-zinc-400">(Saving...)</span>}
             </p>
           </div>
@@ -219,6 +276,44 @@ export default function MealPlannerPage() {
             className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
           >
             Clear Week
+          </button>
+        </div>
+
+        {/* Week navigation — mirrors the Calendar's prev/next/today pattern */}
+        <div className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-3 py-2 shadow-sm">
+          <button
+            type="button"
+            onClick={goPrevWeek}
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+            aria-label="Previous week"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" /></svg>
+            <span className="hidden sm:inline">Previous Week</span>
+          </button>
+
+          <div className="flex items-center gap-2 text-center">
+            <span className="text-sm font-semibold text-zinc-900">{formatWeekRange(weekStart)}</span>
+            {isCurrentWeek ? (
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-600">Current Week</span>
+            ) : (
+              <button
+                type="button"
+                onClick={goCurrentWeek}
+                className="rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-200"
+              >
+                Today
+              </button>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={goNextWeek}
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+            aria-label="Next week"
+          >
+            <span className="hidden sm:inline">Next Week</span>
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" /></svg>
           </button>
         </div>
 
