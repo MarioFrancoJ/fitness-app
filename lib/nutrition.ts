@@ -78,6 +78,21 @@ export function getPlanDayForDate(ref: Date = new Date()): PlanDay {
   return PLAN_DAYS[index];
 }
 
+/**
+ * Map a plan (week_start_date, PlanDay) pair to the concrete calendar date
+ * string (YYYY-MM-DD). `weekStart` is the Monday; PLAN_DAYS[0] === Monday,
+ * so the offset is the day's index in PLAN_DAYS. Parses in UTC to avoid TZ
+ * drift (week_start_date is a bare date).
+ */
+export function planEntryDate(weekStart: string, day: string): string | null {
+  const idx = (PLAN_DAYS as readonly string[]).indexOf(day);
+  if (idx < 0) return null;
+  const d = new Date(`${weekStart}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setUTCDate(d.getUTCDate() + idx);
+  return d.toISOString().slice(0, 10);
+}
+
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -110,7 +125,7 @@ export function defaultSlotForRecipe(mealType?: string | null): MealSlot {
 export async function addRecipeToMealPlan(
   recipeId: string,
   opts: { day?: PlanDay; slot: MealSlot }
-): Promise<MutationResult> {
+): Promise<MutationResult & { day?: PlanDay; slot?: MealSlot; weekStart?: string }> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "You must be signed in." };
@@ -151,7 +166,7 @@ export async function addRecipeToMealPlan(
     if (error) return { ok: false, error: error.message };
   }
 
-  return { ok: true };
+  return { ok: true, day, slot: opts.slot, weekStart: start };
 }
 
 // ── 2. Recipe → Meal log ──────────────────────────────────────────────────────

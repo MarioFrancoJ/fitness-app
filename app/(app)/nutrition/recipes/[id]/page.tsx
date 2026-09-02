@@ -11,8 +11,11 @@ import {
   addRecipeIngredientsToShoppingList,
   logMealFromRecipe,
   defaultSlotForRecipe,
+  getPlanDayForDate,
   MEAL_SLOTS,
+  PLAN_DAYS,
   type MealSlot,
+  type PlanDay,
 } from "@/lib/nutrition";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -67,6 +70,7 @@ export default function RecipeDetailPage() {
   const [notFound, setNotFound] = useState(false);
 
   // Action controls
+  const [day, setDay] = useState<PlanDay>(getPlanDayForDate());
   const [slot, setSlot] = useState<MealSlot>("Snack");
   const [servings, setServings] = useState(1);
   const [busy, setBusy] = useState<null | "plan" | "shop" | "log">(null);
@@ -149,9 +153,9 @@ export default function RecipeDetailPage() {
   async function handleAddToPlan() {
     if (!recipe || busy) return;
     setBusy("plan");
-    const res = await addRecipeToMealPlan(recipe.id, { slot });
+    const res = await addRecipeToMealPlan(recipe.id, { day, slot });
     setBusy(null);
-    if (res.ok) success(`Added "${recipe.name}" to this week's ${slot} slot.`);
+    if (res.ok) success(`Added "${recipe.name}" to ${res.day} · ${res.slot}. See it in the Meal Planner & Calendar.`);
     else toastError(res.error || "Could not add to meal plan.");
   }
 
@@ -322,8 +326,21 @@ export default function RecipeDetailPage() {
           Use this recipe
         </h2>
 
-        {/* Slot + servings controls */}
+        {/* Day + slot + servings controls */}
         <div className="mb-4 flex flex-wrap items-end gap-4">
+          <div>
+            <label htmlFor="plan-day" className="mb-1 block text-golden-xs font-medium text-zinc-600">Day</label>
+            <select
+              id="plan-day"
+              value={day}
+              onChange={(e) => setDay(e.target.value as PlanDay)}
+              className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-golden-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+            >
+              {PLAN_DAYS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
           <div>
             <label htmlFor="meal-slot" className="mb-1 block text-golden-xs font-medium text-zinc-600">Meal</label>
             <select
@@ -385,6 +402,16 @@ export default function RecipeDetailPage() {
             {busy === "shop" ? "Adding…" : "Add Ingredients to Shopping List"}
           </button>
         </div>
+
+        {/* Planner vs. Log clarification + navigation */}
+        <p className="mt-4 text-golden-xs leading-relaxed text-zinc-400">
+          <strong className="font-semibold text-zinc-500">Meal Plan</strong> schedules this recipe for a day (it shows up in the{" "}
+          <Link href="/nutrition/meal-planner" className="font-medium text-zinc-600 underline hover:text-zinc-900">Meal Planner</Link>{" "}
+          and{" "}
+          <Link href="/calendar" className="font-medium text-zinc-600 underline hover:text-zinc-900">Calendar</Link>).{" "}
+          <strong className="font-semibold text-zinc-500">Log as Meal</strong> records it as eaten today, counting toward your{" "}
+          <Link href="/nutrition" className="font-medium text-zinc-600 underline hover:text-zinc-900">daily nutrition totals</Link>.
+        </p>
       </div>
     </div>
   );
