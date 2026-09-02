@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
+import { readSlot, type PlanSlotValue } from "@/lib/nutrition";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -15,7 +16,8 @@ interface MealPlanRow {
   id: string;
   weekStartDate: string;
   weekEndDate: string;
-  plan: Record<Day, Record<MealSlot, string | null>>;
+  // Slot values may be legacy id strings or structured { recipeId, servings }.
+  plan: Record<Day, Record<MealSlot, PlanSlotValue>>;
   isSaved: boolean;
 }
 
@@ -57,8 +59,8 @@ const TEMPLATES: PlanTemplate[] = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function emptyPlan(): Record<Day, Record<MealSlot, string | null>> {
-  const plan = {} as Record<Day, Record<MealSlot, string | null>>;
+function emptyPlan(): Record<Day, Record<MealSlot, PlanSlotValue>> {
+  const plan = {} as Record<Day, Record<MealSlot, PlanSlotValue>>;
   for (const day of DAYS) {
     plan[day] = { Breakfast: null, Lunch: null, Dinner: null, "Snack 1": null, "Snack 2": null };
   }
@@ -76,13 +78,18 @@ function getWeekDates(): { start: string; end: string } {
   return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) };
 }
 
-function getDaySummary(plan: Record<MealSlot, string | null>, recipes: RecipeSummary[]): DaySummary {
+function getDaySummary(plan: Record<MealSlot, PlanSlotValue>, recipes: RecipeSummary[]): DaySummary {
   let calories = 0, protein = 0, carbs = 0, fat = 0;
   for (const slot of MEAL_SLOTS) {
-    const id = plan[slot];
-    if (!id) continue;
-    const r = recipes.find((rec) => rec.id === id);
-    if (r) { calories += r.calories; protein += r.protein; carbs += r.carbs; fat += r.fat; }
+    const entry = readSlot(plan[slot]);
+    if (!entry) continue;
+    const r = recipes.find((rec) => rec.id === entry.recipeId);
+    if (r) {
+      calories += r.calories * entry.servings;
+      protein += r.protein * entry.servings;
+      carbs += r.carbs * entry.servings;
+      fat += r.fat * entry.servings;
+    }
   }
   return { calories, protein, carbs, fat };
 }
@@ -150,7 +157,7 @@ export default function MealPlannerPage() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [savedPlans, setSavedPlans] = useState<MealPlanRow[]>([]);
-  const [clipboardDay, setClipboardDay] = useState<Record<MealSlot, string | null> | null>(null);
+  const [clipboardDay, setClipboardDay] = useState<Record<MealSlot, PlanSlotValue> | null>(null);
 
 
   useEffect(() => {
@@ -212,7 +219,7 @@ export default function MealPlannerPage() {
 
   // ── Persist ─────────────────────────────────────────────────────────────────
 
-  async function persistPlan(updatedPlan: Record<Day, Record<MealSlot, string | null>>, isSaved?: boolean) {
+  async function persistPlan(updatedPlan: Record<Day, Record<MealSlot, PlanSlotValue>>, isSaved?: boolean) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -483,15 +490,18 @@ export default function MealPlannerPage() {
                       <span className="text-xs font-medium text-zinc-500">{slot}</span>
                     </div>
                     {DAYS.map((day) => {
-                      const recipeId = mealPlan.plan[day][slot];
-                      const recipe = recipeId ? recipes.find((r) => r.id === recipeId) : null;
+                      const entry = readSlot(mealPlan.plan[day][slot]);
+                      const recipe = entry ? recipes.find((r) => r.id === entry.recipeId) : null;
+                      const servings = entry?.servings ?? 1;
                       return (
                         <div key={`${day}-${slot}`} className="rounded-lg border border-zinc-100 bg-white p-2 min-h-[70px] flex flex-col justify-between shadow-sm">
                           {recipe ? (
                             <>
                               <div>
-                                <p className="text-xs font-medium text-zinc-900 leading-tight line-clamp-2">{recipe.name}</p>
-                                <p className="mt-0.5 text-xs text-zinc-400">{recipe.calories}kcal</p>
+                                <p className="text-xs font-medium text-zinc-900 leading-tight line-clamp-2">
+                                  {recipe.name}{servings > 1 ? ` ×${servings}` : ""}
+                                </p>
+                                <p className="mt-0.5 text-xs text-zinc-400">{recipe.calories * servings}kcal</p>
                               </div>
                               <div className="mt-1 flex gap-1">
                                 <button type="button" onClick={() => updateSlot(day, slot, null)} aria-label="Remove" className="text-xs text-red-400 hover:text-red-600">Remove</button>

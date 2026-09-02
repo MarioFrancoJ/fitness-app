@@ -3,6 +3,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { readSlot, type PlanSlotValue } from "@/lib/nutrition";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -113,16 +114,19 @@ export default function ShoppingListPage() {
       return;
     }
 
-    // Extract recipe IDs from plan
-    const plan = planData.plan_data as Record<string, Record<string, string | null>>;
+    // Extract recipe IDs from plan. Slots may be legacy strings or structured
+    // { recipeId, servings } — readSlot normalizes both. The multiplier is the
+    // SUM of servings across occurrences (a 2x lunch buys 2x its ingredients).
+    const plan = planData.plan_data as Record<string, Record<string, PlanSlotValue>>;
     const recipeIds = new Set<string>();
     const recipeCounts: Record<string, number> = {};
 
     for (const day of Object.values(plan)) {
-      for (const id of Object.values(day)) {
-        if (id) {
-          recipeIds.add(id);
-          recipeCounts[id] = (recipeCounts[id] || 0) + 1;
+      for (const rawSlot of Object.values(day)) {
+        const entry = readSlot(rawSlot);
+        if (entry) {
+          recipeIds.add(entry.recipeId);
+          recipeCounts[entry.recipeId] = (recipeCounts[entry.recipeId] || 0) + entry.servings;
         }
       }
     }

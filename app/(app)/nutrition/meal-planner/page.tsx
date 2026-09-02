@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
+import { readSlot, type PlanSlotValue } from "@/lib/nutrition";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -12,7 +13,8 @@ const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
 
 type Day = (typeof DAYS)[number];
 type Meal = (typeof MEALS)[number];
-type MealPlan = Record<Day, Record<Meal, string | null>>; // recipe ID or null
+// A slot value may be a legacy recipe-id string or a structured entry.
+type MealPlan = Record<Day, Record<Meal, PlanSlotValue>>;
 
 interface RecipeSummary {
   id: string;
@@ -44,16 +46,28 @@ function getWeekDates(): { start: string; end: string } {
   return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) };
 }
 
-function getRecipe(id: string | null, recipes: RecipeSummary[]): RecipeSummary | undefined {
-  if (!id) return undefined;
-  return recipes.find((r) => r.id === id);
+/** Resolve a slot value (legacy string or structured) into recipe + servings. */
+function getSlot(
+  value: PlanSlotValue,
+  recipes: RecipeSummary[]
+): { recipe: RecipeSummary; servings: number } | undefined {
+  const entry = readSlot(value);
+  if (!entry) return undefined;
+  const recipe = recipes.find((r) => r.id === entry.recipeId);
+  if (!recipe) return undefined;
+  return { recipe, servings: entry.servings };
 }
 
 function dayTotals(plan: MealPlan, day: Day, recipes: RecipeSummary[]) {
   let calories = 0, protein = 0, carbs = 0, fat = 0;
   for (const meal of MEALS) {
-    const r = getRecipe(plan[day][meal], recipes);
-    if (r) { calories += r.calories; protein += r.protein; carbs += r.carbs; fat += r.fat; }
+    const s = getSlot(plan[day][meal], recipes);
+    if (s) {
+      calories += s.recipe.calories * s.servings;
+      protein += s.recipe.protein * s.servings;
+      carbs += s.recipe.carbs * s.servings;
+      fat += s.recipe.fat * s.servings;
+    }
   }
   return { calories, protein, carbs, fat };
 }
@@ -257,7 +271,9 @@ export default function MealPlannerPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {MEALS.map((meal) => {
-              const selected = getRecipe(plan[selectedDay][meal], recipes);
+              const slotData = getSlot(plan[selectedDay][meal], recipes);
+              const selected = slotData?.recipe;
+              const selectedServings = slotData?.servings ?? 1;
               return (
                 <div key={meal} className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
                   <div className="mb-3 flex items-center justify-between">
@@ -275,9 +291,11 @@ export default function MealPlannerPage() {
 
                   {selected ? (
                     <div className="rounded-lg bg-zinc-50 p-3">
-                      <p className="text-sm font-medium text-zinc-900">{selected.name}</p>
+                      <p className="text-sm font-medium text-zinc-900">
+                        {selected.name}{selectedServings > 1 ? ` ×${selectedServings}` : ""}
+                      </p>
                       <p className="mt-1 text-xs text-zinc-400">
-                        {selected.calories} kcal · P {selected.protein}g · C {selected.carbs}g · F {selected.fat}g
+                        {selected.calories * selectedServings} kcal · P {selected.protein * selectedServings}g · C {selected.carbs * selectedServings}g · F {selected.fat * selectedServings}g
                       </p>
                     </div>
                   ) : (
