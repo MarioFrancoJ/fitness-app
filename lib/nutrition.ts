@@ -54,11 +54,6 @@ export function readSlot(value: PlanSlotValue | undefined): PlanSlotEntry | null
   return null;
 }
 
-/** Convenience: extract just the recipe id from a slot (legacy-friendly). */
-export function readSlotRecipeId(value: PlanSlotValue | undefined): string | null {
-  return readSlot(value)?.recipeId ?? null;
-}
-
 // ── Assignment-based planning ────────────────────────────────────────────────
 
 export interface MealPlanAssignment {

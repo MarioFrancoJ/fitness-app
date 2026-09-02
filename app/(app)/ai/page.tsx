@@ -100,7 +100,7 @@ export default function AIDashboardPage() {
 
   const features = [
     { key: "aiCoach" as const, label: "AI Coach", description: "Personalized fitness coaching and Q&A", enabled: flags.aiCoach, href: "/ai/chat" },
-    { key: "aiMealPlanner" as const, label: "AI Meal Planner", description: "Generate meal plans based on your goals", enabled: flags.aiMealPlanner, href: "/meal-planner" },
+    { key: "aiMealPlanner" as const, label: "AI Meal Planner", description: "Generate meal plans based on your goals", enabled: flags.aiMealPlanner, href: "/nutrition/meal-planner" },
     { key: "aiWorkoutGenerator" as const, label: "AI Workout Generator", description: "Create custom workout programs", enabled: flags.aiWorkoutGenerator, href: "/workouts/new" },
     { key: "aiInsights" as const, label: "AI Insights", description: "Deep analysis of your progress data", enabled: flags.aiInsights, href: "/ai-coach" },
   ];
