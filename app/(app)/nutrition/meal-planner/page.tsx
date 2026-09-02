@@ -19,11 +19,26 @@ type MealPlan = Record<Day, Record<Meal, PlanSlotValue>>;
 interface RecipeSummary {
   id: string;
   name: string;
+  goal: string;
   calories: number;
   protein: number;
   carbs: number;
   fat: number;
 }
+
+// ── Templates (goal-based week fill, adapted to the 4-slot model) ────────────
+
+interface PlanTemplate {
+  name: string;
+  goal: string;
+  description: string;
+}
+
+const TEMPLATES: PlanTemplate[] = [
+  { name: "Fat Loss", goal: "Fat Loss", description: "Low-calorie plan focused on lean proteins and vegetables." },
+  { name: "Maintenance", goal: "Maintenance", description: "Balanced plan to maintain current weight and energy." },
+  { name: "Muscle Gain", goal: "Muscle Gain", description: "High-protein, high-calorie plan for muscle growth." },
+];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -113,6 +128,7 @@ export default function MealPlannerPage() {
   const [saving, setSaving] = useState(false);
   // Clipboard for Copy Day / Paste Day (holds one day's 4-slot map).
   const [clipboardDay, setClipboardDay] = useState<Record<Meal, PlanSlotValue> | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
   // The Monday of the week currently being edited. Starts on the current week.
   const [weekStart, setWeekStart] = useState<string>(() => currentWeekStart());
 
@@ -127,13 +143,14 @@ export default function MealPlannerPage() {
 
       const { data: recipesData } = await supabase
         .from("recipes")
-        .select("id, name, calories, protein, carbs, fat")
+        .select("id, name, goal, calories, protein, carbs, fat")
         .order("name");
 
       if (recipesData) {
         setRecipes(recipesData.map((r) => ({
           id: r.id,
           name: r.name,
+          goal: r.goal || "Maintenance",
           calories: r.calories || 0,
           protein: r.protein || 0,
           carbs: r.carbs || 0,
@@ -266,6 +283,36 @@ export default function MealPlannerPage() {
   // Whether the selected day has anything to copy/clear.
   const selectedDayHasMeals = MEALS.some((m) => readSlot(plan[selectedDay][m]) !== null);
 
+  // ── Templates (fill the whole week by goal, 4-slot model) ────────────────────
+
+  // Does the CURRENT week have any planned meal on any day/slot?
+  const weekHasMeals = DAYS.some((d) => MEALS.some((m) => readSlot(plan[d][m]) !== null));
+
+  function applyTemplate(template: PlanTemplate) {
+    const goalRecipes = recipes.filter((r) => r.goal === template.goal);
+    if (goalRecipes.length === 0) {
+      showToast(`No recipes match the ${template.name} goal`);
+      setShowTemplates(false);
+      return;
+    }
+
+    // Fill every day/slot by cycling through the goal's recipes (same approach
+    // as Planner B, mapped to the 4-slot MEALS array). Writes plain recipe-id
+    // strings, which readSlot normalizes everywhere (Calendar/Shopping List).
+    const newPlan = emptyPlan();
+    for (const day of DAYS) {
+      for (const meal of MEALS) {
+        const idx = (DAYS.indexOf(day) * MEALS.length + MEALS.indexOf(meal)) % goalRecipes.length;
+        newPlan[day][meal] = goalRecipes[idx].id;
+      }
+    }
+
+    setPlan(newPlan);
+    savePlan(newPlan);
+    setShowTemplates(false);
+    showToast(`${template.name} template applied`);
+  }
+
   const totals = useMemo(() => dayTotals(plan, selectedDay, recipes), [plan, selectedDay, recipes]);
 
   // Weekly totals
@@ -298,13 +345,22 @@ export default function MealPlannerPage() {
               {saving && <span className="ml-2 text-xs text-zinc-400">(Saving...)</span>}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleClearAll}
-            className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-          >
-            Clear Week
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowTemplates(true)}
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+            >
+              Templates
+            </button>
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+            >
+              Clear Week
+            </button>
+          </div>
         </div>
 
         {/* Week navigation — mirrors the Calendar's prev/next/today pattern */}
@@ -498,6 +554,100 @@ export default function MealPlannerPage() {
         </div>
       </div>
 
+      {/* Templates modal */}
+      {showTemplates && (
+        <TemplatesModal
+          weekHasMeals={weekHasMeals}
+          onApply={applyTemplate}
+          onClose={() => setShowTemplates(false)}
+        />
+      )}
     </>
+  );
+}
+
+// ── Templates modal ───────────────────────────────────────────────────────────
+
+function TemplatesModal({
+  weekHasMeals,
+  onApply,
+  onClose,
+}: {
+  weekHasMeals: boolean;
+  onApply: (t: PlanTemplate) => void;
+  onClose: () => void;
+}) {
+  // When the week already has meals, require an explicit confirm before a
+  // template overwrites it (rule #5).
+  const [pending, setPending] = useState<PlanTemplate | null>(null);
+
+  function handlePick(t: PlanTemplate) {
+    if (weekHasMeals) setPending(t);
+    else onApply(t);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Meal plan templates"
+      onClick={onClose}
+    >
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-zinc-900">Meal Plan Templates</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="text-zinc-400 hover:text-zinc-700">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+          </button>
+        </div>
+
+        {pending ? (
+          // Confirmation step (week not empty)
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-zinc-700">
+              This week already has planned meals. Applying the{" "}
+              <strong className="font-semibold">{pending.name}</strong> template will{" "}
+              <strong className="font-semibold text-red-600">overwrite the entire week</strong>. Continue?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPending(null)}
+                className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => onApply(pending)}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+              >
+                Overwrite week
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {weekHasMeals && (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                This week has planned meals — choosing a template will ask before overwriting.
+              </p>
+            )}
+            {TEMPLATES.map((t) => (
+              <button
+                key={t.name}
+                type="button"
+                onClick={() => handlePick(t)}
+                className="flex flex-col items-start rounded-xl border border-zinc-200 p-4 text-left transition-colors hover:border-zinc-400 hover:bg-zinc-50"
+              >
+                <p className="text-sm font-semibold text-zinc-900">{t.name}</p>
+                <p className="mt-0.5 text-xs text-zinc-400">{t.description}</p>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
