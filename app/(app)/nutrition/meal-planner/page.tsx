@@ -20,6 +20,7 @@ interface RecipeSummary {
   id: string;
   name: string;
   goal: string;
+  imageUrl: string | null;
   calories: number;
   protein: number;
   carbs: number;
@@ -89,6 +90,29 @@ function formatWeekRange(weekStart: string): string {
   return `${startStr} – ${endStr}, ${end.getUTCFullYear()}`;
 }
 
+// ── Meal-slot identity (gives Breakfast/Lunch/Dinner/Snack a visual mood) ─────
+const MEAL_META: Record<string, { icon: string; accent: string; tint: string }> = {
+  Breakfast: { icon: "🍳", accent: "text-amber-600", tint: "bg-amber-50" },
+  Lunch: { icon: "🥗", accent: "text-emerald-600", tint: "bg-emerald-50" },
+  Dinner: { icon: "🍽️", accent: "text-indigo-600", tint: "bg-indigo-50" },
+  Snack: { icon: "🍎", accent: "text-rose-600", tint: "bg-rose-50" },
+};
+
+/** Small recipe photo thumbnail (falls back to a soft food glyph). */
+function MealThumb({ imageUrl, name, className = "" }: { imageUrl: string | null; name: string; className?: string }) {
+  if (imageUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={imageUrl} alt={name} className={`object-cover ${className}`} />;
+  }
+  return (
+    <div className={`flex items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-200 text-zinc-300 ${className}`}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-1/3 w-1/3" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
+  );
+}
+
 /** Resolve a slot value (legacy string or structured) into recipe + servings. */
 function getSlot(
   value: PlanSlotValue,
@@ -149,7 +173,7 @@ export default function MealPlannerPage() {
 
       const { data: recipesData } = await supabase
         .from("recipes")
-        .select("id, name, goal, calories, protein, carbs, fat")
+        .select("id, name, goal, image_url, calories, protein, carbs, fat")
         .order("name");
 
       if (recipesData) {
@@ -157,6 +181,7 @@ export default function MealPlannerPage() {
           id: r.id,
           name: r.name,
           goal: r.goal || "Maintenance",
+          imageUrl: r.image_url || null,
           calories: r.calories || 0,
           protein: r.protein || 0,
           carbs: r.carbs || 0,
@@ -679,7 +704,10 @@ export default function MealPlannerPage() {
               return (
                 <div key={meal} className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
                   <div className="mb-3 flex items-center justify-between">
-                    <p className="text-sm font-semibold text-zinc-700">{meal}</p>
+                    <p className={`inline-flex items-center gap-1.5 text-sm font-semibold ${MEAL_META[meal].accent}`}>
+                      <span className="text-base leading-none">{MEAL_META[meal].icon}</span>
+                      {meal}
+                    </p>
                     {selected && (
                       <button
                         type="button"
@@ -692,16 +720,19 @@ export default function MealPlannerPage() {
                   </div>
 
                   {selected ? (
-                    <div className="rounded-lg bg-zinc-50 p-3">
-                      <p className="text-sm font-medium text-zinc-900">
-                        {selected.name}{selectedServings > 1 ? ` ×${selectedServings}` : ""}
-                      </p>
-                      <p className="mt-1 text-xs text-zinc-500">
-                        {selected.calories * selectedServings} kcal
-                      </p>
-                      <p className="mt-0.5 text-xs text-zinc-400">
-                        {selected.protein * selectedServings}g Prot. · {selected.carbs * selectedServings}g Carb. · {selected.fat * selectedServings}g Fat
-                      </p>
+                    <div className="flex gap-3 rounded-lg bg-zinc-50 p-2">
+                      <MealThumb imageUrl={selected.imageUrl} name={selected.name} className="h-16 w-16 shrink-0 rounded-lg" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-zinc-900">
+                          {selected.name}{selectedServings > 1 ? ` ×${selectedServings}` : ""}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          {selected.calories * selectedServings} kcal
+                        </p>
+                        <p className="mt-0.5 text-xs text-zinc-400">
+                          {selected.protein * selectedServings}g Prot. · {selected.carbs * selectedServings}g Carb. · {selected.fat * selectedServings}g Fat
+                        </p>
+                      </div>
                     </div>
                   ) : (
                     <button
@@ -730,22 +761,22 @@ export default function MealPlannerPage() {
         ) : (
           <div className="hidden lg:block overflow-x-auto">
             <div className="min-w-[880px]">
-              {/* Header row: day names + per-day tools */}
-              <div className="grid grid-cols-[88px_repeat(7,1fr)] gap-1">
+              {/* Header row: soft day labels + per-day tools (menu board, not a calendar bar) */}
+              <div className="grid grid-cols-[104px_repeat(7,1fr)] gap-2">
                 <div />
                 {DAYS.map((day) => (
-                  <div key={day} className="flex flex-col items-center gap-1.5 rounded-t-lg bg-zinc-900 px-1 py-2">
-                    <span className="text-xs font-semibold text-white">{day.slice(0, 3)}</span>
-                    <div className="flex items-center gap-1">
+                  <div key={day} className="flex items-center justify-between px-1 pb-1">
+                    <span className="text-sm font-bold tracking-tight text-zinc-800">{day.slice(0, 3)}</span>
+                    <div className="flex items-center gap-0.5">
                       <button
                         type="button"
                         onClick={() => copyDayOf(day)}
                         disabled={!dayHasMeals(day)}
                         title={`Copy ${day}`}
                         aria-label={`Copy ${day}`}
-                        className="flex h-5 w-5 items-center justify-center rounded bg-white/10 text-zinc-200 transition-colors hover:bg-white/20 hover:text-white disabled:opacity-25"
+                        className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-30"
                       >
-                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3" aria-hidden="true"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h5A1.5 1.5 0 0 1 15 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-5A1.5 1.5 0 0 1 7 12.5v-9Z" /><path d="M5 6.5A1.5 1.5 0 0 0 3.5 8v8A1.5 1.5 0 0 0 5 17.5h5A1.5 1.5 0 0 0 11.5 16H8.5A2.5 2.5 0 0 1 6 13.5V6.5H5Z" /></svg>
+                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h5A1.5 1.5 0 0 1 15 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-5A1.5 1.5 0 0 1 7 12.5v-9Z" /><path d="M5 6.5A1.5 1.5 0 0 0 3.5 8v8A1.5 1.5 0 0 0 5 17.5h5A1.5 1.5 0 0 0 11.5 16H8.5A2.5 2.5 0 0 1 6 13.5V6.5H5Z" /></svg>
                       </button>
                       <button
                         type="button"
@@ -753,9 +784,9 @@ export default function MealPlannerPage() {
                         disabled={!clipboardDay}
                         title={`Paste to ${day}`}
                         aria-label={`Paste to ${day}`}
-                        className="flex h-5 w-5 items-center justify-center rounded bg-emerald-500/20 text-emerald-200 transition-colors hover:bg-emerald-500/40 hover:text-white disabled:opacity-25"
+                        className="flex h-6 w-6 items-center justify-center rounded-md text-emerald-500 transition-colors hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-30"
                       >
-                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3" aria-hidden="true"><path d="M8 2a2 2 0 0 0-1.94 1.5H5.5A1.5 1.5 0 0 0 4 5v11a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 16 16V5a1.5 1.5 0 0 0-1.5-1.5h-.56A2 2 0 0 0 12 2H8Zm0 1.5h4a.5.5 0 0 1 .5.5v.5h-5V4a.5.5 0 0 1 .5-.5Z" /></svg>
+                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true"><path d="M8 2a2 2 0 0 0-1.94 1.5H5.5A1.5 1.5 0 0 0 4 5v11a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 16 16V5a1.5 1.5 0 0 0-1.5-1.5h-.56A2 2 0 0 0 12 2H8Zm0 1.5h4a.5.5 0 0 1 .5.5v.5h-5V4a.5.5 0 0 1 .5-.5Z" /></svg>
                       </button>
                       <button
                         type="button"
@@ -763,74 +794,80 @@ export default function MealPlannerPage() {
                         disabled={!dayHasMeals(day)}
                         title={`Clear ${day}`}
                         aria-label={`Clear ${day}`}
-                        className="flex h-5 w-5 items-center justify-center rounded bg-red-500/20 text-red-200 transition-colors hover:bg-red-500/40 hover:text-white disabled:opacity-25"
+                        className="flex h-6 w-6 items-center justify-center rounded-md text-red-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-30"
                       >
-                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3" aria-hidden="true"><path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41 41 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5Z" clipRule="evenodd" /></svg>
+                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true"><path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41 41 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5Z" clipRule="evenodd" /></svg>
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* One row per meal slot */}
-              {MEALS.map((meal) => (
-                <div key={meal} className="mt-1 grid grid-cols-[88px_repeat(7,1fr)] gap-1">
-                  <div className="flex items-center justify-end pr-2">
-                    <span className="text-xs font-medium text-zinc-500">{meal}</span>
+              {/* One row per meal slot — each slot has its own identity (icon + tint) */}
+              {MEALS.map((meal) => {
+                const m = MEAL_META[meal];
+                return (
+                <div key={meal} className="mt-2 grid grid-cols-[104px_repeat(7,1fr)] gap-2">
+                  <div className={`flex items-center gap-2 rounded-xl ${m.tint} px-3`}>
+                    <span className="text-base leading-none">{m.icon}</span>
+                    <span className={`text-sm font-semibold ${m.accent}`}>{meal}</span>
                   </div>
                   {DAYS.map((day) => {
                     const slotData = getSlot(plan[day][meal], recipes);
                     const selected = slotData?.recipe;
                     const servings = slotData?.servings ?? 1;
-                    return (
-                      <div key={`${day}-${meal}`} className="flex min-h-[64px] flex-col justify-between rounded-lg border border-zinc-100 bg-white p-1.5 shadow-sm">
-                        {selected ? (
-                          <>
-                            <div className="min-w-0">
-                              <p className="line-clamp-2 text-xs font-medium leading-tight text-zinc-900">
-                                {selected.name}{servings > 1 ? ` ×${servings}` : ""}
-                              </p>
-                              <p className="mt-0.5 text-[11px] text-zinc-400">{selected.calories * servings} kcal</p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => clearSlotFor(day, meal)}
-                              className="mt-1 self-start text-[11px] font-medium text-red-400 transition-colors hover:text-red-600"
-                            >
-                              Remove
-                            </button>
-                          </>
-                        ) : (
+                    return selected ? (
+                      // Filled slot = a little menu card with the recipe photo
+                      <div key={`${day}-${meal}`} className="group relative overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+                        <div className="relative h-16 w-full">
+                          <MealThumb imageUrl={selected.imageUrl} name={selected.name} className="h-16 w-full" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                          <p className="absolute inset-x-1.5 bottom-1 line-clamp-2 text-[11px] font-semibold leading-tight text-white drop-shadow">
+                            {selected.name}{servings > 1 ? ` ×${servings}` : ""}
+                          </p>
                           <button
                             type="button"
-                            onClick={() => setPickerTarget({ day, meal })}
-                            aria-label={`Add recipe for ${day} ${meal}`}
-                            className="flex h-full min-h-[52px] w-full items-center justify-center gap-1 rounded-md text-xs font-medium text-zinc-400 transition-colors hover:bg-zinc-50 hover:text-zinc-700"
+                            onClick={() => clearSlotFor(day, meal)}
+                            aria-label={`Remove ${selected.name} from ${day} ${meal}`}
+                            title="Remove"
+                            className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100"
                           >
-                            <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true"><path d="M10 5a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 10 5Z" /></svg>
-                            Add
+                            <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
                           </button>
-                        )}
+                        </div>
+                        <p className="px-1.5 py-1 text-[10px] font-medium text-zinc-400">{selected.calories * servings} kcal</p>
                       </div>
+                    ) : (
+                      <button
+                        key={`${day}-${meal}`}
+                        type="button"
+                        onClick={() => setPickerTarget({ day, meal })}
+                        aria-label={`Add recipe for ${day} ${meal}`}
+                        className="flex min-h-[92px] w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-zinc-200 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-600"
+                      >
+                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path d="M10 5a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 10 5Z" /></svg>
+                        Add
+                      </button>
                     );
                   })}
                 </div>
-              ))}
+                );
+              })}
 
               {/* Per-day totals row */}
-              <div className="mt-1 grid grid-cols-[88px_repeat(7,1fr)] gap-1">
-                <div className="flex items-center justify-end pr-2">
-                  <span className="text-xs font-semibold text-zinc-500">Totals</span>
+              <div className="mt-2 grid grid-cols-[104px_repeat(7,1fr)] gap-2">
+                <div className="flex items-center pl-3">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Totals</span>
                 </div>
                 {DAYS.map((day) => {
                   const t = dayTotals(plan, day, recipes);
                   return (
-                    <div key={`${day}-totals`} className="rounded-lg border border-zinc-100 bg-zinc-50 p-1.5 text-center">
+                    <div key={`${day}-totals`} className="rounded-xl bg-zinc-50 p-1.5 text-center">
                       <p className="text-xs font-bold text-zinc-900">{t.calories}<span className="font-normal text-zinc-400"> kcal</span></p>
-                      <div className="mt-0.5 flex justify-center gap-1 text-[11px]">
-                        <span className="text-blue-600">P{t.protein}</span>
-                        <span className="text-amber-600">C{t.carbs}</span>
-                        <span className="text-emerald-600">F{t.fat}</span>
+                      <div className="mt-0.5 flex justify-center gap-1.5 text-[11px]">
+                        <span className="text-blue-600">{t.protein}P</span>
+                        <span className="text-amber-600">{t.carbs}C</span>
+                        <span className="text-emerald-600">{t.fat}F</span>
                       </div>
                     </div>
                   );
@@ -1015,9 +1052,10 @@ function RecipePicker({
                   <button
                     type="button"
                     onClick={() => onSelect(r.id)}
-                    className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-zinc-50"
+                    className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-zinc-50"
                   >
-                    <span className="min-w-0">
+                    <MealThumb imageUrl={r.imageUrl} name={r.name} className="h-11 w-11 shrink-0 rounded-lg" />
+                    <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-zinc-900">{r.name}</span>
                       <span className="block text-xs text-zinc-400">
                         {r.calories} kcal · {r.protein}g Prot. · {r.carbs}g Carb. · {r.fat}g Fat
