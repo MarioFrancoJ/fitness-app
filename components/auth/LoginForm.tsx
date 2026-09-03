@@ -14,6 +14,7 @@ import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Google icon ───────────────────────────────────────────────────────────────
 
@@ -41,6 +42,8 @@ interface LoginFormProps {
 
 export default function LoginForm({ redirectTo = "/dashboard", callbackError }: LoginFormProps) {
   const router = useRouter();
+  const { dict } = useDictionary();
+  const t = dict.auth.login;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -51,11 +54,11 @@ export default function LoginForm({ redirectTo = "/dashboard", callbackError }: 
     setError("");
 
     if (!email.trim()) {
-      setError("Email is required.");
+      setError(t.validationEmailRequired);
       return;
     }
     if (!password) {
-      setError("Password is required.");
+      setError(t.validationPasswordRequired);
       return;
     }
 
@@ -70,7 +73,7 @@ export default function LoginForm({ redirectTo = "/dashboard", callbackError }: 
     if (authError) {
       setError(
         authError.message === "Invalid login credentials"
-          ? "Invalid email or password."
+          ? t.errorInvalidCredentials
           : authError.message
       );
       setIsSubmitting(false);
@@ -97,10 +100,10 @@ export default function LoginForm({ redirectTo = "/dashboard", callbackError }: 
         {/* Header */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900">
-            Sign in to your account
+            {t.title}
           </h2>
           <p className="mt-1.5 text-sm text-zinc-500">
-            Welcome back! Please enter your details.
+            {t.subtitle}
           </p>
         </div>
 
@@ -116,7 +119,7 @@ export default function LoginForm({ redirectTo = "/dashboard", callbackError }: 
           {callbackError && (
             <div className="rounded-lg bg-amber-50 px-4 py-3" role="alert">
               <p className="text-sm font-medium text-amber-700">
-                Authentication error. Please try again.
+                {t.callbackError}
               </p>
             </div>
           )}
@@ -125,8 +128,8 @@ export default function LoginForm({ redirectTo = "/dashboard", callbackError }: 
           <Input
             id="email"
             type="email"
-            label="Email"
-            placeholder="you@example.com"
+            label={t.fieldEmail}
+            placeholder={t.fieldEmailPlaceholder}
             autoComplete="email"
             value={email}
             onChange={(e) => { setEmail(e.target.value); if (error) setError(""); }}
@@ -136,19 +139,19 @@ export default function LoginForm({ redirectTo = "/dashboard", callbackError }: 
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <label htmlFor="password" className="text-sm font-medium text-zinc-700">
-                Password
+                {t.fieldPassword}
               </label>
               <Link
                 href="/forgot-password"
                 className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900"
               >
-                Forgot password?
+                {t.forgotPassword}
               </Link>
             </div>
             <Input
               id="password"
               type="password"
-              placeholder="••••••••"
+              placeholder={t.fieldPasswordPlaceholder}
               autoComplete="current-password"
               value={password}
               onChange={(e) => { setPassword(e.target.value); if (error) setError(""); }}
@@ -157,31 +160,31 @@ export default function LoginForm({ redirectTo = "/dashboard", callbackError }: 
 
           {/* Sign in button */}
           <Button type="submit" fullWidth disabled={isSubmitting}>
-            {isSubmitting ? "Signing in…" : "Sign In"}
+            {isSubmitting ? t.signingIn : t.signInButton}
           </Button>
 
           {/* Divider */}
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-zinc-200" />
-            <span className="text-xs text-zinc-400">OR</span>
+            <span className="text-xs text-zinc-400">{t.dividerOr}</span>
             <div className="h-px flex-1 bg-zinc-200" />
           </div>
 
           {/* Google OAuth */}
           <Button type="button" variant="outline" fullWidth onClick={handleGoogleSignIn}>
             <GoogleIcon />
-            Continue with Google
+            {t.continueWithGoogle}
           </Button>
         </form>
 
         {/* Footer */}
         <p className="mt-6 text-center text-sm text-zinc-500">
-          Don&apos;t have an account?{" "}
+          {t.noAccount}{" "}
           <Link
             href="/register"
             className="font-semibold text-zinc-900 transition-colors hover:text-zinc-600"
           >
-            Create account
+            {t.createAccountLink}
           </Link>
         </p>
       </div>

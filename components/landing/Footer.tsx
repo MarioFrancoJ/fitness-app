@@ -1,33 +1,40 @@
-const footerLinks = [
-  {
-    heading: "Product",
-    links: [
-      { label: "Features", href: "#features" },
-      { label: "Pricing", href: "#pricing" },
-      { label: "FAQ", href: "#faq" },
-      { label: "Changelog", href: "#" },
-    ],
-  },
-  {
-    heading: "Company",
-    links: [
-      { label: "About", href: "#" },
-      { label: "Blog", href: "#" },
-      { label: "Careers", href: "#" },
-      { label: "Contact", href: "#" },
-    ],
-  },
-  {
-    heading: "Legal",
-    links: [
-      { label: "Privacy Policy", href: "/privacy" },
-      { label: "Terms of Service", href: "/terms" },
-      { label: "Cookie Policy", href: "#" },
-    ],
-  },
-];
+"use client";
+
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 export default function Footer() {
+  const { dict } = useDictionary();
+  const f = dict.footer;
+
+  const footerLinks = [
+    {
+      heading: f.columns.product,
+      links: [
+        { label: f.links.features, href: "#features" },
+        { label: f.links.pricing, href: "#pricing" },
+        { label: f.links.faq, href: "#faq" },
+        { label: f.links.changelog, href: "#" },
+      ],
+    },
+    {
+      heading: f.columns.company,
+      links: [
+        { label: f.links.about, href: "#" },
+        { label: f.links.blog, href: "#" },
+        { label: f.links.careers, href: "#" },
+        { label: f.links.contact, href: "#" },
+      ],
+    },
+    {
+      heading: f.columns.legal,
+      links: [
+        { label: f.links.privacyPolicy, href: "/privacy" },
+        { label: f.links.termsOfService, href: "/terms" },
+        { label: f.links.cookiePolicy, href: "#" },
+      ],
+    },
+  ];
+
   return (
     <footer className="border-t border-zinc-100 bg-white py-16">
       <div className="mx-auto max-w-6xl px-6">
@@ -35,11 +42,10 @@ export default function Footer() {
           {/* Brand */}
           <div className="flex flex-col gap-4">
             <span className="text-lg font-semibold tracking-tight text-zinc-900">
-              FitnessApp
+              {dict.common.appName}
             </span>
             <p className="text-sm leading-relaxed text-zinc-400">
-              The modern platform for coaches and athletes who are serious about
-              results.
+              {f.tagline}
             </p>
           </div>
 
@@ -67,8 +73,8 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-zinc-100 pt-8 text-xs text-zinc-400 sm:flex-row">
-          <p>© {new Date().getFullYear()} FitnessApp. All rights reserved.</p>
-          <p>Built with Next.js and Tailwind CSS.</p>
+          <p>{f.copyright.replace("{year}", String(new Date().getFullYear()))}</p>
+          <p>{f.builtWith}</p>
         </div>
       </div>
     </footer>

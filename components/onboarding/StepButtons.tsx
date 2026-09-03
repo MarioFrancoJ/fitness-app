@@ -11,8 +11,8 @@ interface StepButtonsProps {
 export default function StepButtons({
   onNext,
   onBack,
-  nextLabel = "Continue",
-  backLabel = "Back",
+  nextLabel,
+  backLabel,
   isNextDisabled = false,
 }: StepButtonsProps) {
   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { locales, type Locale } from "@/lib/i18n/config";
 import { setLocaleCookie } from "@/lib/i18n/actions";
 
@@ -16,12 +16,17 @@ interface LanguageSwitcherProps {
 
 export default function LanguageSwitcher({ currentLocale }: LanguageSwitcherProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   function handleSwitch(locale: Locale) {
     if (locale === currentLocale) return;
     startTransition(async () => {
+      // Persist the choice + revalidate server caches, then refresh the router
+      // so the current route's RSC payload (and the dictionary passed through it)
+      // is re-fetched and every component re-renders in the new language.
       await setLocaleCookie(locale, pathname);
+      router.refresh();
     });
   }
 

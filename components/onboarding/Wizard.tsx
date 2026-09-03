@@ -7,6 +7,10 @@ import StepCard from "./StepCard";
 import StepButtons from "./StepButtons";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
+import PublicLanguageSwitcher from "@/components/i18n/PublicLanguageSwitcher";
+
+type OnboardingDict = ReturnType<typeof useDictionary>["dict"]["auth"]["onboarding"];
 
 // ── Shared profile state ──────────────────────────────────────────────────────
 
@@ -59,18 +63,18 @@ async function saveProfileToSupabase(profile: UserProfile) {
 
 // ── Step 1 ────────────────────────────────────────────────────────────────────
 
-const onboardingFeatures = [
-  { icon: "🏋", label: "Personalized Workouts" },
-  { icon: "📏", label: "Body Measurements" },
-  { icon: "🍽", label: "Nutrition Plan" },
-  { icon: "📅", label: "Training Schedule" },
-];
+function Step1({ t, onNext }: { t: OnboardingDict; onNext: () => void }) {
+  const onboardingFeatures = [
+    { icon: "🏋", label: t.featurePersonalizedWorkouts },
+    { icon: "📏", label: t.featureBodyMeasurements },
+    { icon: "🍽", label: t.featureNutritionPlan },
+    { icon: "📅", label: t.featureTrainingSchedule },
+  ];
 
-function Step1({ onNext }: { onNext: () => void }) {
   return (
     <StepCard
-      title="Your Fitness Journey Starts Now"
-      subtitle="We'll build a personalized fitness plan based on your goals, body measurements, nutrition preferences and training schedule."
+      title={t.step1Title}
+      subtitle={t.step1Subtitle}
     >
       {/* Feature cards */}
       <div className="mb-6 grid grid-cols-2 gap-3">
@@ -90,10 +94,10 @@ function Step1({ onNext }: { onNext: () => void }) {
         <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
           <path fillRule="evenodd" d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8.5-3a.75.75 0 0 0-1.5 0v3c0 .414.336.75.75.75H10a.75.75 0 0 0 0-1.5H8.5V5Z" clipRule="evenodd" />
         </svg>
-        Estimated setup time: Less than 2 minutes
+        {t.setupTime}
       </p>
 
-      <StepButtons onNext={onNext} nextLabel="Continue" />
+      <StepButtons onNext={onNext} nextLabel={t.continue} />
     </StepCard>
   );
 }
@@ -101,20 +105,14 @@ function Step1({ onNext }: { onNext: () => void }) {
 
 // ── Step 2 — Fitness Goal ─────────────────────────────────────────────────────
 
-const goalOptions = [
-  { icon: "🔥", label: "Lose Fat", value: "Lose Fat" },
-  { icon: "💪", label: "Build Muscle", value: "Build Muscle" },
-  { icon: "⚖️", label: "Maintain Weight", value: "Maintain Weight" },
-  { icon: "🏃", label: "Improve Performance", value: "Improve Performance" },
-  { icon: "🤸", label: "Calisthenics Skills", value: "Calisthenics Skills" },
-];
-
 function Step2({
+  t,
   profile,
   onProfileChange,
   onNext,
   onBack,
 }: {
+  t: OnboardingDict;
   profile: UserProfile;
   onProfileChange: (field: keyof UserProfile, value: string | number | null) => void;
   onNext: () => void;
@@ -122,9 +120,17 @@ function Step2({
 }) {
   const [error, setError] = useState("");
 
+  const goalOptions = [
+    { icon: "🔥", label: t.goalLoseFat, value: "Lose Fat" },
+    { icon: "💪", label: t.goalBuildMuscle, value: "Build Muscle" },
+    { icon: "⚖️", label: t.goalMaintainWeight, value: "Maintain Weight" },
+    { icon: "🏃", label: t.goalImprovePerformance, value: "Improve Performance" },
+    { icon: "🤸", label: t.goalCalisthenics, value: "Calisthenics Skills" },
+  ];
+
   function handleNext() {
     if (!profile.goal) {
-      setError("Please select a fitness goal.");
+      setError(t.step2Error);
       return;
     }
     setError("");
@@ -138,8 +144,8 @@ function Step2({
 
   return (
     <StepCard
-      title="What is your primary fitness goal?"
-      subtitle="We'll use your goal to personalize your workouts, nutrition and recommendations."
+      title={t.step2Title}
+      subtitle={t.step2Subtitle}
     >
       <div className="mb-6 flex flex-col gap-2.5">
         {goalOptions.map((option) => {
@@ -174,7 +180,7 @@ function Step2({
         <p className="mb-4 text-xs text-red-500" role="alert">{error}</p>
       )}
 
-      <StepButtons onNext={handleNext} onBack={onBack} nextLabel="Continue" />
+      <StepButtons onNext={handleNext} onBack={onBack} nextLabel={t.continue} backLabel={t.back} />
     </StepCard>
   );
 }
@@ -185,29 +191,39 @@ type Gender = "Male" | "Female" | "Other";
 
 interface Step3Errors { age?: string; gender?: string; height?: string; weight?: string }
 
-function validateStep3(p: UserProfile): Step3Errors {
+function validateStep3(p: UserProfile, t: OnboardingDict): Step3Errors {
   const errors: Step3Errors = {};
 
   const age = parseInt(p.age, 10);
-  if (!p.age.trim()) errors.age = "Age is required.";
-  else if (isNaN(age) || age < 10 || age > 120) errors.age = "Enter a valid age between 10 and 120.";
+  if (!p.age.trim()) errors.age = t.errorAgeRequired;
+  else if (isNaN(age) || age < 10 || age > 120) errors.age = t.errorAgeInvalid;
 
-  if (!p.gender) errors.gender = "Please select your gender.";
+  if (!p.gender) errors.gender = t.errorGenderRequired;
 
   const height = parseFloat(p.height);
-  if (!p.height.trim()) errors.height = "Height is required.";
-  else if (isNaN(height) || height < 50 || height > 300) errors.height = "Enter a valid height between 50 and 300 cm.";
+  if (!p.height.trim()) errors.height = t.errorHeightRequired;
+  else if (isNaN(height) || height < 50 || height > 300) errors.height = t.errorHeightInvalid;
 
   const weight = parseFloat(p.weight);
-  if (!p.weight.trim()) errors.weight = "Weight is required.";
-  else if (isNaN(weight) || weight < 20 || weight > 500) errors.weight = "Enter a valid weight between 20 and 500 kg.";
+  if (!p.weight.trim()) errors.weight = t.errorWeightRequired;
+  else if (isNaN(weight) || weight < 20 || weight > 500) errors.weight = t.errorWeightInvalid;
 
   return errors;
 }
 
+function genderLabel(g: Gender, t: OnboardingDict): string {
+  switch (g) {
+    case "Male": return t.genderMale;
+    case "Female": return t.genderFemale;
+    case "Other": return t.genderOther;
+    default: return g;
+  }
+}
+
 function Step3({
-  profile, onChange, onProfileChange, onNext, onBack,
+  t, profile, onChange, onProfileChange, onNext, onBack,
 }: {
+  t: OnboardingDict;
   profile: UserProfile;
   onChange: (field: keyof UserProfile, value: string) => void;
   onProfileChange: (field: keyof UserProfile, value: string | number | null) => void;
@@ -217,7 +233,7 @@ function Step3({
   const [errors, setErrors] = useState<Step3Errors>({});
 
   function handleNext() {
-    const errs = validateStep3(profile);
+    const errs = validateStep3(profile, t);
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setErrors({});
     onNext();
@@ -236,17 +252,17 @@ function Step3({
 
   return (
     <StepCard
-      title="Tell us about your body"
-      subtitle="We'll use this information to estimate your calories and macros."
+      title={t.step3Title}
+      subtitle={t.step3Subtitle}
     >
       <div className="flex flex-col gap-5">
         {/* Age */}
-        <Input id="age" type="number" label="Age" placeholder="e.g. 28"
+        <Input id="age" type="number" label={t.fieldAge} placeholder={t.fieldAgePlaceholder}
           min={10} max={120} value={profile.age} onChange={handleChange} error={errors.age} />
 
         {/* Gender */}
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-zinc-700">Gender</span>
+          <span className="text-sm font-medium text-zinc-700">{t.fieldGender}</span>
           <div className="flex gap-2">
             {(["Male", "Female", "Other"] as Gender[]).map((g) => (
               <button
@@ -262,7 +278,7 @@ function Step3({
                     : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400 hover:text-zinc-900",
                 ].join(" ")}
               >
-                {g}
+                {genderLabel(g, t)}
               </button>
             ))}
           </div>
@@ -270,15 +286,15 @@ function Step3({
         </div>
 
         {/* Height */}
-        <Input id="height" type="number" label="Height (cm)" placeholder="e.g. 175"
+        <Input id="height" type="number" label={t.fieldHeight} placeholder={t.fieldHeightPlaceholder}
           min={50} max={300} step={0.1} value={profile.height} onChange={handleChange} error={errors.height} />
 
         {/* Weight */}
-        <Input id="weight" type="number" label="Weight (kg)" placeholder="e.g. 72"
+        <Input id="weight" type="number" label={t.fieldWeight} placeholder={t.fieldWeightPlaceholder}
           min={20} max={500} step={0.1} value={profile.weight} onChange={handleChange} error={errors.weight} />
       </div>
 
-      <StepButtons onNext={handleNext} onBack={onBack} nextLabel="Continue" />
+      <StepButtons onNext={handleNext} onBack={onBack} nextLabel={t.continue} backLabel={t.back} />
     </StepCard>
   );
 }
@@ -287,20 +303,14 @@ function Step3({
 
 type ActivityLevel = "Sedentary" | "Lightly Active" | "Moderately Active" | "Very Active" | "Athlete";
 
-const activityOptions: { value: ActivityLevel; icon: string; description: string }[] = [
-  { value: "Sedentary",         icon: "🪑", description: "Little or no exercise" },
-  { value: "Lightly Active",    icon: "🚶", description: "Light exercise 1–3 days/week" },
-  { value: "Moderately Active", icon: "🏃", description: "Moderate exercise 3–5 days/week" },
-  { value: "Very Active",       icon: "🏋", description: "Hard exercise 6–7 days/week" },
-  { value: "Athlete",           icon: "⚡", description: "Professional or twice-daily training" },
-];
-
 function Step4({
+  t,
   profile,
   onProfileChange,
   onFinish,
   onBack,
 }: {
+  t: OnboardingDict;
   profile: UserProfile;
   onProfileChange: (field: keyof UserProfile, value: string | number | null) => void;
   onFinish: () => void;
@@ -308,9 +318,17 @@ function Step4({
 }) {
   const [error, setError] = useState("");
 
+  const activityOptions: { value: ActivityLevel; icon: string; label: string; description: string }[] = [
+    { value: "Sedentary",         icon: "🪑", label: t.activitySedentary,         description: t.activitySedentaryDesc },
+    { value: "Lightly Active",    icon: "🚶", label: t.activityLightlyActive,     description: t.activityLightlyActiveDesc },
+    { value: "Moderately Active", icon: "🏃", label: t.activityModeratelyActive,  description: t.activityModeratelyActiveDesc },
+    { value: "Very Active",       icon: "🏋", label: t.activityVeryActive,        description: t.activityVeryActiveDesc },
+    { value: "Athlete",           icon: "⚡", label: t.activityAthlete,           description: t.activityAthleteDesc },
+  ];
+
   function handleFinish() {
     if (!profile.activityLevel) {
-      setError("Please select your activity level.");
+      setError(t.step4Error);
       return;
     }
     setError("");
@@ -325,8 +343,8 @@ function Step4({
 
   return (
     <StepCard
-      title="How active are you?"
-      subtitle="This helps us estimate your daily calorie needs."
+      title={t.step4Title}
+      subtitle={t.step4Subtitle}
     >
       <div className="mb-6 flex flex-col gap-2.5">
         {activityOptions.map((option) => {
@@ -347,7 +365,7 @@ function Step4({
             >
               <span className="text-xl" aria-hidden="true">{option.icon}</span>
               <div className="flex flex-col">
-                <span className="text-sm font-semibold">{option.value}</span>
+                <span className="text-sm font-semibold">{option.label}</span>
                 <span className={`text-xs ${selected ? "text-zinc-300" : "text-zinc-400"}`}>
                   {option.description}
                 </span>
@@ -366,7 +384,7 @@ function Step4({
         <p className="mb-4 text-xs text-red-500" role="alert">{error}</p>
       )}
 
-      <StepButtons onNext={handleFinish} onBack={onBack} nextLabel="Finish Setup" />
+      <StepButtons onNext={handleFinish} onBack={onBack} nextLabel={t.finishSetup} backLabel={t.back} />
     </StepCard>
   );
 }
@@ -375,6 +393,8 @@ function Step4({
 
 export default function Wizard() {
   const router = useRouter();
+  const { dict } = useDictionary();
+  const t = dict.auth.onboarding;
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState<UserProfile>(INITIAL_PROFILE);
 
@@ -395,19 +415,29 @@ export default function Wizard() {
 
   return (
     <div className="w-full max-w-lg">
-      <div className="mb-6">
-        <ProgressBar currentStep={step} totalSteps={TOTAL_STEPS} />
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="flex-1">
+          <ProgressBar
+            currentStep={step}
+            totalSteps={TOTAL_STEPS}
+            stepLabel={t.stepProgress
+              .replace("{current}", String(step))
+              .replace("{total}", String(TOTAL_STEPS))}
+            progressLabel={t.progressLabel}
+          />
+        </div>
+        <PublicLanguageSwitcher />
       </div>
 
-      {step === 1 && <Step1 onNext={goNext} />}
+      {step === 1 && <Step1 t={t} onNext={goNext} />}
       {step === 2 && (
-        <Step2 profile={profile} onProfileChange={handleChange} onNext={goNext} onBack={goBack} />
+        <Step2 t={t} profile={profile} onProfileChange={handleChange} onNext={goNext} onBack={goBack} />
       )}
       {step === 3 && (
-        <Step3 profile={profile} onChange={handleStringChange} onProfileChange={handleChange} onNext={goNext} onBack={goBack} />
+        <Step3 t={t} profile={profile} onChange={handleStringChange} onProfileChange={handleChange} onNext={goNext} onBack={goBack} />
       )}
       {step === 4 && (
-        <Step4 profile={profile} onProfileChange={handleChange} onFinish={handleFinish} onBack={goBack} />
+        <Step4 t={t} profile={profile} onProfileChange={handleChange} onFinish={handleFinish} onBack={goBack} />
       )}
     </div>
   );

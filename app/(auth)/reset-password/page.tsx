@@ -11,9 +11,12 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const { dict } = useDictionary();
+  const t = dict.auth.resetPassword;
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -26,11 +29,11 @@ export default function ResetPasswordPage() {
     setError("");
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError(t.validationPasswordLength);
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(t.validationPasswordsMismatch);
       return;
     }
 
@@ -63,8 +66,8 @@ export default function ResetPasswordPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-zinc-900">Password updated</h2>
-          <p className="mt-2 text-sm text-zinc-500">Your password has been changed successfully. Redirecting…</p>
+          <h2 className="text-lg font-semibold text-zinc-900">{t.successTitle}</h2>
+          <p className="mt-2 text-sm text-zinc-500">{t.successDescription}</p>
         </div>
       </div>
     );
@@ -73,30 +76,30 @@ export default function ResetPasswordPage() {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">New password</h1>
-        <p className="mt-1.5 text-sm text-zinc-500">Enter your new password. It must be at least 8 characters.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
+        <p className="mt-1.5 text-sm text-zinc-500">{t.subtitle}</p>
       </div>
 
       <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
         {error && (<div className="rounded-lg bg-red-50 px-4 py-3" role="alert"><p className="text-sm font-medium text-red-700">{error}</p></div>)}
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="password" className="text-sm font-medium text-zinc-700">New password</label>
-          <input id="password" type="password" placeholder="Minimum 8 characters" autoComplete="new-password" value={password}
+          <label htmlFor="password" className="text-sm font-medium text-zinc-700">{t.fieldNewPassword}</label>
+          <input id="password" type="password" placeholder={t.fieldNewPasswordPlaceholder} autoComplete="new-password" value={password}
             onChange={(e) => { setPassword(e.target.value); if (error) setError(""); }}
             className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500" />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="confirmPassword" className="text-sm font-medium text-zinc-700">Confirm password</label>
-          <input id="confirmPassword" type="password" placeholder="Repeat your password" autoComplete="new-password" value={confirmPassword}
+          <label htmlFor="confirmPassword" className="text-sm font-medium text-zinc-700">{t.fieldConfirmPassword}</label>
+          <input id="confirmPassword" type="password" placeholder={t.fieldConfirmPasswordPlaceholder} autoComplete="new-password" value={confirmPassword}
             onChange={(e) => { setConfirmPassword(e.target.value); if (error) setError(""); }}
             className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500" />
         </div>
 
         <button type="submit" disabled={loading}
           className="mt-1 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50">
-          {loading ? "Updating…" : "Update password"}
+          {loading ? t.updating : t.submitButton}
         </button>
       </form>
     </div>

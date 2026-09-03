@@ -14,6 +14,9 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
+
+type RegisterDict = ReturnType<typeof useDictionary>["dict"]["auth"]["register"];
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,33 +38,33 @@ interface FormErrors {
 
 // ── Validation ───────────────────────────────────────────────────────────────
 
-function validate(fields: FormFields): FormErrors {
+function validate(fields: FormFields, t: RegisterDict): FormErrors {
   const errors: FormErrors = {};
 
   if (!fields.name.trim()) {
-    errors.name = "Full name is required.";
+    errors.name = t.validationNameRequired;
   }
 
   if (!fields.email.trim()) {
-    errors.email = "Email is required.";
+    errors.email = t.validationEmailRequired;
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)) {
-    errors.email = "Enter a valid email address.";
+    errors.email = t.validationEmailInvalid;
   }
 
   if (!fields.password) {
-    errors.password = "Password is required.";
+    errors.password = t.validationPasswordRequired;
   } else if (fields.password.length < 8) {
-    errors.password = "Password must be at least 8 characters.";
+    errors.password = t.validationPasswordLength;
   }
 
   if (!fields.confirmPassword) {
-    errors.confirmPassword = "Please confirm your password.";
+    errors.confirmPassword = t.validationConfirmRequired;
   } else if (fields.password !== fields.confirmPassword) {
-    errors.confirmPassword = "Passwords do not match.";
+    errors.confirmPassword = t.validationPasswordsMismatch;
   }
 
   if (!fields.terms) {
-    errors.terms = "You must accept the terms to continue.";
+    errors.terms = t.validationTermsRequired;
   }
 
   return errors;
@@ -71,6 +74,8 @@ function validate(fields: FormFields): FormErrors {
 
 export default function RegisterForm() {
   const router = useRouter();
+  const { dict } = useDictionary();
+  const t = dict.auth.register;
 
   const [fields, setFields] = useState<FormFields>({
     name: "",
@@ -100,7 +105,7 @@ export default function RegisterForm() {
     e.preventDefault();
     setGeneralError("");
 
-    const validationErrors = validate(fields);
+    const validationErrors = validate(fields, t);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
@@ -122,7 +127,7 @@ export default function RegisterForm() {
     if (authError) {
       setGeneralError(
         authError.message.includes("already registered")
-          ? "This email is already registered."
+          ? t.errorEmailRegistered
           : authError.message
       );
       setIsSubmitting(false);
@@ -156,10 +161,10 @@ export default function RegisterForm() {
         {/* Header */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900">
-            Create your account
+            {t.title}
           </h2>
           <p className="mt-1.5 text-sm text-zinc-500">
-            Start your fitness journey today. It&apos;s free.
+            {t.subtitle}
           </p>
         </div>
 
@@ -175,8 +180,8 @@ export default function RegisterForm() {
           <Input
             id="name"
             type="text"
-            label="Full Name"
-            placeholder="Alex Johnson"
+            label={t.fieldFullName}
+            placeholder={t.fieldFullNamePlaceholder}
             autoComplete="name"
             value={fields.name}
             onChange={handleChange}
@@ -187,8 +192,8 @@ export default function RegisterForm() {
           <Input
             id="email"
             type="email"
-            label="Email"
-            placeholder="you@example.com"
+            label={t.fieldEmail}
+            placeholder={t.fieldEmailPlaceholder}
             autoComplete="email"
             value={fields.email}
             onChange={handleChange}
@@ -199,8 +204,8 @@ export default function RegisterForm() {
           <Input
             id="password"
             type="password"
-            label="Password"
-            placeholder="Min. 8 characters"
+            label={t.fieldPassword}
+            placeholder={t.fieldPasswordPlaceholder}
             autoComplete="new-password"
             value={fields.password}
             onChange={handleChange}
@@ -211,8 +216,8 @@ export default function RegisterForm() {
           <Input
             id="confirmPassword"
             type="password"
-            label="Confirm Password"
-            placeholder="Repeat your password"
+            label={t.fieldConfirmPassword}
+            placeholder={t.fieldConfirmPasswordPlaceholder}
             autoComplete="new-password"
             value={fields.confirmPassword}
             onChange={handleChange}
@@ -230,19 +235,19 @@ export default function RegisterForm() {
                 className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 accent-zinc-900"
               />
               <span className="text-sm text-zinc-600">
-                I agree to the{" "}
+                {t.termsAgree}{" "}
                 <Link
                   href="/terms"
                   className="font-medium text-zinc-900 underline underline-offset-2 hover:text-zinc-600"
                 >
-                  Terms of Service
+                  {t.termsOfService}
                 </Link>{" "}
-                and{" "}
+                {t.termsAnd}{" "}
                 <Link
                   href="/privacy"
                   className="font-medium text-zinc-900 underline underline-offset-2 hover:text-zinc-600"
                 >
-                  Privacy Policy
+                  {t.privacyPolicy}
                 </Link>
               </span>
             </label>
@@ -255,18 +260,18 @@ export default function RegisterForm() {
 
           {/* Submit */}
           <Button type="submit" fullWidth disabled={isSubmitting}>
-            {isSubmitting ? "Creating account…" : "Create Account"}
+            {isSubmitting ? t.creatingAccount : t.createAccountButton}
           </Button>
         </form>
 
         {/* Footer */}
         <p className="mt-6 text-center text-sm text-zinc-500">
-          Already have an account?{" "}
+          {t.alreadyHaveAccount}{" "}
           <Link
             href="/login"
             className="font-semibold text-zinc-900 transition-colors hover:text-zinc-600"
           >
-            Sign in
+            {t.signInLink}
           </Link>
         </p>
       </div>

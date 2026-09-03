@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { getLocaleCookie } from "@/lib/i18n/actions";
+import { getDictionary } from "@/lib/i18n/getDictionary";
+import PublicDictionaryProvider from "@/components/i18n/PublicDictionaryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,17 +21,24 @@ export const metadata: Metadata = {
     "Personalized workouts, nutrition plans and progress tracking in one modern platform.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocaleCookie();
+  const dict = await getDictionary(locale);
+
   return (
     <html
-      lang="en"
+      lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-white text-zinc-900">{children}</body>
+      <body className="min-h-full bg-white text-zinc-900">
+        <PublicDictionaryProvider locale={locale} dict={dict}>
+          {children}
+        </PublicDictionaryProvider>
+      </body>
     </html>
   );
 }
