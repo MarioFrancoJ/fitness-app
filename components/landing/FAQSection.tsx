@@ -8,7 +8,7 @@ type FAQItem = {
   answer: string;
 };
 
-const FAQ_KEYS = ["noCoach", "aiCoach", "switchPlans", "coachManage"] as const;
+const FAQ_KEYS = ["aiCoach", "switchPlans"] as const;
 
 function FAQItem({ question, answer }: FAQItem) {
   const [open, setOpen] = useState(false);

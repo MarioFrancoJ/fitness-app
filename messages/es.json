@@ -114,14 +114,14 @@
   "features": {
     "eyebrow": "Todo lo que necesitas",
     "headline": "Diseñado para resultados serios",
-    "subtitle": "Cada función está pensada con un solo objetivo: ayudarte a ti y a tu entrenador a trabajar mejor juntos.",
+    "subtitle": "Cada función está pensada con un solo objetivo: ayudarte a alcanzar tus objetivos fitness más rápido.",
     "items": {
-      "workoutPrograms": { "title": "Programas de entrenamiento", "description": "Planes de entrenamiento estructurados de varias semanas creados por entrenadores certificados. Adapta la intensidad, el volumen y el descanso a tu horario." },
+      "workoutPrograms": { "title": "Programas de entrenamiento", "description": "Planes de entrenamiento estructurados y progresivos de varias semanas. Adapta la intensidad, el volumen y el descanso a tu horario." },
       "nutritionPlans": { "title": "Planes de nutrición", "description": "Planes de comidas equilibrados en macros alineados con tu objetivo: definir, aumentar o mantener. Se ajustan automáticamente a medida que cambia tu peso." },
       "progressTracking": { "title": "Seguimiento del progreso", "description": "Registra medidas corporales, sube fotos de progreso y visualiza tendencias a lo largo de semanas y meses con gráficos claros." },
       "aiCoach": { "title": "Entrenador IA", "description": "Chatea con un asistente fitness de IA que conoce tu programa, tus métricas recientes y tus objetivos para darte consejos según tu contexto." },
       "mealPlanning": { "title": "Planificación de comidas", "description": "Crea planes de comidas semanales a partir de una biblioteca de más de 500.000 alimentos. Genera listas de compras automáticas para cualquier rango de fechas." },
-      "analytics": { "title": "Analíticas", "description": "Los entrenadores obtienen paneles de seguimiento. Los clientes obtienen informes de volumen, rachas y tendencias de composición corporal, todo en una sola vista." }
+      "analytics": { "title": "Analíticas", "description": "Sigue tu progreso, tu adherencia y tus tendencias personales. Consulta tu volumen, tus rachas y tus métricas de composición corporal para mantener la consistencia, todo en una sola vista." }
     }
   },
   "pricing": {
@@ -209,10 +209,6 @@
     "eyebrow": "Preguntas frecuentes",
     "headline": "Preguntas comunes",
     "items": {
-      "noCoach": {
-        "question": "¿Puedo usar FitnessApp sin un entrenador?",
-        "answer": "Sí. Puedes registrarte como cliente por tu cuenta y usar todas las funciones principales —programas de entrenamiento, seguimiento de nutrición, fotos de progreso y el entrenador IA— de forma independiente. Siempre puedes conectar con un entrenador más adelante si quieres una experiencia más personalizada."
-      },
       "aiCoach": {
         "question": "¿Cómo funciona el entrenador IA?",
         "answer": "El entrenador IA es un asistente conversacional impulsado por GPT-4o. Tiene acceso a tu programa actual, tus medidas recientes y tus objetivos dietéticos, para poder responder preguntas, sugerir alternativas de recetas, modificar ejercicios y ayudarte a mantener el rumbo, siempre en el contexto de tus datos reales."
@@ -220,10 +216,6 @@
       "switchPlans": {
         "question": "¿Puedo cambiar de plan en cualquier momento?",
         "answer": "Por supuesto. Puedes mejorar o bajar de plan en cualquier momento desde los ajustes de tu cuenta. Las mejoras se aplican de inmediato. Al bajar de plan, conservas las funciones Pro hasta el final del periodo de facturación actual."
-      },
-      "coachManage": {
-        "question": "¿Cómo gestionan los entrenadores a sus clientes?",
-        "answer": "Los entrenadores disponen de un panel dedicado donde pueden invitar clientes por correo, asignar programas de entrenamiento y planes de comidas personalizados, supervisar métricas de cumplimiento y programar eventos de seguimiento. Los datos de cada cliente están aislados: los entrenadores solo ven a los clientes asignados a su cuenta."
       }
     }
   },
