@@ -149,8 +149,7 @@
     "toastUpdateFailed": "Failed to update plan. Please try again.",
     "plans": {
       "basic": { "name": "Basic", "price": "$0", "period": "forever", "description": "Get started for free.", "cta": "Start Free" },
-      "pro": { "name": "Pro", "price": "$9.99", "period": "/mo", "description": "For serious athletes.", "cta": "Upgrade to Premium" },
-      "elite": { "name": "Elite", "price": "$7.99", "period": "/mo", "description": "Best value, billed yearly.", "cta": "Upgrade to Premium" }
+      "pro": { "name": "Pro", "price": "$9.99", "period": "/mo", "description": "For serious athletes.", "cta": "Upgrade to Premium" }
     },
     "landing": {
       "eyebrow": "Pricing",
@@ -220,7 +219,7 @@
     }
   },
   "footer": {
-    "tagline": "The modern platform for coaches and athletes who are serious about results.",
+    "tagline": "The modern platform for people who are serious about their fitness goals.",
     "copyright": "© {year} FitnessApp. All rights reserved.",
     "builtWith": "Built with Next.js and Tailwind CSS.",
     "columns": {
