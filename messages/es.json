@@ -201,23 +201,6 @@
             "Generador de listas de compras",
             "Soporte prioritario"
           ]
-        },
-        "elite": {
-          "name": "Elite",
-          "price": "$12.99",
-          "priceMonthly": "$12.99",
-          "priceYearly": "$119",
-          "approxMonthly": "$9.92",
-          "description": "Para entrenadores que gestionan varios clientes.",
-          "cta": "Obtener Elite",
-          "features": [
-            "Todo lo de Pro",
-            "Gestiona hasta 20 clientes",
-            "Panel de cumplimiento de clientes",
-            "Programas con marca personalizada",
-            "Entrenador IA — mensajes ilimitados",
-            "Gestor de cuenta dedicado"
-          ]
         }
       }
     }

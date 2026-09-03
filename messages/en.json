@@ -201,23 +201,6 @@
             "Shopping list generator",
             "Priority support"
           ]
-        },
-        "elite": {
-          "name": "Elite",
-          "price": "$12.99",
-          "priceMonthly": "$12.99",
-          "priceYearly": "$119",
-          "approxMonthly": "$9.92",
-          "description": "For coaches managing multiple clients.",
-          "cta": "Go Elite",
-          "features": [
-            "Everything in Pro",
-            "Manage up to 20 clients",
-            "Client compliance dashboard",
-            "Custom branded programs",
-            "AI Coach — unlimited messages",
-            "Dedicated account manager"
-          ]
         }
       }
     }

@@ -10,7 +10,7 @@ type BillingCycle = "monthly" | "yearly";
 // (favors retention + annual conversion). Switch to "monthly" here to change it.
 const DEFAULT_CYCLE: BillingCycle = "yearly";
 
-type PlanKey = "basic" | "pro" | "elite";
+type PlanKey = "basic" | "pro";
 
 // Parse a formatted price like "$5.99" into a number (5.99). Returns null for
 // non-numeric prices (e.g. "Free"), so callers can skip savings math.
@@ -36,18 +36,18 @@ export default function PricingSection() {
   const [cycle, setCycle] = useState<BillingCycle>(DEFAULT_CYCLE);
   const isYearly = cycle === "yearly";
 
-  // Highest real savings across paid plans — drives the "Save up to X%" badge
+  // Real yearly savings on the paid plan — drives the "Save up to X%" badge
   // on the yearly toggle, so the headline claim is always accurate.
-  const maxSavings = (["pro", "elite"] as PlanKey[]).reduce((max, key) => {
+  const maxSavings = (["pro"] as PlanKey[]).reduce((max, key) => {
     const pct = yearlySavingsPct(p.plans[key].priceMonthly, p.plans[key].priceYearly);
     return pct !== null && pct > max ? pct : max;
   }, 0);
 
+  // Two-plan lineup for individual users: Basic (Free) + Pro (paid, highlighted).
   const planOrder: { key: PlanKey; highlighted: boolean }[] = [
     { key: "basic", highlighted: false },
     // Pro is the highlighted "Most Popular" card — the primary Free → paid jump.
     { key: "pro", highlighted: true },
-    { key: "elite", highlighted: false },
   ];
 
   return (
@@ -106,8 +106,8 @@ export default function PricingSection() {
           </div>
         </div>
 
-        {/* Cards */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        {/* Cards — 2 plans centered */}
+        <div className="mx-auto grid max-w-3xl gap-6 sm:grid-cols-2">
           {planOrder.map(({ key, highlighted }) => {
             const plan = p.plans[key];
             const price = isYearly ? plan.priceYearly : plan.priceMonthly;
