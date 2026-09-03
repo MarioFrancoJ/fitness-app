@@ -98,25 +98,30 @@
   },
   "hero": {
     "headline": "Transform Your Fitness Journey",
+    "headlinePrefix": "Transform Your",
+    "headlineHighlight": "Fitness Journey",
     "subtitle": "Personalized workouts, nutrition plans and progress tracking in one modern platform.",
     "badge": "New",
+    "publicBeta": "Now in public beta",
+    "ctaStartFree": "Start Free",
+    "ctaLogin": "Login",
     "stats": {
       "activeUsers": "Active Users",
       "workoutsLogged": "Workouts Logged",
-      "goalCompletion": "Goal Completion"
+      "goalCompletion": "Avg. Goal Completion"
     }
   },
   "features": {
-    "eyebrow": "Features",
-    "headline": "Everything you need to succeed",
-    "subtitle": "A complete platform for your fitness goals.",
+    "eyebrow": "Everything you need",
+    "headline": "Built for serious results",
+    "subtitle": "Every feature is designed around one goal — helping you and your coach work better together.",
     "items": {
-      "workoutPrograms": { "title": "Workout Programs", "description": "Personalized training plans for every goal." },
-      "nutritionPlans": { "title": "Nutrition Plans", "description": "Meal planning and macro tracking." },
-      "progressTracking": { "title": "Progress Tracking", "description": "Track weight, measurements and photos." },
-      "aiCoach": { "title": "AI Coach", "description": "Personalized fitness guidance." },
-      "mealPlanning": { "title": "Meal Planning", "description": "Weekly meal plans and shopping lists." },
-      "analytics": { "title": "Analytics", "description": "Deep insights into your progress." }
+      "workoutPrograms": { "title": "Workout Programs", "description": "Structured multi-week training plans built by certified coaches. Adapt intensity, volume, and rest to your schedule." },
+      "nutritionPlans": { "title": "Nutrition Plans", "description": "Macro-balanced meal plans aligned with your goal — cut, bulk, or maintain. Automatically adjusts as your weight changes." },
+      "progressTracking": { "title": "Progress Tracking", "description": "Log body measurements, upload progress photos, and visualise trends across weeks and months with clear charts." },
+      "aiCoach": { "title": "AI Coach", "description": "Chat with an AI fitness assistant that knows your program, your recent metrics, and your goals to give contextual advice." },
+      "mealPlanning": { "title": "Meal Planning", "description": "Build weekly meal plans from a library of 500,000+ foods. Auto-generate shopping lists for any date range." },
+      "analytics": { "title": "Analytics", "description": "Coaches get compliance dashboards. Clients get volume, streak, and body-composition trend reports — all in one view." }
     }
   },
   "pricing": {
@@ -146,20 +151,102 @@
       "basic": { "name": "Basic", "price": "$0", "period": "forever", "description": "Get started for free.", "cta": "Start Free" },
       "pro": { "name": "Pro", "price": "$9.99", "period": "/mo", "description": "For serious athletes.", "cta": "Upgrade to Premium" },
       "elite": { "name": "Elite", "price": "$7.99", "period": "/mo", "description": "Best value, billed yearly.", "cta": "Upgrade to Premium" }
+    },
+    "landing": {
+      "eyebrow": "Pricing",
+      "headline": "Simple, transparent pricing",
+      "subtitle": "Start for free. Upgrade when you're ready. No hidden fees.",
+      "mostPopular": "Most Popular",
+      "periodFreeForever": "Free forever",
+      "periodPerMonth": "per month",
+      "plans": {
+        "basic": {
+          "name": "Basic",
+          "price": "$0",
+          "description": "Get started with the essentials.",
+          "cta": "Start Free",
+          "features": [
+            "1 active workout program",
+            "Food diary (up to 7 days history)",
+            "Body weight tracking",
+            "Access to exercise library",
+            "Community support"
+          ]
+        },
+        "pro": {
+          "name": "Pro",
+          "price": "$19",
+          "description": "Everything you need to reach your goals.",
+          "cta": "Get Pro",
+          "features": [
+            "Unlimited workout programs",
+            "Full nutrition & meal planning",
+            "Progress photos & measurements",
+            "AI Coach — 200 messages/month",
+            "Shopping list generator",
+            "Priority support"
+          ]
+        },
+        "elite": {
+          "name": "Elite",
+          "price": "$49",
+          "description": "For coaches managing multiple clients.",
+          "cta": "Go Elite",
+          "features": [
+            "Everything in Pro",
+            "Manage up to 20 clients",
+            "Client compliance dashboard",
+            "Custom branded programs",
+            "AI Coach — unlimited messages",
+            "Dedicated account manager"
+          ]
+        }
+      }
     }
   },
   "faq": {
     "eyebrow": "FAQ",
-    "headline": "Frequently Asked Questions"
+    "headline": "Common questions",
+    "items": {
+      "noCoach": {
+        "question": "Can I use FitnessApp without a coach?",
+        "answer": "Yes. You can self-register as a client and use all the core features — workout programs, nutrition tracking, progress photos, and the AI Coach — independently. You can always connect with a coach later if you want a more personalised experience."
+      },
+      "aiCoach": {
+        "question": "How does the AI Coach work?",
+        "answer": "The AI Coach is a conversational assistant powered by GPT-4o. It has access to your current program, recent measurements, and dietary goals so it can answer questions, suggest recipe alternatives, modify exercises, and keep you on track — all within the context of your actual data."
+      },
+      "switchPlans": {
+        "question": "Can I switch plans at any time?",
+        "answer": "Absolutely. You can upgrade or downgrade your plan at any point from your account settings. Upgrades take effect immediately. When downgrading, you retain Pro features until the end of the current billing period."
+      },
+      "coachManage": {
+        "question": "How do coaches manage their clients?",
+        "answer": "Coaches get a dedicated dashboard where they can invite clients via email, assign custom workout programs and meal plans, monitor compliance metrics, and schedule check-in events. Each client's data is isolated — coaches only see the clients assigned to their account."
+      }
+    }
   },
   "footer": {
-    "tagline": "Transform your fitness journey.",
-    "copyright": "© 2026 FitnessApp. All rights reserved.",
-    "builtWith": "Built with Next.js",
+    "tagline": "The modern platform for coaches and athletes who are serious about results.",
+    "copyright": "© {year} FitnessApp. All rights reserved.",
+    "builtWith": "Built with Next.js and Tailwind CSS.",
     "columns": {
       "product": "Product",
       "company": "Company",
       "legal": "Legal"
+    },
+    "links": {
+      "features": "Features",
+      "pricing": "Pricing",
+      "faq": "FAQ",
+      "changelog": "Changelog",
+      "about": "About",
+      "blog": "Blog",
+      "careers": "Careers",
+      "contact": "Contact",
+      "privacyPolicy": "Privacy Policy",
+      "termsOfService": "Terms of Service",
+      "cookiePolicy": "Cookie Policy"
     }
   },
   "dashboard": {
@@ -1370,6 +1457,33 @@
       "validationTermsRequired": "You must accept the terms to continue.",
       "errorEmailRegistered": "This email is already registered."
     },
+    "forgotPassword": {
+      "title": "Forgot password",
+      "subtitle": "Enter your email and we'll send you a link to reset your password.",
+      "fieldEmail": "Email",
+      "fieldEmailPlaceholder": "you@example.com",
+      "submitButton": "Send recovery link",
+      "sending": "Sending…",
+      "backToLogin": "← Back to login",
+      "successTitle": "Check your email",
+      "successDescription": "We sent a recovery link to {email}. Check your inbox.",
+      "validationEmailRequired": "Email is required.",
+      "validationEmailInvalid": "Please enter a valid email address."
+    },
+    "resetPassword": {
+      "title": "New password",
+      "subtitle": "Enter your new password. It must be at least 8 characters.",
+      "fieldNewPassword": "New password",
+      "fieldNewPasswordPlaceholder": "Minimum 8 characters",
+      "fieldConfirmPassword": "Confirm password",
+      "fieldConfirmPasswordPlaceholder": "Repeat your password",
+      "submitButton": "Update password",
+      "updating": "Updating…",
+      "successTitle": "Password updated",
+      "successDescription": "Your password has been changed successfully. Redirecting…",
+      "validationPasswordLength": "Password must be at least 8 characters.",
+      "validationPasswordsMismatch": "Passwords do not match."
+    },
     "beta": {
       "badge": "BETA",
       "title": "Join the FitnessApp Beta",
@@ -1446,7 +1560,10 @@
       "activityVeryActiveDesc": "Hard exercise 6–7 days/week",
       "activityAthleteDesc": "Professional or twice-daily training",
       "step4Error": "Please select your activity level.",
-      "finishSetup": "Finish Setup"
+      "finishSetup": "Finish Setup",
+      "back": "Back",
+      "stepProgress": "Step {current} of {total}",
+      "progressLabel": "Onboarding progress"
     }
   },
   "feedback": {

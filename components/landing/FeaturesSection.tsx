@@ -1,57 +1,40 @@
-const features = [
-  {
-    icon: "⚡",
-    title: "Workout Programs",
-    description:
-      "Structured multi-week training plans built by certified coaches. Adapt intensity, volume, and rest to your schedule.",
-  },
-  {
-    icon: "🥗",
-    title: "Nutrition Plans",
-    description:
-      "Macro-balanced meal plans aligned with your goal — cut, bulk, or maintain. Automatically adjusts as your weight changes.",
-  },
-  {
-    icon: "📈",
-    title: "Progress Tracking",
-    description:
-      "Log body measurements, upload progress photos, and visualise trends across weeks and months with clear charts.",
-  },
-  {
-    icon: "🤖",
-    title: "AI Coach",
-    description:
-      "Chat with an AI fitness assistant that knows your program, your recent metrics, and your goals to give contextual advice.",
-  },
-  {
-    icon: "🍽️",
-    title: "Meal Planning",
-    description:
-      "Build weekly meal plans from a library of 500,000+ foods. Auto-generate shopping lists for any date range.",
-  },
-  {
-    icon: "📊",
-    title: "Analytics",
-    description:
-      "Coaches get compliance dashboards. Clients get volume, streak, and body-composition trend reports — all in one view.",
-  },
-];
+"use client";
+
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
+
+const ICONS = ["⚡", "🥗", "📈", "🤖", "🍽️", "📊"] as const;
+const ITEM_KEYS = [
+  "workoutPrograms",
+  "nutritionPlans",
+  "progressTracking",
+  "aiCoach",
+  "mealPlanning",
+  "analytics",
+] as const;
 
 export default function FeaturesSection() {
+  const { dict } = useDictionary();
+  const f = dict.features;
+
+  const features = ITEM_KEYS.map((key, i) => ({
+    icon: ICONS[i],
+    title: f.items[key].title,
+    description: f.items[key].description,
+  }));
+
   return (
     <section id="features" className="bg-zinc-50 py-24">
       <div className="mx-auto max-w-6xl px-6">
         {/* Heading */}
         <div className="mb-16 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-widest text-zinc-400">
-            Everything you need
+            {f.eyebrow}
           </p>
           <h2 className="text-4xl font-bold tracking-tight text-zinc-900">
-            Built for serious results
+            {f.headline}
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-base text-zinc-500">
-            Every feature is designed around one goal — helping you and your
-            coach work better together.
+            {f.subtitle}
           </p>
         </div>
 

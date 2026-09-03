@@ -1,77 +1,65 @@
+"use client";
+
+import Link from "next/link";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
+
 type Plan = {
   name: string;
   price: string;
   period: string;
   description: string;
-  features: string[];
+  features: readonly string[];
   cta: string;
   highlighted: boolean;
 };
 
-const plans: Plan[] = [
-  {
-    name: "Basic",
-    price: "$0",
-    period: "Free forever",
-    description: "Get started with the essentials.",
-    features: [
-      "1 active workout program",
-      "Food diary (up to 7 days history)",
-      "Body weight tracking",
-      "Access to exercise library",
-      "Community support",
-    ],
-    cta: "Start Free",
-    highlighted: false,
-  },
-  {
-    name: "Pro",
-    price: "$19",
-    period: "per month",
-    description: "Everything you need to reach your goals.",
-    features: [
-      "Unlimited workout programs",
-      "Full nutrition & meal planning",
-      "Progress photos & measurements",
-      "AI Coach — 200 messages/month",
-      "Shopping list generator",
-      "Priority support",
-    ],
-    cta: "Get Pro",
-    highlighted: true,
-  },
-  {
-    name: "Elite",
-    price: "$49",
-    period: "per month",
-    description: "For coaches managing multiple clients.",
-    features: [
-      "Everything in Pro",
-      "Manage up to 20 clients",
-      "Client compliance dashboard",
-      "Custom branded programs",
-      "AI Coach — unlimited messages",
-      "Dedicated account manager",
-    ],
-    cta: "Go Elite",
-    highlighted: false,
-  },
-];
-
 export default function PricingSection() {
+  const { dict } = useDictionary();
+  const p = dict.pricing.landing;
+
+  const plans: Plan[] = [
+    {
+      name: p.plans.basic.name,
+      price: p.plans.basic.price,
+      period: p.periodFreeForever,
+      description: p.plans.basic.description,
+      features: p.plans.basic.features,
+      cta: p.plans.basic.cta,
+      highlighted: false,
+    },
+    {
+      name: p.plans.pro.name,
+      price: p.plans.pro.price,
+      period: p.periodPerMonth,
+      description: p.plans.pro.description,
+      features: p.plans.pro.features,
+      cta: p.plans.pro.cta,
+      highlighted: true,
+    },
+    {
+      name: p.plans.elite.name,
+      price: p.plans.elite.price,
+      period: p.periodPerMonth,
+      description: p.plans.elite.description,
+      features: p.plans.elite.features,
+      cta: p.plans.elite.cta,
+      highlighted: false,
+    },
+  ];
+
   return (
     <section id="pricing" className="py-24">
       <div className="mx-auto max-w-6xl px-6">
         {/* Heading */}
         <div className="mb-16 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-widest text-zinc-400">
-            Pricing
+            {p.eyebrow}
           </p>
           <h2 className="text-4xl font-bold tracking-tight text-zinc-900">
-            Simple, transparent pricing
+            {p.headline}
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-base text-zinc-500">
-            Start for free. Upgrade when you're ready. No hidden fees.
+            {p.subtitle}
           </p>
         </div>
 
@@ -89,27 +77,19 @@ export default function PricingSection() {
               {plan.highlighted && (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-zinc-900 shadow">
-                    Most Popular
+                    {p.mostPopular}
                   </span>
                 </div>
               )}
 
               {/* Plan name + price */}
               <div className="mb-6">
-                <p
-                  className={`mb-4 text-sm font-semibold uppercase tracking-widest ${
-                    plan.highlighted ? "text-zinc-400" : "text-zinc-400"
-                  }`}
-                >
+                <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-zinc-400">
                   {plan.name}
                 </p>
                 <div className="flex items-end gap-1">
                   <span className="text-4xl font-bold">{plan.price}</span>
-                  <span
-                    className={`mb-1 text-sm ${
-                      plan.highlighted ? "text-zinc-400" : "text-zinc-400"
-                    }`}
-                  >
+                  <span className="mb-1 text-sm text-zinc-400">
                     {plan.period}
                   </span>
                 </div>
@@ -145,7 +125,7 @@ export default function PricingSection() {
               </ul>
 
               {/* CTA */}
-              <a
+              <Link
                 href="/register"
                 className={`block rounded-lg py-2.5 text-center text-sm font-semibold transition-colors ${
                   plan.highlighted
@@ -154,7 +134,7 @@ export default function PricingSection() {
                 }`}
               >
                 {plan.cta}
-              </a>
+              </Link>
             </div>
           ))}
         </div>

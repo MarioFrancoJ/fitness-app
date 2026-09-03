@@ -22,7 +22,16 @@ export async function setLocaleCookie(locale: Locale, redirectPath = "/") {
     secure: process.env.NODE_ENV === "production",
   });
 
-  revalidatePath(redirectPath, "layout");
+  // Revalidate the entire tree from the root layout down. Every layout
+  // ((app), (admin) and the public root) reads the locale cookie and rebuilds
+  // its dictionary, so a root "layout" revalidation ensures all routes pick up
+  // the new language. The client also calls router.refresh() after this action.
+  revalidatePath("/", "layout");
+  // Keep the caller's current path revalidated too (defensive; usually covered
+  // by the root layout revalidation above).
+  if (redirectPath && redirectPath !== "/") {
+    revalidatePath(redirectPath, "layout");
+  }
 }
 
 /**

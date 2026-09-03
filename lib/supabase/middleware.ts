@@ -15,8 +15,15 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // If Supabase env vars are missing, don't crash the whole middleware (which
+  // would 500 every request, including public pages). Degrade gracefully by
+  // treating the request as unauthenticated. Route guards still apply.
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return { user: null, supabaseResponse };
+  }
 
   const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {

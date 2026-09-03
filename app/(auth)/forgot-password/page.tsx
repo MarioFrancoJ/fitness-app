@@ -10,8 +10,11 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 export default function ForgotPasswordPage() {
+  const { dict } = useDictionary();
+  const t = dict.auth.forgotPassword;
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -22,11 +25,11 @@ export default function ForgotPasswordPage() {
     setError("");
 
     if (!email.trim()) {
-      setError("Email is required.");
+      setError(t.validationEmailRequired);
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Please enter a valid email address.");
+      setError(t.validationEmailInvalid);
       return;
     }
 
@@ -57,11 +60,11 @@ export default function ForgotPasswordPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-zinc-900">Check your email</h2>
+          <h2 className="text-lg font-semibold text-zinc-900">{t.successTitle}</h2>
           <p className="mt-2 text-sm text-zinc-500">
-            We sent a recovery link to <span className="font-medium text-zinc-700">{email}</span>. Check your inbox.
+            {t.successDescription.split("{email}")[0]}<span className="font-medium text-zinc-700">{email}</span>{t.successDescription.split("{email}")[1]}
           </p>
-          <Link href="/login" className="mt-6 inline-block text-sm font-medium text-zinc-900 hover:text-zinc-600">← Back to login</Link>
+          <Link href="/login" className="mt-6 inline-block text-sm font-medium text-zinc-900 hover:text-zinc-600">{t.backToLogin}</Link>
         </div>
       </div>
     );
@@ -70,28 +73,28 @@ export default function ForgotPasswordPage() {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Forgot password</h1>
-        <p className="mt-1.5 text-sm text-zinc-500">Enter your email and we&apos;ll send you a link to reset your password.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
+        <p className="mt-1.5 text-sm text-zinc-500">{t.subtitle}</p>
       </div>
 
       <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
         {error && (<div className="rounded-lg bg-red-50 px-4 py-3" role="alert"><p className="text-sm font-medium text-red-700">{error}</p></div>)}
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="email" className="text-sm font-medium text-zinc-700">Email</label>
-          <input id="email" type="email" placeholder="you@example.com" autoComplete="email" value={email}
+          <label htmlFor="email" className="text-sm font-medium text-zinc-700">{t.fieldEmail}</label>
+          <input id="email" type="email" placeholder={t.fieldEmailPlaceholder} autoComplete="email" value={email}
             onChange={(e) => { setEmail(e.target.value); if (error) setError(""); }}
             className="rounded-lg border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500" />
         </div>
 
         <button type="submit" disabled={loading}
           className="mt-1 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50">
-          {loading ? "Sending…" : "Send recovery link"}
+          {loading ? t.sending : t.submitButton}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-zinc-500">
-        <Link href="/login" className="font-semibold text-zinc-900 hover:text-zinc-600">← Back to login</Link>
+        <Link href="/login" className="font-semibold text-zinc-900 hover:text-zinc-600">{t.backToLogin}</Link>
       </p>
     </div>
   );

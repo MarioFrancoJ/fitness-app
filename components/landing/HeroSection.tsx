@@ -1,8 +1,7 @@
-const stats = [
-  { label: "Active Users", value: "12,400" },
-  { label: "Workouts Logged", value: "284K" },
-  { label: "Avg. Goal Completion", value: "91%" },
-];
+"use client";
+
+import Link from "next/link";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 const dashboardCards = [
   {
@@ -36,6 +35,15 @@ const dashboardCards = [
 ];
 
 export default function HeroSection() {
+  const { dict } = useDictionary();
+  const hero = dict.hero;
+
+  const stats = [
+    { label: hero.stats.activeUsers, value: "12,400" },
+    { label: hero.stats.workoutsLogged, value: "284K" },
+    { label: hero.stats.goalCompletion, value: "91%" },
+  ];
+
   return (
     <section className="pb-24 pt-36">
       <div className="mx-auto max-w-6xl px-6">
@@ -44,32 +52,31 @@ export default function HeroSection() {
           <div className="flex flex-col gap-8">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-600">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Now in public beta
+              {hero.publicBeta}
             </div>
 
             <h1 className="text-5xl font-bold leading-tight tracking-tight text-zinc-900">
-              Transform Your{" "}
-              <span className="text-zinc-400">Fitness Journey</span>
+              {hero.headlinePrefix}{" "}
+              <span className="text-zinc-400">{hero.headlineHighlight}</span>
             </h1>
 
             <p className="max-w-md text-lg leading-relaxed text-zinc-500">
-              Personalized workouts, nutrition plans and progress tracking in
-              one modern platform.
+              {hero.subtitle}
             </p>
 
             <div className="flex flex-wrap gap-3">
-              <a
+              <Link
                 href="/register"
                 className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700"
               >
-                Start Free
-              </a>
-              <a
+                {hero.ctaStartFree}
+              </Link>
+              <Link
                 href="/login"
                 className="rounded-lg border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
               >
-                Login
-              </a>
+                {hero.ctaLogin}
+              </Link>
             </div>
 
             {/* Social proof stats */}

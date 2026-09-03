@@ -1,9 +1,18 @@
 interface ProgressBarProps {
   currentStep: number; // 1-based
   totalSteps: number;
+  /** Localized "Step X of Y" label (already interpolated by the caller). */
+  stepLabel: string;
+  /** Localized accessible label for the progress track. */
+  progressLabel: string;
 }
 
-export default function ProgressBar({ currentStep, totalSteps }: ProgressBarProps) {
+export default function ProgressBar({
+  currentStep,
+  totalSteps,
+  stepLabel,
+  progressLabel,
+}: ProgressBarProps) {
   const clampedStep = Math.min(currentStep, totalSteps);
   const pct = Math.round((clampedStep / totalSteps) * 100);
 
@@ -12,7 +21,7 @@ export default function ProgressBar({ currentStep, totalSteps }: ProgressBarProp
       {/* Step counter */}
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-medium text-zinc-500">
-          Step {clampedStep} of {totalSteps}
+          {stepLabel}
         </span>
         <span className="text-xs font-medium text-zinc-400">{pct}%</span>
       </div>
@@ -23,7 +32,7 @@ export default function ProgressBar({ currentStep, totalSteps }: ProgressBarProp
         aria-valuenow={clampedStep}
         aria-valuemin={1}
         aria-valuemax={totalSteps}
-        aria-label="Onboarding progress"
+        aria-label={progressLabel}
         className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-100"
       >
         <div
