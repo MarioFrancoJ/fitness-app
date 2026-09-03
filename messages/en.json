@@ -159,10 +159,22 @@
       "mostPopular": "Most Popular",
       "periodFreeForever": "Free forever",
       "periodPerMonth": "per month",
+      "billingLabel": "Billing",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "save": "Save {percent}%",
+      "saveUpTo": "Save up to {percent}%",
+      "perMonth": "/month",
+      "perYear": "/year",
+      "approxPerMonth": "≈ {price}/month",
+      "freePrice": "Free",
       "plans": {
         "basic": {
           "name": "Basic",
           "price": "$0",
+          "priceMonthly": "Free",
+          "priceYearly": "Free",
+          "approxMonthly": "",
           "description": "Get started with the essentials.",
           "cta": "Start Free",
           "features": [
@@ -175,7 +187,10 @@
         },
         "pro": {
           "name": "Pro",
-          "price": "$19",
+          "price": "$5.99",
+          "priceMonthly": "$5.99",
+          "priceYearly": "$49",
+          "approxMonthly": "$4.08",
           "description": "Everything you need to reach your goals.",
           "cta": "Get Pro",
           "features": [
@@ -189,7 +204,10 @@
         },
         "elite": {
           "name": "Elite",
-          "price": "$49",
+          "price": "$12.99",
+          "priceMonthly": "$12.99",
+          "priceYearly": "$119",
+          "approxMonthly": "$9.92",
           "description": "For coaches managing multiple clients.",
           "cta": "Go Elite",
           "features": [

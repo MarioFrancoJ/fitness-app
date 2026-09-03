@@ -159,10 +159,22 @@
       "mostPopular": "Más popular",
       "periodFreeForever": "Gratis para siempre",
       "periodPerMonth": "al mes",
+      "billingLabel": "Facturación",
+      "monthly": "Mensual",
+      "yearly": "Anual",
+      "save": "Ahorra {percent}%",
+      "saveUpTo": "Ahorra hasta {percent}%",
+      "perMonth": "/mes",
+      "perYear": "/año",
+      "approxPerMonth": "≈ {price}/mes",
+      "freePrice": "Gratis",
       "plans": {
         "basic": {
           "name": "Básico",
           "price": "$0",
+          "priceMonthly": "Gratis",
+          "priceYearly": "Gratis",
+          "approxMonthly": "",
           "description": "Empieza con lo esencial.",
           "cta": "Empieza gratis",
           "features": [
@@ -175,7 +187,10 @@
         },
         "pro": {
           "name": "Pro",
-          "price": "$19",
+          "price": "$5.99",
+          "priceMonthly": "$5.99",
+          "priceYearly": "$49",
+          "approxMonthly": "$4.08",
           "description": "Todo lo que necesitas para alcanzar tus objetivos.",
           "cta": "Obtener Pro",
           "features": [
@@ -189,7 +204,10 @@
         },
         "elite": {
           "name": "Elite",
-          "price": "$49",
+          "price": "$12.99",
+          "priceMonthly": "$12.99",
+          "priceYearly": "$119",
+          "approxMonthly": "$9.92",
           "description": "Para entrenadores que gestionan varios clientes.",
           "cta": "Obtener Elite",
           "features": [
