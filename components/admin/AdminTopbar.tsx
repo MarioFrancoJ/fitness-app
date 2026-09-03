@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 function IconSearch() {
   return (
@@ -23,6 +24,7 @@ function roleBadgeColor(role: string) {
 
 export default function AdminTopbar() {
   const router = useRouter();
+  const { dict } = useDictionary();
   const [role, setRole] = useState<string>("");
   const [name, setName] = useState<string>("AD");
 
@@ -64,8 +66,8 @@ export default function AdminTopbar() {
         </span>
         <input
           type="search"
-          placeholder="Search admin..."
-          aria-label="Search admin"
+          placeholder={dict.admin.searchPlaceholder}
+          aria-label={dict.admin.searchPlaceholder}
           className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
         />
       </div>
@@ -83,7 +85,7 @@ export default function AdminTopbar() {
           href="/dashboard"
           className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900"
         >
-          ← Back to App
+          {dict.admin.backToApp}
         </Link>
 
         <button
@@ -99,7 +101,7 @@ export default function AdminTopbar() {
           onClick={handleLogout}
           className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
         >
-          Sign out
+          {dict.common.logout}
         </button>
       </div>
     </header>

@@ -6,8 +6,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type WorkoutsDict = ReturnType<typeof useDictionary>["dict"]["workouts"];
 
 type WorkoutDifficulty = "Beginner" | "Intermediate" | "Advanced";
 type WorkoutGoal = "Fat Loss" | "Muscle Gain" | "Strength" | "Endurance" | "Mobility" | "General Fitness";
@@ -61,10 +64,36 @@ function goalColor(g: WorkoutGoal | null): string {
   }
 }
 
+// Localized display label for a goal value (value stays the logic/DB key).
+function goalLabel(g: WorkoutGoal | null, w: WorkoutsDict): string {
+  switch (g) {
+    case "Fat Loss":        return w.goalFatLoss;
+    case "Muscle Gain":     return w.goalMuscleGain;
+    case "Strength":        return w.goalStrength;
+    case "Endurance":       return w.goalEndurance;
+    case "Mobility":        return w.goalMobility;
+    case "General Fitness": return w.goalGeneralFitness;
+    default:                return g ?? "";
+  }
+}
+
+// Localized display label for a difficulty value (value stays the logic/DB key).
+function difficultyLabel(d: WorkoutDifficulty | null, w: WorkoutsDict): string {
+  switch (d) {
+    case "Beginner":     return w.difficultyBeginner;
+    case "Intermediate": return w.difficultyIntermediate;
+    case "Advanced":     return w.difficultyAdvanced;
+    default:             return d ?? "";
+  }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function WorkoutDetailPage() {
   const { success: showToast } = useToast();
+  const { dict } = useDictionary();
+  const t = dict.workouts.detail;
+  const w = dict.workouts;
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
@@ -182,7 +211,7 @@ export default function WorkoutDetailPage() {
       }
     }
 
-    showToast("Workout duplicated!");
+    showToast(t.toastDuplicated);
     router.push(`/workouts/${newWorkout.id}`);
   }
 
@@ -190,16 +219,16 @@ export default function WorkoutDetailPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading workout..." />
+      <PageLoader text={t.loading} />
     );
   }
 
   if (!workout) {
     return (
       <div className="flex flex-col gap-6">
-        <Link href="/workouts" className="text-sm font-medium text-zinc-500 hover:text-zinc-900">&larr; Back to Workouts</Link>
+        <Link href="/workouts" className="text-sm font-medium text-zinc-500 hover:text-zinc-900">{t.backToWorkouts}</Link>
         <div className="flex h-48 items-center justify-center rounded-xl border border-zinc-200 bg-white">
-          <p className="text-sm text-zinc-400">Workout not found.</p>
+          <p className="text-sm text-zinc-400">{t.notFound}</p>
         </div>
       </div>
     );
@@ -211,7 +240,7 @@ export default function WorkoutDetailPage() {
     <>
       <div className="flex flex-col gap-6">
         <Link href="/workouts" className="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-zinc-900">
-          &larr; Back to Workouts
+          {t.backToWorkouts}
         </Link>
 
         {/* Header */}
@@ -220,8 +249,8 @@ export default function WorkoutDetailPage() {
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{workout.name}</h1>
             {workout.description && <p className="mt-1 text-sm text-zinc-500">{workout.description}</p>}
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              {workout.goal && <span className={`rounded-md px-2.5 py-1 text-xs font-medium ${goalColor(workout.goal)}`}>{workout.goal}</span>}
-              {workout.difficulty && <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${difficultyColor(workout.difficulty)}`}>{workout.difficulty}</span>}
+              {workout.goal && <span className={`rounded-md px-2.5 py-1 text-xs font-medium ${goalColor(workout.goal)}`}>{goalLabel(workout.goal, w)}</span>}
+              {workout.difficulty && <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${difficultyColor(workout.difficulty)}`}>{difficultyLabel(workout.difficulty, w)}</span>}
               {workout.duration && <span className="text-xs text-zinc-400">{workout.duration} min</span>}
               <span className="text-xs text-zinc-400">{totalExercises} exercises</span>
               <span className="text-xs text-zinc-400">{workout.workout_days.length} days</span>
@@ -233,18 +262,18 @@ export default function WorkoutDetailPage() {
                 href={`/training/start?workout=${workout.id}`}
                 className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700"
               >
-                Start Workout
+                {t.startWorkout}
               </Link>
             ) : (
               <span
-                title="Add exercises to this workout before starting"
+                title={t.startDisabledTooltip}
                 className="cursor-not-allowed rounded-lg bg-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-400"
               >
-                Start Workout
+                {t.startWorkout}
               </span>
             )}
-            <button type="button" onClick={handleDuplicate} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">Duplicate</button>
-            <button type="button" onClick={handleDelete} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50">Delete</button>
+            <button type="button" onClick={handleDuplicate} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">{dict.common.duplicate}</button>
+            <button type="button" onClick={handleDelete} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50">{dict.common.delete}</button>
           </div>
         </div>
 
@@ -254,17 +283,17 @@ export default function WorkoutDetailPage() {
             <div key={day.id} className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
               <p className="mb-3 text-sm font-semibold text-zinc-900">{day.day_name}</p>
               {day.workout_exercises.length === 0 ? (
-                <p className="text-xs text-zinc-400">Rest day</p>
+                <p className="text-xs text-zinc-400">{t.restDay}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
                       <tr className="border-b border-zinc-100">
-                        <th className="pb-2 text-xs font-semibold text-zinc-400">Exercise</th>
-                        <th className="pb-2 text-xs font-semibold text-zinc-400">Sets</th>
-                        <th className="pb-2 text-xs font-semibold text-zinc-400">Reps</th>
-                        <th className="pb-2 text-xs font-semibold text-zinc-400">Rest</th>
-                        <th className="pb-2 text-xs font-semibold text-zinc-400">Notes</th>
+                        <th className="pb-2 text-xs font-semibold text-zinc-400">{t.colExercise}</th>
+                        <th className="pb-2 text-xs font-semibold text-zinc-400">{t.colSets}</th>
+                        <th className="pb-2 text-xs font-semibold text-zinc-400">{t.colReps}</th>
+                        <th className="pb-2 text-xs font-semibold text-zinc-400">{t.colRest}</th>
+                        <th className="pb-2 text-xs font-semibold text-zinc-400">{t.colNotes}</th>
                       </tr>
                     </thead>
                     <tbody>

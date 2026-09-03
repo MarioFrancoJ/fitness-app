@@ -6,8 +6,11 @@ import PageLoader from "@/components/ui/PageLoader";
 import { SkeletonPage } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import EmptyState from "@/components/ui/EmptyState";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type RecommendationsDict = ReturnType<typeof useDictionary>["dict"]["recommendations"];
 
 type RecommendationCategory = "Nutrition" | "Training" | "Recovery" | "Weight Management" | "Consistency" | "Motivation" | "Goal Achievement";
 type RecommendationPriority = "Low" | "Medium" | "High" | "Critical";
@@ -60,6 +63,8 @@ function categoryIcon(c: RecommendationCategory): string {
 
 export default function RecommendationsPage() {
   const { success: showToast } = useToast();
+  const { dict } = useDictionary();
+  const t = dict.recommendations;
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [filter, setFilter] = useState<FilterTab>("active");
   const [loading, setLoading] = useState(true);
@@ -99,8 +104,8 @@ export default function RecommendationsPage() {
       const supabase = createClient();
       await supabase.from("recommendations").update({ status }).eq("id", id);
       setRecommendations((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
-      if (status === "Completed") showToast("Marked as completed!");
-      if (status === "Dismissed") showToast("Recommendation dismissed");
+      if (status === "Completed") showToast(t.toastCompleted);
+      if (status === "Dismissed") showToast(t.toastDismissed);
     } catch (err) {
       console.error("Failed to update recommendation:", err);
     }
@@ -115,7 +120,7 @@ export default function RecommendationsPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading recommendations..." />
+      <PageLoader text={t.loading} />
     );
   }
 
@@ -124,33 +129,33 @@ export default function RecommendationsPage() {
       <div className="flex flex-col gap-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Recommendations</h1>
-          <p className="mt-1 text-sm text-zinc-500">Personalized guidance based on your data and behavior.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
+          <p className="mt-1 text-sm text-zinc-500">{t.subtitle}</p>
         </div>
 
         {/* Stats cards */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-xl font-bold text-zinc-900">{active.length}</p>
-            <p className="text-xs text-zinc-400">Active</p>
+            <p className="text-xs text-zinc-400">{t.statActive}</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-xl font-bold text-red-600">{critical.length}</p>
-            <p className="text-xs text-zinc-400">Critical</p>
+            <p className="text-xs text-zinc-400">{t.statCritical}</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-xl font-bold text-emerald-600">{completed.length}</p>
-            <p className="text-xs text-zinc-400">Completed</p>
+            <p className="text-xs text-zinc-400">{t.statCompleted}</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-xl font-bold text-zinc-400">{dismissed.length}</p>
-            <p className="text-xs text-zinc-400">Dismissed</p>
+            <p className="text-xs text-zinc-400">{t.statDismissed}</p>
           </div>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-0.5 w-fit">
-          {([["active", "Active"], ["completed", "Completed"], ["dismissed", "Dismissed"]] as [FilterTab, string][]).map(([key, label]) => (
+          {([["active", t.tabActive], ["completed", t.tabCompleted], ["dismissed", t.tabDismissed]] as [FilterTab, string][]).map(([key, label]) => (
             <button key={key} type="button" onClick={() => setFilter(key)}
               className={["rounded-md px-4 py-1.5 text-xs font-semibold transition-colors", filter === key ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}>
               {label}
@@ -162,8 +167,8 @@ export default function RecommendationsPage() {
         {displayed.length === 0 ? (
           <EmptyState
             icon={filter === "active" ? "✨" : filter === "completed" ? "✅" : "🗑️"}
-            title={filter === "active" ? "No active recommendations" : `No ${filter} recommendations`}
-            description={filter === "active" ? "You're on track! Check back later for personalized tips." : `You don't have any ${filter} recommendations yet.`}
+            title={filter === "active" ? t.emptyActiveTitle : t.emptyFilteredTitle.replace("{filter}", filter)}
+            description={filter === "active" ? t.emptyActiveDesc : t.emptyFilteredDesc.replace("{filter}", filter)}
           />
         ) : (
           <div className="flex flex-col gap-3">
@@ -191,11 +196,11 @@ export default function RecommendationsPage() {
                     <div className="flex shrink-0 gap-1">
                       <button type="button" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(rec.id, "Completed"); }}
                         className="rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-200">
-                        Complete
+                        {t.actionComplete}
                       </button>
                       <button type="button" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(rec.id, "Dismissed"); }}
                         className="rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-200">
-                        Dismiss
+                        {t.actionDismiss}
                       </button>
                     </div>
                   )}

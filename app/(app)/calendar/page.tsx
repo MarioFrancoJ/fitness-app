@@ -7,6 +7,15 @@ import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
 import Link from "next/link";
 import { planEntryDate, readSlot, type PlanSlotValue } from "@/lib/nutrition";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
+
+type CalendarDict = ReturnType<typeof useDictionary>["dict"]["calendar"];
+
+// Abbreviated weekday labels (Mon…Sun) built from the calendar dict slice.
+// The header labels are pure display; the grid uses date math, not these strings.
+function buildWeekdays(t: CalendarDict): string[] {
+  return [t.weekdayMon, t.weekdayTue, t.weekdayWed, t.weekdayThu, t.weekdayFri, t.weekdaySat, t.weekdaySun];
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -68,8 +77,6 @@ function getMonthRange(year: number, month: number): { start: string; end: strin
   return { start, end };
 }
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
 const TYPE_ICONS: Record<string, string> = {
   custom: "📌",
   workout: "💪",
@@ -82,6 +89,9 @@ const TYPE_ICONS: Record<string, string> = {
 
 export default function CalendarPage() {
   const { toast: globalToast } = useToast();
+  const { dict } = useDictionary();
+  const t = dict.calendar;
+  const weekdays = useMemo(() => buildWeekdays(t), [t]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [activities, setActivities] = useState<ActivityMap>({});
   const [loading, setLoading] = useState(true);
@@ -310,7 +320,7 @@ export default function CalendarPage() {
       .single();
 
     if (error) {
-      showToast("Error creating event: " + error.message, "error");
+      showToast(t.toastCreateError.replace("{msg}", String(error.message)), "error");
       return;
     }
 
@@ -318,7 +328,7 @@ export default function CalendarPage() {
       setEvents((prev) => [...prev, data as CalendarEvent].sort(
         (a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
       ));
-      showToast("Event created successfully", "success");
+      showToast(t.toastCreated, "success");
     }
   }
 
@@ -347,7 +357,7 @@ export default function CalendarPage() {
       .single();
 
     if (error) {
-      showToast("Error updating event: " + error.message, "error");
+      showToast(t.toastUpdateError.replace("{msg}", String(error.message)), "error");
       return;
     }
 
@@ -356,7 +366,7 @@ export default function CalendarPage() {
         prev.map((e) => (e.id === data.id ? (data as CalendarEvent) : e))
           .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
       );
-      showToast("Event updated successfully", "success");
+      showToast(t.toastUpdated, "success");
     }
   }
 
@@ -370,12 +380,12 @@ export default function CalendarPage() {
       .eq("id", editingEvent.id);
 
     if (error) {
-      showToast("Error deleting event: " + error.message, "error");
+      showToast(t.toastDeleteError.replace("{msg}", String(error.message)), "error");
       return;
     }
 
     setEvents((prev) => prev.filter((e) => e.id !== editingEvent.id));
-    showToast("Event deleted", "success");
+    showToast(t.toastDeleted, "success");
   }
 
   // ── Toast ─────────────────────────────────────────────────────────────────
@@ -445,7 +455,7 @@ export default function CalendarPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading) {
-    return <PageLoader text="Loading calendar..." />;
+    return <PageLoader text={t.loading} />;
   }
 
   return (
@@ -453,9 +463,9 @@ export default function CalendarPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Calendar</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Your fitness activity timeline — workouts, meals, and progress.
+            {t.subtitle}
           </p>
         </div>
         <button
@@ -463,16 +473,16 @@ export default function CalendarPage() {
           onClick={openCreateModal}
           className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
         >
-          + New Event
+          {t.newEvent}
         </button>
       </div>
 
       {/* Upcoming events — above calendar for immediate relevance */}
       <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-        <h3 className="mb-4 text-sm font-semibold text-zinc-900">Upcoming Events</h3>
+        <h3 className="mb-4 text-sm font-semibold text-zinc-900">{t.upcomingEvents}</h3>
         {events.filter((e) => new Date(e.start_date) >= today).length === 0 ? (
           <div className="flex h-16 items-center justify-center">
-            <p className="text-sm text-zinc-400">No upcoming events. Create one to get started!</p>
+            <p className="text-sm text-zinc-400">{t.noUpcoming}</p>
           </div>
         ) : (
           <ul className="divide-y divide-zinc-50">
@@ -513,7 +523,7 @@ export default function CalendarPage() {
               {currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
             </h2>
             <button type="button" onClick={goToday} className="rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-200">
-              Today
+              {t.today}
             </button>
           </div>
 
@@ -529,7 +539,7 @@ export default function CalendarPage() {
         <div className="rounded-b-xl border border-t-0 border-zinc-200 bg-white p-4 shadow-sm">
           {/* Weekday headers */}
           <div className="mb-2 grid grid-cols-7 gap-1">
-            {WEEKDAYS.map((day) => (
+            {weekdays.map((day) => (
               <div key={day} className="py-2 text-center text-xs font-semibold text-zinc-400">
                 {day}
               </div>
@@ -585,25 +595,25 @@ export default function CalendarPage() {
                   {/* Activity indicators */}
                   <div className="flex flex-wrap gap-0.5 text-xs leading-none">
                     {dayActivity?.workouts.length ? (
-                      <span title="Workout">💪</span>
+                      <span title={t.tipWorkout}>💪</span>
                     ) : null}
                     {dayActivity?.mealsCount ? (
-                      <span title="Meals logged">🍽️</span>
+                      <span title={t.tipMealsLogged}>🍽️</span>
                     ) : null}
                     {dayActivity?.weight !== null && dayActivity?.weight !== undefined ? (
-                      <span title="Weight recorded">⚖️</span>
+                      <span title={t.tipWeightRecorded}>⚖️</span>
                     ) : null}
                     {dayActivity?.hasPhoto ? (
-                      <span title="Progress photo">📸</span>
+                      <span title={t.tipProgressPhoto}>📸</span>
                     ) : null}
                     {dayActivity?.waterMl ? (
-                      <span title="Water logged">💧</span>
+                      <span title={t.tipWaterLogged}>💧</span>
                     ) : null}
                     {dayActivity?.supplements.length ? (
-                      <span title="Supplements taken">💊</span>
+                      <span title={t.tipSupplementsTaken}>💊</span>
                     ) : null}
                     {dayActivity?.plannedMeals.length ? (
-                      <span title="Planned meal">🗓️</span>
+                      <span title={t.tipPlannedMeal}>🗓️</span>
                     ) : null}
                   </div>
 
@@ -637,7 +647,7 @@ export default function CalendarPage() {
         <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-zinc-900">
-              {selectedDate ? formatDate(selectedDate) : "Select a day"}
+              {selectedDate ? formatDate(selectedDate) : t.selectDay}
             </h3>
             {selectedDate && (
               <button
@@ -645,21 +655,21 @@ export default function CalendarPage() {
                 onClick={openCreateModal}
                 className="text-xs font-medium text-zinc-500 hover:text-zinc-900"
               >
-                + Add
+                {t.add}
               </button>
             )}
           </div>
 
           {!selectedDate ? (
             <div className="flex h-40 items-center justify-center">
-              <p className="text-sm text-zinc-400">Click a day to see activities</p>
+              <p className="text-sm text-zinc-400">{t.clickDay}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
               {/* Activity section */}
               {activityForSelectedDate && (
                 <div className="flex flex-col gap-2">
-                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Activity</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">{t.activity}</p>
 
                   {/* Workouts */}
                   {activityForSelectedDate.workouts.map((w, i) => (
@@ -668,7 +678,7 @@ export default function CalendarPage() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium text-blue-900">{w.name}</p>
                         <p className="text-xs text-blue-600">
-                          {w.duration ? `${w.duration} min` : "Duration N/A"}
+                          {w.duration ? `${w.duration} min` : t.durationNA}
                           {w.status !== "Completed" && ` · ${w.status}`}
                         </p>
                       </div>
@@ -680,7 +690,7 @@ export default function CalendarPage() {
                     <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2">
                       <span className="text-sm">🍽️</span>
                       <p className="text-xs font-medium text-amber-900">
-                        {activityForSelectedDate.mealsCount} meal{activityForSelectedDate.mealsCount !== 1 ? "s" : ""} logged
+                        {t.mealsLoggedCount.replace("{n}", String(activityForSelectedDate.mealsCount))}
                       </p>
                     </div>
                   )}
@@ -700,7 +710,7 @@ export default function CalendarPage() {
                     <div className="flex items-center gap-2 rounded-lg bg-purple-50 px-3 py-2">
                       <span className="text-sm">📸</span>
                       <p className="text-xs font-medium text-purple-900">
-                        Progress photo uploaded
+                        {t.progressPhotoUploaded}
                       </p>
                     </div>
                   )}
@@ -712,8 +722,8 @@ export default function CalendarPage() {
                       <p className="text-xs font-medium text-sky-900">
                         {activityForSelectedDate.waterGoalMl !== null &&
                         activityForSelectedDate.waterMl >= activityForSelectedDate.waterGoalMl
-                          ? `Water Goal Reached: ${activityForSelectedDate.waterMl}ml`
-                          : `Water: ${activityForSelectedDate.waterMl}ml`}
+                          ? t.waterGoalReached.replace("{n}", String(activityForSelectedDate.waterMl))
+                          : t.water.replace("{n}", String(activityForSelectedDate.waterMl))}
                       </p>
                     </div>
                   )}
@@ -723,7 +733,7 @@ export default function CalendarPage() {
                     <div className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-2">
                       <span className="text-sm">💊</span>
                       <p className="text-xs font-medium text-indigo-900">
-                        Supplements: {activityForSelectedDate.supplements.join(", ")}
+                        {t.supplements.replace("{list}", activityForSelectedDate.supplements.join(", "))}
                       </p>
                     </div>
                   )}
@@ -734,9 +744,9 @@ export default function CalendarPage() {
               {activityForSelectedDate && activityForSelectedDate.plannedMeals.length > 0 && (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Planned Meals</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">{t.plannedMeals}</p>
                     <Link href="/nutrition/meal-planner" className="text-xs font-medium text-zinc-500 hover:text-zinc-900">
-                      Open planner →
+                      {t.openPlanner}
                     </Link>
                   </div>
                   {activityForSelectedDate.plannedMeals.map((pm, i) => (
@@ -750,7 +760,7 @@ export default function CalendarPage() {
                         <p className="truncate text-xs font-medium text-rose-900">
                           {pm.name}{pm.servings > 1 ? ` ×${pm.servings}` : ""}
                         </p>
-                        <p className="text-xs text-rose-500">{pm.slot} · planned</p>
+                        <p className="text-xs text-rose-500">{t.slotPlanned.replace("{slot}", pm.slot)}</p>
                       </div>
                       <span className="shrink-0 text-rose-400" aria-hidden="true">›</span>
                     </Link>
@@ -761,7 +771,7 @@ export default function CalendarPage() {
               {/* Calendar events section */}
               {eventsForSelectedDate.length > 0 && (
                 <div className="flex flex-col gap-2">
-                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Scheduled Events</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">{t.scheduledEvents}</p>
                   {eventsForSelectedDate.map((event) => (
                     <button
                       key={event.id}
@@ -778,7 +788,7 @@ export default function CalendarPage() {
                         <p className="mt-0.5 text-xs text-zinc-400">
                           {TYPE_ICONS[event.event_type] || "📌"} {event.event_type}
                           {!event.all_day && ` · ${formatTime(event.start_date)}`}
-                          {event.all_day && " · All day"}
+                          {event.all_day && ` · ${t.allDay}`}
                         </p>
                       </div>
                     </button>
@@ -790,13 +800,13 @@ export default function CalendarPage() {
               {!activityForSelectedDate && eventsForSelectedDate.length === 0 && (
                 <div className="flex h-32 flex-col items-center justify-center gap-2">
                   <span className="text-2xl">📅</span>
-                  <p className="text-sm text-zinc-400">No activity this day</p>
+                  <p className="text-sm text-zinc-400">{t.noActivityDay}</p>
                   <button
                     type="button"
                     onClick={openCreateModal}
                     className="mt-1 text-xs font-medium text-zinc-900 hover:underline"
                   >
-                    Schedule an event →
+                    {t.scheduleEvent}
                   </button>
                 </div>
               )}

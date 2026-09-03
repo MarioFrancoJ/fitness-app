@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,9 @@ interface SavedWorkout {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function WorkoutBuilderPage() {
+  const { dict } = useDictionary();
+  const nt = dict.workouts.new;
+  const wb = dict.training.workoutBuilder;
   const [exercises, setExercises] = useState<ExerciseOption[]>([]);
   const [workoutName, setWorkoutName] = useState("My Workout");
   const [selectedExercises, setSelectedExercises] = useState<BuilderExercise[]>([]);
@@ -128,7 +132,7 @@ export default function WorkoutBuilderPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      setError("Not authenticated.");
+      setError(dict.common.errorNotAuthenticated);
       setSaving(false);
       return;
     }
@@ -146,7 +150,7 @@ export default function WorkoutBuilderPage() {
       .single();
 
     if (workoutErr || !workout) {
-      setError("Error creating workout: " + (workoutErr?.message || "unknown"));
+      setError(nt.errorCreating.replace("{msg}", workoutErr?.message || "unknown"));
       setSaving(false);
       return;
     }
@@ -164,7 +168,7 @@ export default function WorkoutBuilderPage() {
       .single();
 
     if (dayErr || !day) {
-      setError("Error creating workout day: " + (dayErr?.message || "unknown"));
+      setError(nt.errorCreatingDay.replace("{msg}", dayErr?.message || "unknown"));
       setSaving(false);
       return;
     }
@@ -187,7 +191,7 @@ export default function WorkoutBuilderPage() {
       .insert(exerciseInserts);
 
     if (exErr) {
-      setError("Error saving exercises: " + exErr.message);
+      setError(nt.errorSavingExercises.replace("{msg}", exErr.message));
       setSaving(false);
       return;
     }
@@ -230,7 +234,7 @@ export default function WorkoutBuilderPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading workout builder..." />
+      <PageLoader text={wb.loading} />
     );
   }
 
@@ -238,9 +242,9 @@ export default function WorkoutBuilderPage() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Workout Builder</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{wb.title}</h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Build a workout by selecting exercises and configuring sets and reps.
+          {wb.subtitle}
         </p>
       </div>
 
@@ -255,7 +259,7 @@ export default function WorkoutBuilderPage() {
       <div className="flex flex-wrap items-end gap-4">
         <div className="w-64">
           <label htmlFor="workout-name" className="mb-1.5 block text-sm font-medium text-zinc-700">
-            Workout Name
+            {wb.workoutName}
           </label>
           <input
             id="workout-name"
@@ -268,7 +272,7 @@ export default function WorkoutBuilderPage() {
 
         <div className="w-64">
           <label htmlFor="add-exercise" className="mb-1.5 block text-sm font-medium text-zinc-700">
-            Add Exercise
+            {wb.addExercise}
           </label>
           <select
             id="add-exercise"
@@ -279,10 +283,10 @@ export default function WorkoutBuilderPage() {
             }}
             className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
           >
-            <option value="" disabled>Select an exercise...</option>
+            <option value="" disabled>{wb.selectExercise}</option>
             {exercises.map((ex) => (
               <option key={ex.id} value={ex.id}>
-                {ex.name} ({ex.muscle_group})
+                {wb.exerciseOption.replace("{name}", ex.name).replace("{muscle}", ex.muscle_group)}
               </option>
             ))}
           </select>
@@ -292,7 +296,7 @@ export default function WorkoutBuilderPage() {
       {/* Selected exercises */}
       {selectedExercises.length === 0 ? (
         <div className="flex h-40 items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <p className="text-sm text-zinc-400">No exercises added yet. Select one above.</p>
+          <p className="text-sm text-zinc-400">{wb.emptyExercises}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-4">
@@ -310,14 +314,14 @@ export default function WorkoutBuilderPage() {
                   onClick={() => handleRemoveExercise(ex.tempId)}
                   className="text-xs font-medium text-zinc-400 transition-colors hover:text-red-600"
                 >
-                  Remove
+                  {dict.common.remove}
                 </button>
               </div>
 
               {/* Sets/Reps/Rest config */}
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-medium text-zinc-500">Sets</label>
+                  <label className="text-xs font-medium text-zinc-500">{nt.sets}</label>
                   <input
                     type="number"
                     min={1}
@@ -328,7 +332,7 @@ export default function WorkoutBuilderPage() {
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-medium text-zinc-500">Reps</label>
+                  <label className="text-xs font-medium text-zinc-500">{nt.reps}</label>
                   <input
                     type="number"
                     min={1}
@@ -339,7 +343,7 @@ export default function WorkoutBuilderPage() {
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-medium text-zinc-500">Rest (s)</label>
+                  <label className="text-xs font-medium text-zinc-500">{nt.restS}</label>
                   <input
                     type="number"
                     min={0}
@@ -360,10 +364,10 @@ export default function WorkoutBuilderPage() {
       {selectedExercises.length > 0 && (
         <div className="flex items-center gap-4">
           <Button type="button" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Workout"}
+            {saving ? dict.common.saving : wb.saveWorkout}
           </Button>
           {saved && (
-            <span className="text-sm font-medium text-emerald-600">✓ Workout saved</span>
+            <span className="text-sm font-medium text-emerald-600">{wb.savedNotice}</span>
           )}
         </div>
       )}
@@ -373,7 +377,7 @@ export default function WorkoutBuilderPage() {
         <div className="rounded-xl border border-zinc-200 bg-white shadow-sm">
           <div className="border-b border-zinc-100 px-6 py-4">
             <p className="text-sm font-semibold text-zinc-700">
-              Saved Workouts ({history.length})
+              {wb.savedWorkoutsCount.replace("{n}", String(history.length))}
             </p>
           </div>
           <ul className="divide-y divide-zinc-100">
@@ -382,7 +386,7 @@ export default function WorkoutBuilderPage() {
                 <div>
                   <p className="text-sm font-medium text-zinc-900">{w.name}</p>
                   <p className="text-xs text-zinc-400">
-                    {w.exerciseCount} exercise{w.exerciseCount !== 1 ? "s" : ""} · {w.createdAt}
+                    {wb.exerciseSuffix.replace("{n}", String(w.exerciseCount))} · {w.createdAt}
                   </p>
                 </div>
                 <button
@@ -390,7 +394,7 @@ export default function WorkoutBuilderPage() {
                   onClick={() => handleDeleteWorkout(w.id)}
                   className="text-xs font-medium text-zinc-400 transition-colors hover:text-red-600"
                 >
-                  Delete
+                  {dict.common.delete}
                 </button>
               </li>
             ))}

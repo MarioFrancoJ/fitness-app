@@ -5,8 +5,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type SubscriptionDict = ReturnType<typeof useDictionary>["dict"]["subscription"];
 
 type PlanType = "FREE" | "PREMIUM_MONTHLY" | "PREMIUM_YEARLY";
 type SubscriptionStatus = "Active" | "Trial" | "Expired" | "Cancelled" | "Pending";
@@ -45,6 +48,15 @@ const PLAN_DEFINITIONS: PlanDefinition[] = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// Maps a plan id (logic key) to its localized display name.
+function planName(plan: PlanType, t: SubscriptionDict): string {
+  switch (plan) {
+    case "PREMIUM_MONTHLY": return t.planPremiumMonthly;
+    case "PREMIUM_YEARLY":  return t.planPremiumYearly;
+    default:                return t.planFree;
+  }
+}
+
 function UsageBar({ label, current, max }: { label: string; current: number; max: number }) {
   const unlimited = max === -1;
   const pct = unlimited ? 0 : Math.min((current / max) * 100, 100);
@@ -68,6 +80,8 @@ function UsageBar({ label, current, max }: { label: string; current: number; max
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SubscriptionPage() {
+  const { dict } = useDictionary();
+  const t = dict.subscription;
   const { success: showToast } = useToast();
   const [sub, setSub] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState({ recipesCreated: 0, workoutPlansCreated: 0, progressPhotosUploaded: 0, historyDays: 0 });
@@ -137,7 +151,7 @@ export default function SubscriptionPage() {
         if (inserted) sub.id = inserted.id;
       }
       setSub({ ...sub, plan, status: "Active", startDate: now.toISOString().slice(0, 10), renewalDate: renewalDate.toISOString().slice(0, 10), expirationDate: null });
-      showToast("Upgraded to Premium!");
+      showToast(t.toastUpgraded);
     } catch (err) { console.error("Upgrade failed:", err); }
   }
 
@@ -146,7 +160,7 @@ export default function SubscriptionPage() {
     const supabase = createClient();
     await supabase.from("subscriptions").update({ status: "Cancelled", expiration_date: sub.renewalDate }).eq("id", sub.id);
     setSub({ ...sub, status: "Cancelled", expirationDate: sub.renewalDate });
-    showToast("Subscription cancelled.");
+    showToast(t.toastCancelled);
   }
 
   async function handleDowngrade() {
@@ -154,7 +168,7 @@ export default function SubscriptionPage() {
     const supabase = createClient();
     await supabase.from("subscriptions").update({ plan: "FREE", status: "Active", renewal_date: null, expiration_date: null }).eq("id", sub.id);
     setSub({ ...sub, plan: "FREE", status: "Active", renewalDate: null, expirationDate: null });
-    showToast("Downgraded to Free.");
+    showToast(t.toastDowngraded);
   }
 
   async function handleStartTrial() {
@@ -172,12 +186,12 @@ export default function SubscriptionPage() {
       await supabase.from("subscriptions").insert({ user_id: user.id, plan: "PREMIUM_MONTHLY", status: "Trial", start_date: now.toISOString().slice(0, 10), expiration_date: expiry.toISOString().slice(0, 10) });
     }
     setSub({ ...sub, plan: "PREMIUM_MONTHLY", status: "Trial", startDate: now.toISOString().slice(0, 10), renewalDate: null, expirationDate: expiry.toISOString().slice(0, 10) });
-    showToast("7-day Premium trial started!");
+    showToast(t.toastTrialStarted);
   }
 
   if (loading) {
     return (
-      <PageLoader text="Loading subscription..." />
+      <PageLoader text={t.loading} />
     );
   }
 
@@ -186,41 +200,41 @@ export default function SubscriptionPage() {
   const premium = (sub.plan === "PREMIUM_MONTHLY" || sub.plan === "PREMIUM_YEARLY") && (sub.status === "Active" || sub.status === "Trial");
   const planDef = PLAN_DEFINITIONS.find((p) => p.id === sub.plan) ?? PLAN_DEFINITIONS[0];
   const limits = planDef.limits;
-  const badge = sub.plan === "FREE" ? { label: "FREE", color: "bg-zinc-100 text-zinc-600" } : sub.status === "Trial" ? { label: "TRIAL", color: "bg-amber-100 text-amber-700" } : { label: "PREMIUM", color: "bg-gradient-to-r from-violet-500 to-purple-600 text-white" };
+  const badge = sub.plan === "FREE" ? { label: t.badgeFree, color: "bg-zinc-100 text-zinc-600" } : sub.status === "Trial" ? { label: t.badgeTrial, color: "bg-amber-100 text-amber-700" } : { label: t.badgePremium, color: "bg-gradient-to-r from-violet-500 to-purple-600 text-white" };
 
   return (
     <>
       <div className="flex flex-col gap-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Subscription</h1>
-            <p className="mt-1 text-sm text-zinc-500">Manage your plan and usage.</p>
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
+            <p className="mt-1 text-sm text-zinc-500">{t.subtitle}</p>
           </div>
           <span className={`rounded-full px-3 py-1 text-xs font-bold ${badge.color}`}>{badge.label}</span>
         </div>
 
         {/* Current Plan */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="mb-4 text-sm font-semibold text-zinc-900">Current Plan</p>
+          <p className="mb-4 text-sm font-semibold text-zinc-900">{t.currentPlanHeading}</p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg bg-zinc-50 p-4"><p className="text-xs text-zinc-400">Plan</p><p className="text-sm font-bold text-zinc-900">{planDef.name}</p></div>
-            <div className="rounded-lg bg-zinc-50 p-4"><p className="text-xs text-zinc-400">Status</p><p className={`text-sm font-bold ${sub.status === "Active" ? "text-emerald-600" : sub.status === "Trial" ? "text-amber-600" : "text-red-500"}`}>{sub.status}</p></div>
-            <div className="rounded-lg bg-zinc-50 p-4"><p className="text-xs text-zinc-400">Start Date</p><p className="text-sm font-bold text-zinc-900">{sub.startDate}</p></div>
-            <div className="rounded-lg bg-zinc-50 p-4"><p className="text-xs text-zinc-400">{sub.expirationDate ? "Expires" : "Renewal"}</p><p className="text-sm font-bold text-zinc-900">{sub.expirationDate || sub.renewalDate || "—"}</p></div>
+            <div className="rounded-lg bg-zinc-50 p-4"><p className="text-xs text-zinc-400">{t.fieldPlan}</p><p className="text-sm font-bold text-zinc-900">{planName(sub.plan, t)}</p></div>
+            <div className="rounded-lg bg-zinc-50 p-4"><p className="text-xs text-zinc-400">{t.fieldStatus}</p><p className={`text-sm font-bold ${sub.status === "Active" ? "text-emerald-600" : sub.status === "Trial" ? "text-amber-600" : "text-red-500"}`}>{sub.status}</p></div>
+            <div className="rounded-lg bg-zinc-50 p-4"><p className="text-xs text-zinc-400">{t.fieldStartDate}</p><p className="text-sm font-bold text-zinc-900">{sub.startDate}</p></div>
+            <div className="rounded-lg bg-zinc-50 p-4"><p className="text-xs text-zinc-400">{sub.expirationDate ? t.fieldExpires : t.fieldRenewal}</p><p className="text-sm font-bold text-zinc-900">{sub.expirationDate || sub.renewalDate || "—"}</p></div>
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
             {!premium && (
               <>
-                <button type="button" onClick={() => handleUpgrade("PREMIUM_MONTHLY")} className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700">Upgrade Monthly ($9.99/mo)</button>
-                <button type="button" onClick={() => handleUpgrade("PREMIUM_YEARLY")} className="rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-700">Upgrade Yearly ($7.99/mo)</button>
-                {sub.status !== "Trial" && <button type="button" onClick={handleStartTrial} className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">Start 7-Day Trial</button>}
+                <button type="button" onClick={() => handleUpgrade("PREMIUM_MONTHLY")} className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700">{t.upgradeMonthly}</button>
+                <button type="button" onClick={() => handleUpgrade("PREMIUM_YEARLY")} className="rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-700">{t.upgradeYearly}</button>
+                {sub.status !== "Trial" && <button type="button" onClick={handleStartTrial} className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">{t.startTrial}</button>}
               </>
             )}
             {premium && sub.status === "Active" && (
               <>
-                <button type="button" onClick={handleCancel} className="rounded-lg border border-red-200 bg-white px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50">Cancel</button>
-                <button type="button" onClick={handleDowngrade} className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-600 hover:bg-zinc-50">Downgrade to Free</button>
+                <button type="button" onClick={handleCancel} className="rounded-lg border border-red-200 bg-white px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50">{t.cancel}</button>
+                <button type="button" onClick={handleDowngrade} className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-600 hover:bg-zinc-50">{t.downgrade}</button>
               </>
             )}
           </div>
@@ -228,20 +242,20 @@ export default function SubscriptionPage() {
 
         {/* Usage */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="mb-4 text-sm font-semibold text-zinc-900">Usage</p>
+          <p className="mb-4 text-sm font-semibold text-zinc-900">{t.usageHeading}</p>
           <div className="grid gap-4 sm:grid-cols-2">
-            <UsageBar label="Recipes Created" current={usage.recipesCreated} max={limits.maxRecipes} />
-            <UsageBar label="Workout Plans" current={usage.workoutPlansCreated} max={limits.maxWorkoutPlans} />
-            <UsageBar label="Progress Photos" current={usage.progressPhotosUploaded} max={limits.maxProgressPhotos} />
-            <UsageBar label="History Days" current={usage.historyDays} max={limits.maxHistoryDays} />
+            <UsageBar label={t.usageRecipes} current={usage.recipesCreated} max={limits.maxRecipes} />
+            <UsageBar label={t.usageWorkoutPlans} current={usage.workoutPlansCreated} max={limits.maxWorkoutPlans} />
+            <UsageBar label={t.usageProgressPhotos} current={usage.progressPhotosUploaded} max={limits.maxProgressPhotos} />
+            <UsageBar label={t.usageHistoryDays} current={usage.historyDays} max={limits.maxHistoryDays} />
           </div>
         </div>
 
         {!premium && (
           <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50 p-6">
-            <p className="text-sm font-semibold text-violet-900">Unlock Your Full Potential</p>
-            <p className="mt-1 text-xs text-violet-700">Upgrade to Premium for unlimited access.</p>
-            <Link href="/pricing" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-700">View Plans</Link>
+            <p className="text-sm font-semibold text-violet-900">{t.unlockHeading}</p>
+            <p className="mt-1 text-xs text-violet-700">{t.unlockDesc}</p>
+            <Link href="/pricing" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-700">{t.viewPlans}</Link>
           </div>
         )}
       </div>

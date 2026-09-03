@@ -8,6 +8,11 @@ import EmptyState from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
 import { addRecipeIngredientsToShoppingList } from "@/lib/nutrition";
 import MealPlanModal, { type MealPlanModalRecipe } from "@/components/nutrition/MealPlanModal";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
+
+// Dictionary slices used across this page's components.
+type RecipesDict = ReturnType<typeof useDictionary>["dict"]["nutrition"]["recipes"];
+type NutritionDict = ReturnType<typeof useDictionary>["dict"]["nutrition"];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -50,9 +55,31 @@ function goalColor(goal: RecipeGoal): string {
   }
 }
 
+function goalLabel(goal: RecipeGoal, t: RecipesDict): string {
+  switch (goal) {
+    case "Fat Loss":    return t.goalFatLoss;
+    case "Muscle Gain": return t.goalMuscleGain;
+    case "Maintenance": return t.goalMaintenance;
+  }
+}
+
+// Filter chip label for goals, including the "All" pseudo-value.
+function goalFilterLabel(goal: "All" | RecipeGoal, t: RecipesDict): string {
+  return goal === "All" ? t.goalAll : goalLabel(goal, t);
+}
+
+function mealTypeLabel(type: MealType, nt: NutritionDict): string {
+  switch (type) {
+    case "Breakfast": return nt.mealTypeBreakfast;
+    case "Lunch":     return nt.mealTypeLunch;
+    case "Dinner":    return nt.mealTypeDinner;
+    case "Snack":     return nt.mealTypeSnack;
+  }
+}
+
 // ── Recipe Card ───────────────────────────────────────────────────────────────
 
-function RecipeCard({ recipe, onAddToPlan }: { recipe: Recipe; onAddToPlan: (r: Recipe) => void }) {
+function RecipeCard({ recipe, onAddToPlan, t, nt }: { recipe: Recipe; onAddToPlan: (r: Recipe) => void; t: RecipesDict; nt: NutritionDict }) {
   const { success, error: toastError } = useToast();
   const [busy, setBusy] = useState<null | "shop">(null);
 
@@ -69,8 +96,8 @@ function RecipeCard({ recipe, onAddToPlan }: { recipe: Recipe; onAddToPlan: (r: 
     setBusy("shop");
     const res = await addRecipeIngredientsToShoppingList(recipe.ingredients);
     setBusy(null);
-    if (res.ok) success(`Added ${res.addedCount} ingredient${res.addedCount === 1 ? "" : "s"} to your shopping list.`);
-    else toastError(res.error || "Could not add ingredients.");
+    if (res.ok) success(t.toastAddedIngredients.replace("{n}", String(res.addedCount)));
+    else toastError(res.error || t.toastAddError);
   }
 
   return (
@@ -94,11 +121,11 @@ function RecipeCard({ recipe, onAddToPlan }: { recipe: Recipe; onAddToPlan: (r: 
           {/* Badges over the image */}
           <div className="absolute inset-x-2 top-2 flex items-start justify-between gap-2">
             <span className={`rounded-full px-2 py-0.5 text-golden-xs font-semibold shadow-sm ${goalColor(recipe.goal)}`}>
-              {recipe.goal}
+              {goalLabel(recipe.goal, t)}
             </span>
             {recipe.mealType && (
               <span className="rounded-full bg-white/90 px-2 py-0.5 text-golden-xs font-medium text-zinc-700 shadow-sm backdrop-blur-sm">
-                {recipe.mealType}
+                {mealTypeLabel(recipe.mealType, nt)}
               </span>
             )}
           </div>
@@ -116,9 +143,9 @@ function RecipeCard({ recipe, onAddToPlan }: { recipe: Recipe; onAddToPlan: (r: 
           {/* Secondary meta — single line with dot separators */}
           <p className="mt-1 truncate text-golden-xs text-zinc-400">
             {[
-              recipe.prepTime > 0 ? `${recipe.prepTime} min` : null,
-              `${recipe.servings} serving${recipe.servings > 1 ? "s" : ""}`,
-              `${recipe.ingredients.length} ingredient${recipe.ingredients.length === 1 ? "" : "s"}`,
+              recipe.prepTime > 0 ? `${recipe.prepTime} ${t.unitMin}` : null,
+              `${recipe.servings} ${t.unitServings}`,
+              `${recipe.ingredients.length} ${t.unitIngredients}`,
             ]
               .filter(Boolean)
               .join(" • ")}
@@ -129,7 +156,7 @@ function RecipeCard({ recipe, onAddToPlan }: { recipe: Recipe; onAddToPlan: (r: 
           <div className="mt-golden-2 border-t border-zinc-100 pt-golden-2">
             <p className="text-golden-lg font-bold leading-none text-zinc-900">
               {recipe.calories}
-              <span className="ml-1 text-golden-xs font-medium text-zinc-400">kcal</span>
+              <span className="ml-1 text-golden-xs font-medium text-zinc-400">{t.unitKcal}</span>
             </p>
             <p className="mt-1.5 truncate text-golden-xs font-medium text-zinc-500">
               {recipe.protein}g Prot. <span className="text-zinc-300">•</span> {recipe.carbs}g Carb. <span className="text-zinc-300">•</span> {recipe.fat}g Fat
@@ -143,20 +170,20 @@ function RecipeCard({ recipe, onAddToPlan }: { recipe: Recipe; onAddToPlan: (r: 
             href={`/nutrition/recipes/${recipe.id}`}
             className="flex-1 rounded-golden-md border border-zinc-200 bg-white px-golden-2 py-golden-1 text-center text-golden-sm font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
           >
-            View
+            {t.view}
           </Link>
           <button
             type="button"
             onClick={handleAddToPlan}
             className="flex-1 rounded-golden-md bg-zinc-900 px-golden-2 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-zinc-800"
           >
-            + Meal Plan
+            {t.addMealPlan}
           </button>
           <button
             type="button"
             onClick={handleQuickShop}
             disabled={busy !== null || recipe.ingredients.length === 0}
-            title="Add ingredients to shopping list"
+            title={`Add ${recipe.name} ingredients to shopping list`}
             aria-label={`Add ${recipe.name} ingredients to shopping list`}
             className="shrink-0 rounded-golden-md border border-zinc-200 bg-white p-golden-1 text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-40"
           >
@@ -176,7 +203,7 @@ function RecipeCard({ recipe, onAddToPlan }: { recipe: Recipe; onAddToPlan: (r: 
 
 // ── Section ───────────────────────────────────────────────────────────────────
 
-function RecipeSection({ title, recipes, onAddToPlan }: { title: string; recipes: Recipe[]; onAddToPlan: (r: Recipe) => void }) {
+function RecipeSection({ title, recipes, onAddToPlan, t, nt }: { title: string; recipes: Recipe[]; onAddToPlan: (r: Recipe) => void; t: RecipesDict; nt: NutritionDict }) {
   if (recipes.length === 0) return null;
   return (
     <div>
@@ -184,7 +211,7 @@ function RecipeSection({ title, recipes, onAddToPlan }: { title: string; recipes
         {title} <span className="font-normal text-zinc-400">({recipes.length})</span>
       </h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {recipes.map((r) => <RecipeCard key={r.id} recipe={r} onAddToPlan={onAddToPlan} />)}
+        {recipes.map((r) => <RecipeCard key={r.id} recipe={r} onAddToPlan={onAddToPlan} t={t} nt={nt} />)}
       </div>
     </div>
   );
@@ -193,6 +220,9 @@ function RecipeSection({ title, recipes, onAddToPlan }: { title: string; recipes
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RecipesPage() {
+  const { dict } = useDictionary();
+  const t = dict.nutrition.recipes;
+  const nt = dict.nutrition;
   const { success, error: toastError } = useToast();
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [search, setSearch] = useState("");
@@ -286,16 +316,16 @@ export default function RecipesPage() {
   }, [filtered]);
 
   if (loading) {
-    return <PageLoader text="Loading recipes..." />;
+    return <PageLoader text={t.loading} />;
   }
 
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Recipes</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
         <p className="mt-1 text-golden-sm text-zinc-500">
-          {allRecipes.length} recipe{allRecipes.length !== 1 ? "s" : ""} available
+          {t.available.replace("{n}", String(allRecipes.length))}
         </p>
       </div>
 
@@ -308,10 +338,10 @@ export default function RecipesPage() {
             </svg>
             <input
               type="search"
-              placeholder="Search recipes..."
+              placeholder={t.searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              aria-label="Search recipes"
+              aria-label={t.searchPlaceholder}
               className="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-golden-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
             />
           </div>
@@ -330,7 +360,7 @@ export default function RecipesPage() {
                     : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400",
                 ].join(" ")}
               >
-                {g}
+                {goalFilterLabel(g, t)}
               </button>
             ))}
           </div>
@@ -352,7 +382,7 @@ export default function RecipesPage() {
                   : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-400",
               ].join(" ")}
             >
-              {m}
+              {m === "All" ? t.goalAll : mealTypeLabel(m, nt)}
             </button>
           ))}
         </div>
@@ -362,22 +392,22 @@ export default function RecipesPage() {
       {allRecipes.length === 0 ? (
         <EmptyState
           icon="📖"
-          title="No recipes yet"
-          description="Recipes will appear here once created by an admin."
+          title={t.emptyTitle}
+          description={t.emptyDescription}
         />
       ) : showGrouped ? (
         <div className="flex flex-col gap-8">
-          <RecipeSection title="Muscle Gain" recipes={byGoal["Muscle Gain"]} onAddToPlan={openPlanModal} />
-          <RecipeSection title="Fat Loss" recipes={byGoal["Fat Loss"]} onAddToPlan={openPlanModal} />
-          <RecipeSection title="Maintenance" recipes={byGoal["Maintenance"]} onAddToPlan={openPlanModal} />
+          <RecipeSection title={t.sectionMuscleGain} recipes={byGoal["Muscle Gain"]} onAddToPlan={openPlanModal} t={t} nt={nt} />
+          <RecipeSection title={t.sectionFatLoss} recipes={byGoal["Fat Loss"]} onAddToPlan={openPlanModal} t={t} nt={nt} />
+          <RecipeSection title={t.sectionMaintenance} recipes={byGoal["Maintenance"]} onAddToPlan={openPlanModal} t={t} nt={nt} />
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex h-48 items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <p className="text-golden-sm text-zinc-400">No recipes match your filters.</p>
+          <p className="text-golden-sm text-zinc-400">{t.noMatch}</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((r) => <RecipeCard key={r.id} recipe={r} onAddToPlan={openPlanModal} />)}
+          {filtered.map((r) => <RecipeCard key={r.id} recipe={r} onAddToPlan={openPlanModal} t={t} nt={nt} />)}
         </div>
       )}
 

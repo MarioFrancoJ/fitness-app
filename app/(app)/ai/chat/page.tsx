@@ -4,8 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type AiChatDict = ReturnType<typeof useDictionary>["dict"]["ai"]["chat"];
 
 interface ChatMsg {
   id: string;
@@ -48,6 +51,8 @@ function getAIResponse(input: string): string {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AIChatPage() {
+  const { dict } = useDictionary();
+  const t = dict.ai.chat;
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -71,7 +76,7 @@ export default function AIChatPage() {
         setMessages(data.map((m) => ({ id: m.id, role: m.role as "user" | "coach", content: m.content, timestamp: m.timestamp })));
       } else {
         // Create welcome message
-        const welcome: ChatMsg = { id: "welcome", role: "coach", content: "Hey! I'm your AI fitness coach. I have access to your profile, nutrition, training, and progress data — ask me anything and I'll give you personalized advice.", timestamp: new Date().toISOString() };
+        const welcome: ChatMsg = { id: "welcome", role: "coach", content: t.welcomeMessage, timestamp: new Date().toISOString() };
         setMessages([welcome]);
         await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content, channel: "ai_chat" });
       }
@@ -111,7 +116,7 @@ export default function AIChatPage() {
 
       setMessages([...updated, assistantMsg]);
     } catch {
-      const errorMsg: ChatMsg = { id: crypto.randomUUID(), role: "coach", content: "Sorry, I encountered an error. Please try again.", timestamp: new Date().toISOString() };
+      const errorMsg: ChatMsg = { id: crypto.randomUUID(), role: "coach", content: t.errorMessage, timestamp: new Date().toISOString() };
       setMessages([...updated, errorMsg]);
     }
 
@@ -128,14 +133,14 @@ export default function AIChatPage() {
     if (!user) return;
 
     await supabase.from("ai_chat_messages").delete().eq("user_id", user.id).eq("channel", "ai_chat");
-    const welcome: ChatMsg = { id: "welcome", role: "coach", content: "Chat cleared! How can I help you today?", timestamp: new Date().toISOString() };
+    const welcome: ChatMsg = { id: "welcome", role: "coach", content: t.chatClearedMessage, timestamp: new Date().toISOString() };
     await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content, channel: "ai_chat" });
     setMessages([welcome]);
   }
 
   if (initialLoading) {
     return (
-      <PageLoader text="Loading chat..." />
+      <PageLoader text={t.loading} />
     );
   }
 
@@ -146,12 +151,12 @@ export default function AIChatPage() {
         <div className="flex items-center gap-3">
           <Link href="/ai" className="text-sm font-medium text-zinc-500 hover:text-zinc-900">&larr;</Link>
           <div>
-            <h1 className="text-lg font-bold text-zinc-900">AI Coach</h1>
-            <p className="text-xs text-zinc-400">Context-aware • Provider-agnostic</p>
+            <h1 className="text-lg font-bold text-zinc-900">{t.headerTitle}</h1>
+            <p className="text-xs text-zinc-400">{t.headerSubtitle}</p>
           </div>
         </div>
         <button type="button" onClick={handleClear} className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50">
-          Clear Chat
+          {t.clearChat}
         </button>
       </div>
 
@@ -166,7 +171,7 @@ export default function AIChatPage() {
                 {msg.role === "coach" && (
                   <div className="mb-1 flex items-center gap-1.5">
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-blue-100 text-xs">AI</span>
-                    <span className="text-xs font-semibold text-zinc-400">Coach</span>
+                    <span className="text-xs font-semibold text-zinc-400">{t.coachBadge}</span>
                   </div>
                 )}
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
@@ -192,15 +197,15 @@ export default function AIChatPage() {
       <div className="border-t border-zinc-100 pt-4">
         <div className="flex gap-2">
           <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown}
-            placeholder="Ask about nutrition, training, recovery..." aria-label="Message" disabled={loading}
+            placeholder={t.inputPlaceholder} aria-label="Message" disabled={loading}
             className="h-10 flex-1 rounded-lg border border-zinc-200 bg-white px-4 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50" />
           <button type="button" onClick={handleSend} disabled={!input.trim() || loading}
             className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-700 disabled:opacity-50">
-            Send
+            {t.sendButton}
           </button>
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
-          {["What should I eat today?", "Suggest a workout", "How's my progress?", "I need motivation"].map((q) => (
+          {[t.suggestionEat, t.suggestionWorkout, t.suggestionProgress, t.suggestionMotivation].map((q) => (
             <button key={q} type="button" onClick={() => setInput(q)}
               className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs text-zinc-600 hover:border-zinc-400">
               {q}

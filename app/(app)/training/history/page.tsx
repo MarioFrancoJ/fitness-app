@@ -4,8 +4,11 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type StatusDict = ReturnType<typeof useDictionary>["dict"]["training"]["status"];
 
 type FilterPeriod = "today" | "week" | "month" | "all";
 type SessionStatus = "Completed" | "Cancelled" | "Abandoned" | "In Progress";
@@ -46,22 +49,24 @@ function getDateCutoff(filter: FilterPeriod): string | null {
   }
 }
 
-function statusBadge(status: SessionStatus) {
+function statusBadge(status: SessionStatus, statusDict: StatusDict) {
   switch (status) {
     case "Completed":
-      return { bg: "bg-emerald-50 text-emerald-700", label: "Completed" };
+      return { bg: "bg-emerald-50 text-emerald-700", label: statusDict.completed };
     case "Cancelled":
-      return { bg: "bg-red-50 text-red-700", label: "Cancelled" };
+      return { bg: "bg-red-50 text-red-700", label: statusDict.cancelled };
     case "Abandoned":
-      return { bg: "bg-zinc-100 text-zinc-600", label: "Abandoned" };
+      return { bg: "bg-zinc-100 text-zinc-600", label: statusDict.abandoned };
     default:
-      return { bg: "bg-amber-50 text-amber-700", label: "In Progress" };
+      return { bg: "bg-amber-50 text-amber-700", label: statusDict.inProgress };
   }
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function TrainingHistoryPage() {
+  const { dict } = useDictionary();
+  const t = dict.training.history;
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [filter, setFilter] = useState<FilterPeriod>("all");
   const [loading, setLoading] = useState(true);
@@ -133,10 +138,10 @@ export default function TrainingHistoryPage() {
   }, [sessions, filter]);
 
   const filters: { label: string; value: FilterPeriod }[] = [
-    { label: "Today", value: "today" },
-    { label: "This Week", value: "week" },
-    { label: "This Month", value: "month" },
-    { label: "All Time", value: "all" },
+    { label: dict.common.filterToday, value: "today" },
+    { label: dict.common.filterThisWeek, value: "week" },
+    { label: dict.common.filterThisMonth, value: "month" },
+    { label: dict.common.filterAllTime, value: "all" },
   ];
 
   function toggleExpand(id: string) {
@@ -144,7 +149,7 @@ export default function TrainingHistoryPage() {
   }
 
   if (loading) {
-    return <PageLoader text="Loading history..." />;
+    return <PageLoader text={t.loading} />;
   }
 
   return (
@@ -152,13 +157,13 @@ export default function TrainingHistoryPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Training History</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            {filtered.length} session{filtered.length !== 1 ? "s" : ""}
+            {t.sessionCount.replace("{n}", String(filtered.length))}
           </p>
         </div>
         <Link href="/training/start" className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700">
-          Start Workout
+          {dict.training.startWorkout}
         </Link>
       </div>
 
@@ -183,13 +188,13 @@ export default function TrainingHistoryPage() {
       {/* Sessions list */}
       {filtered.length === 0 ? (
         <div className="flex h-40 items-center justify-center rounded-xl border border-zinc-200 bg-white">
-          <p className="text-sm text-zinc-400">No sessions found for this period.</p>
+          <p className="text-sm text-zinc-400">{t.noSessions}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
           {filtered.map((s) => {
             const isExpanded = expandedId === s.id;
-            const badge = statusBadge(s.status);
+            const badge = statusBadge(s.status, dict.training.status);
 
             return (
               <div
@@ -217,7 +222,7 @@ export default function TrainingHistoryPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-semibold text-zinc-900">
-                        {s.workout_name || "Custom Workout"}
+                        {s.workout_name || t.customWorkout}
                       </p>
                       <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${badge.bg}`}>
                         {badge.label}
@@ -239,7 +244,7 @@ export default function TrainingHistoryPage() {
                     onClick={(e) => e.stopPropagation()}
                     className="shrink-0 rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-semibold text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-100"
                   >
-                    Details →
+                    {dict.common.details} →
                   </Link>
                 </button>
 
@@ -247,7 +252,7 @@ export default function TrainingHistoryPage() {
                 {isExpanded && (
                   <div className="border-t border-zinc-100 bg-zinc-50/50 px-5 py-4">
                     {s.exercises.length === 0 ? (
-                      <p className="text-xs text-zinc-400">No exercise data recorded.</p>
+                      <p className="text-xs text-zinc-400">{t.noExerciseData}</p>
                     ) : (
                       <div className="flex flex-col gap-3">
                         {s.exercises.map((ex, exIdx) => {
@@ -272,7 +277,7 @@ export default function TrainingHistoryPage() {
                                         : "bg-zinc-50 text-zinc-500",
                                     ].join(" ")}
                                   >
-                                    <span className="font-semibold">Set {set.setNumber}</span>
+                                    <span className="font-semibold">{t.setLabel.replace("{n}", String(set.setNumber))}</span>
                                     <span className="text-zinc-400">·</span>
                                     <span>{set.completedReps} reps</span>
                                     {set.completedWeight > 0 && (

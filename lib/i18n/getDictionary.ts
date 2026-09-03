@@ -1,8 +1,9 @@
 import type { Locale } from './config'
+import en from '@/messages/en.json'
 
 // Import both message files statically so they are bundled at build time.
-// Using dynamic import with a ternary keeps the function async-compatible
-// and prevents Next.js from tree-shaking the JSON files.
+// Using dynamic import keeps the function async-compatible and lets Next.js
+// code-split each locale's JSON.
 const dictionaries = {
   en: () => import('@/messages/en.json').then((m) => m.default),
   es: () => import('@/messages/es.json').then((m) => m.default),
@@ -21,67 +22,10 @@ export async function getDictionary(locale: Locale) {
   return loader() as Promise<Dictionary>
 }
 
-// ─── Type definition mirroring the shape of en.json ───────────────────────────
+// ─── Type derived from the English message file (source of truth) ─────────────
+//
+// The Dictionary type mirrors the exact shape of messages/en.json. Because it is
+// derived from the JSON itself, it never drifts out of sync as keys are added or
+// removed. All locale files must share this identical structure.
 
-export type Dictionary = {
-  common: {
-    appName: string
-    login: string
-    getStarted: string
-    startFree: string
-    learnMore: string
-  }
-  nav: {
-    features: string
-    pricing: string
-    faq: string
-  }
-  hero: {
-    headline: string
-    subtitle: string
-    badge: string
-    stats: {
-      activeUsers: string
-      workoutsLogged: string
-      goalCompletion: string
-    }
-  }
-  features: {
-    eyebrow: string
-    headline: string
-    subtitle: string
-    items: {
-      workoutPrograms: { title: string; description: string }
-      nutritionPlans: { title: string; description: string }
-      progressTracking: { title: string; description: string }
-      aiCoach: { title: string; description: string }
-      mealPlanning: { title: string; description: string }
-      analytics: { title: string; description: string }
-    }
-  }
-  pricing: {
-    eyebrow: string
-    headline: string
-    subtitle: string
-    mostPopular: string
-    plans: {
-      basic: { name: string; price: string; period: string; description: string; cta: string }
-      pro: { name: string; price: string; period: string; description: string; cta: string }
-      elite: { name: string; price: string; period: string; description: string; cta: string }
-    }
-  }
-  faq: {
-    eyebrow: string
-    headline: string
-  }
-  footer: {
-    tagline: string
-    copyright: string
-    builtWith: string
-    columns: {
-      product: string
-      company: string
-      legal: string
-    }
-  }
-}
+export type Dictionary = typeof en

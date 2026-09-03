@@ -4,8 +4,11 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type ExercisesDict = ReturnType<typeof useDictionary>["dict"]["training"]["exercises"];
 
 type ExerciseCategory = "Strength" | "Calisthenics" | "Cardio" | "Mobility" | "Flexibility";
 type MuscleGroup = "Chest" | "Back" | "Shoulders" | "Biceps" | "Triceps" | "Forearms" | "Core" | "Glutes" | "Quadriceps" | "Hamstrings" | "Calves" | "Full Body";
@@ -45,9 +48,22 @@ function categoryColor(c: ExerciseCategory): string {
   }
 }
 
+// Localized display label for a category value (the value itself stays the logic key).
+function categoryLabel(c: ExerciseCategory, t: ExercisesDict): string {
+  switch (c) {
+    case "Strength":     return t.categoryStrength;
+    case "Calisthenics": return t.categoryCalisthenics;
+    case "Cardio":       return t.categoryCardio;
+    case "Mobility":     return t.categoryMobility;
+    case "Flexibility":  return t.categoryFlexibility;
+  }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function ExercisesPage() {
+  const { dict } = useDictionary();
+  const t = dict.training.exercises;
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"All" | ExerciseCategory>("All");
@@ -96,7 +112,7 @@ export default function ExercisesPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading exercises..." />
+      <PageLoader text={t.loading} />
     );
   }
 
@@ -104,9 +120,9 @@ export default function ExercisesPage() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Exercises</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
         <p className="mt-1 text-sm text-zinc-500">
-          {allExercises.length} exercises available
+          {t.available.replace("{n}", String(allExercises.length))}
         </p>
       </div>
 
@@ -116,25 +132,25 @@ export default function ExercisesPage() {
           <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" aria-hidden="true">
             <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
           </svg>
-          <input type="search" placeholder="Search exercises..." value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search exercises"
+          <input type="search" placeholder={t.searchPlaceholder} value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search exercises"
             className="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
         </div>
 
         <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as "All" | ExerciseCategory)} aria-label="Filter by category"
           className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
-          <option value="All">All Categories</option>
-          {EXERCISE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          <option value="All">{t.allCategories}</option>
+          {EXERCISE_CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel(c, t)}</option>)}
         </select>
 
         <select value={muscleFilter} onChange={(e) => setMuscleFilter(e.target.value as "All" | MuscleGroup)} aria-label="Filter by muscle group"
           className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
-          <option value="All">All Muscles</option>
+          <option value="All">{t.allMuscles}</option>
           {MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
 
         <select value={difficultyFilter} onChange={(e) => setDifficultyFilter(e.target.value as "All" | Difficulty)} aria-label="Filter by difficulty"
           className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
-          <option value="All">All Levels</option>
+          <option value="All">{t.allLevels}</option>
           {DIFFICULTIES.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
       </div>
@@ -142,7 +158,7 @@ export default function ExercisesPage() {
       {/* Featured */}
       {showFeatured && (
         <div>
-          <h2 className="mb-3 text-sm font-semibold text-zinc-900">Featured Exercises</h2>
+          <h2 className="mb-3 text-sm font-semibold text-zinc-900">{t.featured}</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((ex) => (
               <Link key={ex.id} href={`/training/exercises/${ex.id}`}
@@ -153,7 +169,7 @@ export default function ExercisesPage() {
                 </div>
                 <p className="mb-3 text-xs text-zinc-400 line-clamp-2">{ex.description}</p>
                 <div className="mt-auto flex items-center gap-2 border-t border-zinc-100 pt-3">
-                  <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${categoryColor(ex.category)}`}>{ex.category}</span>
+                  <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${categoryColor(ex.category)}`}>{categoryLabel(ex.category, t)}</span>
                   <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">{ex.muscleGroup}</span>
                 </div>
               </Link>
@@ -170,7 +186,7 @@ export default function ExercisesPage() {
             if (catExercises.length === 0) return null;
             return (
               <div key={cat}>
-                <h2 className="mb-3 text-sm font-semibold text-zinc-900">{cat}</h2>
+                <h2 className="mb-3 text-sm font-semibold text-zinc-900">{categoryLabel(cat, t)}</h2>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {catExercises.map((ex) => (
                     <Link key={ex.id} href={`/training/exercises/${ex.id}`}
@@ -192,7 +208,7 @@ export default function ExercisesPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex h-48 items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <p className="text-sm text-zinc-400">No exercises match your filters.</p>
+          <p className="text-sm text-zinc-400">{t.noMatch}</p>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -205,7 +221,7 @@ export default function ExercisesPage() {
               </div>
               <p className="mb-2 text-xs text-zinc-400 line-clamp-2">{ex.description}</p>
               <div className="mt-auto flex items-center gap-2 border-t border-zinc-100 pt-3">
-                <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${categoryColor(ex.category)}`}>{ex.category}</span>
+                <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${categoryColor(ex.category)}`}>{categoryLabel(ex.category, t)}</span>
                 <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">{ex.muscleGroup}</span>
               </div>
             </Link>

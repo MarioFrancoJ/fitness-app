@@ -4,10 +4,23 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+type PrefsDict = ReturnType<typeof useDictionary>["dict"]["notifications"]["preferencesPage"];
+
 type ReminderFrequency = "Daily" | "Weekly" | "Monthly" | "Never";
+
+// Maps an enum frequency (logic key) to its localized display label.
+function frequencyLabel(freq: ReminderFrequency, t: PrefsDict): string {
+  switch (freq) {
+    case "Daily":   return t.freqDaily;
+    case "Weekly":  return t.freqWeekly;
+    case "Monthly": return t.freqMonthly;
+    case "Never":   return t.freqNever;
+  }
+}
 
 interface NotificationPreferences {
   workoutReminders: boolean;
@@ -45,6 +58,8 @@ function Toggle({ enabled, onToggle, label, description }: { enabled: boolean; o
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function NotificationPreferencesPage() {
+  const { dict } = useDictionary();
+  const t = dict.notifications.preferencesPage;
   const { success: showToast } = useToast();
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,9 +146,9 @@ export default function NotificationPreferencesPage() {
       );
 
     if (error) {
-      showToast("Error saving preferences");
+      showToast(t.toastError);
     } else {
-      showToast("Preferences saved!");
+      showToast(t.toastSaved);
     }
 
     setSaving(false);
@@ -143,7 +158,7 @@ export default function NotificationPreferencesPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading preferences..." />
+      <PageLoader text={t.loading} />
     );
   }
 
@@ -153,51 +168,51 @@ export default function NotificationPreferencesPage() {
     <>
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Notification Preferences</h1>
-          <p className="mt-1 text-sm text-zinc-500">Choose which notifications you want to receive.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
+          <p className="mt-1 text-sm text-zinc-500">{t.subtitle}</p>
         </div>
 
         {/* Toggles */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="mb-4 text-sm font-semibold text-zinc-700">Notification Types</p>
+          <p className="mb-4 text-sm font-semibold text-zinc-700">{t.typesHeading}</p>
           <div className="flex flex-col gap-3">
-            <Toggle enabled={prefs.workoutReminders} onToggle={() => toggle("workoutReminders")} label="Workout Reminders" description="Reminders about scheduled workouts and inactivity" />
-            <Toggle enabled={prefs.nutritionReminders} onToggle={() => toggle("nutritionReminders")} label="Nutrition Reminders" description="Reminders to log meals and reach macro goals" />
-            <Toggle enabled={prefs.progressReminders} onToggle={() => toggle("progressReminders")} label="Progress Reminders" description="Reminders to update weight and measurements" />
-            <Toggle enabled={prefs.achievementNotifications} onToggle={() => toggle("achievementNotifications")} label="Achievement Notifications" description="Celebrate milestones and streaks" />
-            <Toggle enabled={prefs.recommendationNotifications} onToggle={() => toggle("recommendationNotifications")} label="Recommendation Notifications" description="New personalized recommendations" />
-            <Toggle enabled={prefs.subscriptionNotifications} onToggle={() => toggle("subscriptionNotifications")} label="Subscription Notifications" description="Trial ending, renewal, and billing alerts" />
+            <Toggle enabled={prefs.workoutReminders} onToggle={() => toggle("workoutReminders")} label={t.workoutRemindersLabel} description={t.workoutRemindersDesc} />
+            <Toggle enabled={prefs.nutritionReminders} onToggle={() => toggle("nutritionReminders")} label={t.nutritionRemindersLabel} description={t.nutritionRemindersDesc} />
+            <Toggle enabled={prefs.progressReminders} onToggle={() => toggle("progressReminders")} label={t.progressRemindersLabel} description={t.progressRemindersDesc} />
+            <Toggle enabled={prefs.achievementNotifications} onToggle={() => toggle("achievementNotifications")} label={t.achievementLabel} description={t.achievementDesc} />
+            <Toggle enabled={prefs.recommendationNotifications} onToggle={() => toggle("recommendationNotifications")} label={t.recommendationLabel} description={t.recommendationDesc} />
+            <Toggle enabled={prefs.subscriptionNotifications} onToggle={() => toggle("subscriptionNotifications")} label={t.subscriptionLabel} description={t.subscriptionDesc} />
           </div>
         </div>
 
         {/* Frequency */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="mb-4 text-sm font-semibold text-zinc-700">Reminder Frequency</p>
+          <p className="mb-4 text-sm font-semibold text-zinc-700">{t.frequencyHeading}</p>
           <div className="flex gap-2">
             {FREQUENCIES.map((f) => (
               <button key={f} type="button" onClick={() => setFrequency(f)}
                 className={["rounded-lg px-4 py-2 text-xs font-semibold transition-colors",
                   prefs.reminderFrequency === f ? "bg-zinc-900 text-white" : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50",
                 ].join(" ")}>
-                {f}
+                {frequencyLabel(f, t)}
               </button>
             ))}
           </div>
-          <p className="mt-3 text-xs text-zinc-400">Controls how often reminder notifications are generated.</p>
+          <p className="mt-3 text-xs text-zinc-400">{t.frequencyNote}</p>
         </div>
 
         {/* Future channels */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="mb-2 text-sm font-semibold text-zinc-700">Delivery Channels</p>
-          <p className="text-xs text-zinc-400 mb-4">Additional delivery methods will be available in future updates.</p>
+          <p className="mb-2 text-sm font-semibold text-zinc-700">{t.channelsHeading}</p>
+          <p className="text-xs text-zinc-400 mb-4">{t.channelsNote}</p>
           <div className="flex flex-col gap-2">
-            {[{ label: "In-App", enabled: true }, { label: "Email", enabled: false }, { label: "Push Notifications", enabled: false }, { label: "SMS", enabled: false }, { label: "WhatsApp", enabled: false }].map((ch) => (
+            {[{ label: t.channelInApp, enabled: true }, { label: t.channelEmail, enabled: false }, { label: t.channelPush, enabled: false }, { label: t.channelSms, enabled: false }, { label: t.channelWhatsapp, enabled: false }].map((ch) => (
               <div key={ch.label} className="flex items-center justify-between rounded-lg bg-zinc-50 p-3">
                 <span className="text-sm text-zinc-700">{ch.label}</span>
                 {ch.enabled ? (
-                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Active</span>
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{t.channelActive}</span>
                 ) : (
-                  <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-400">Coming Soon</span>
+                  <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-400">{t.channelComingSoon}</span>
                 )}
               </div>
             ))}
@@ -206,7 +221,7 @@ export default function NotificationPreferencesPage() {
 
         <button type="button" onClick={handleSave} disabled={saving}
           className="w-fit rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 disabled:opacity-50">
-          {saving ? "Saving..." : "Save Preferences"}
+          {saving ? dict.common.saving : t.savePreferences}
         </button>
       </div>
     </>

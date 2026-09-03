@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/Toast";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -108,7 +109,7 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
 
 // ── Progress Bar ──────────────────────────────────────────────────────────────
 
-function MacroBar({ label, current, target, color }: { label: string; current: number; target: number; color: string }) {
+function MacroBar({ label, current, target, color, isCalories }: { label: string; current: number; target: number; color: string; isCalories?: boolean }) {
   const pct = Math.min((current / target) * 100, 100);
   const over = current > target;
   return (
@@ -116,7 +117,7 @@ function MacroBar({ label, current, target, color }: { label: string; current: n
       <div className="mb-1 flex items-center justify-between">
         <span className="text-xs font-medium text-zinc-600">{label}</span>
         <span className={`text-xs font-semibold ${over ? "text-red-500" : "text-zinc-700"}`}>
-          {current} / {target}{label === "Calories" ? " kcal" : "g"}
+          {current} / {target}{isCalories ? " kcal" : "g"}
         </span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
@@ -131,7 +132,7 @@ function MacroBar({ label, current, target, color }: { label: string; current: n
 
 // ── Empty State ───────────────────────────────────────────────────────────────
 
-function EmptyState({ onAdd }: { onAdd: () => void }) {
+function EmptyState({ onAdd, t }: { onAdd: () => void; t: ReturnType<typeof useDictionary>["dict"]["nutrition"] }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white py-20">
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100">
@@ -139,14 +140,14 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
           <path fillRule="evenodd" d="M9.965 3.038C7.67 3.28 5.64 4.533 4.25 6.492a8.014 8.014 0 0 0-1.223 6.584c.194.8.96 1.284 1.746 1.07A7.95 7.95 0 0 0 7 13.5c1.18 0 2.3.256 3.31.713C10.86 15.48 12.15 16 13.5 16c1.657 0 3-.828 3-2.5C16.5 7.649 13.576 2.664 9.965 3.038Z" clipRule="evenodd" />
         </svg>
       </div>
-      <p className="mb-1 text-base font-semibold text-zinc-900">No meals logged yet</p>
-      <p className="mb-6 text-sm text-zinc-500">Start tracking your nutrition by adding your first meal.</p>
+      <p className="mb-1 text-base font-semibold text-zinc-900">{t.emptyTitle}</p>
+      <p className="mb-6 text-sm text-zinc-500">{t.emptyDescription}</p>
       <button
         type="button"
         onClick={onAdd}
         className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
       >
-        Add First Meal
+        {t.emptyAction}
       </button>
     </div>
   );
@@ -155,6 +156,8 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function NutritionPage() {
+  const { dict } = useDictionary();
+  const t = dict.nutrition;
   const { success: showToast } = useToast();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [targets, setTargets] = useState<NutritionTargets>(DEFAULT_TARGETS);
@@ -175,6 +178,15 @@ export default function NutritionPage() {
   const [formTime, setFormTime] = useState(nowTime());
   const [formPhoto, setFormPhoto] = useState<string | null>(null);
 
+  const mealTypeLabel = (type: MealType): string => {
+    switch (type) {
+      case "Breakfast": return t.mealTypeBreakfast;
+      case "Lunch": return t.mealTypeLunch;
+      case "Dinner": return t.mealTypeDinner;
+      case "Snack": return t.mealTypeSnack;
+      default: return type;
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -293,7 +305,7 @@ export default function NutritionPage() {
         calories: meal.calories, protein: meal.protein, carbs: meal.carbs, fat: meal.fat,
         date: meal.date, time: meal.time || null, photo_url: meal.photoUrl,
       }).eq("id", editingId);
-      showToast("Meal updated successfully!");
+      showToast(t.toast.updated);
     } else {
       // Insert in Supabase
       const supabase = createClient();
@@ -307,7 +319,7 @@ export default function NutritionPage() {
         if (inserted) meal.id = inserted.id;
       }
       updated = [meal, ...meals];
-      showToast("Meal added successfully!");
+      showToast(t.toast.added);
     }
 
     setMeals(updated);
@@ -320,7 +332,7 @@ export default function NutritionPage() {
     setMeals(updated);
     const supabase = createClient();
     supabase.from("meal_logs").delete().eq("id", id);
-    showToast("Meal deleted");
+    showToast(t.toast.deleted);
   }
 
   function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -360,21 +372,21 @@ export default function NutritionPage() {
   // Insights
   const insights = useMemo(() => {
     const msgs: string[] = [];
-    if (todaySummary.totalProtein >= targets.protein) msgs.push("You reached your protein goal today.");
-    else if (todaySummary.totalProtein > 0 && todaySummary.totalProtein < targets.protein * 0.5) msgs.push("Your protein intake is low today. Try adding a high-protein meal.");
-    if (todaySummary.totalCalories > 0 && todaySummary.totalCalories < targets.calories * 0.8) msgs.push("You are below your calorie target.");
-    if (todaySummary.totalCalories > targets.calories) msgs.push("You exceeded your calorie target today.");
-    if (todaySummary.totalFat > targets.fat) msgs.push("You exceeded your fat target.");
-    if (todaySummary.totalCarbs >= targets.carbs) msgs.push("You reached your carbs goal.");
+    if (todaySummary.totalProtein >= targets.protein) msgs.push(t.insight.proteinGoalReached);
+    else if (todaySummary.totalProtein > 0 && todaySummary.totalProtein < targets.protein * 0.5) msgs.push(t.insight.proteinLow);
+    if (todaySummary.totalCalories > 0 && todaySummary.totalCalories < targets.calories * 0.8) msgs.push(t.insight.belowCalorie);
+    if (todaySummary.totalCalories > targets.calories) msgs.push(t.insight.exceededCalorie);
+    if (todaySummary.totalFat > targets.fat) msgs.push(t.insight.exceededFat);
+    if (todaySummary.totalCarbs >= targets.carbs) msgs.push(t.insight.carbsGoalReached);
 
     // Weekly consistency
     const weekDates = getDateRange("week");
     const daysLogged = new Set(meals.filter((m) => weekDates.includes(m.date)).map((m) => m.date)).size;
-    if (daysLogged >= 5) msgs.push("Great consistency this week! You've logged meals on " + daysLogged + " days.");
+    if (daysLogged >= 5) msgs.push(t.insight.consistency.replace("{n}", String(daysLogged)));
 
-    if (msgs.length === 0 && todaySummary.mealCount === 0) msgs.push("No meals logged today. Start tracking to see insights.");
+    if (msgs.length === 0 && todaySummary.mealCount === 0) msgs.push(t.insight.noMeals);
     return msgs;
-  }, [todaySummary, targets, meals]);
+  }, [todaySummary, targets, meals, t]);
 
   if (!hydrated) return null;
 
@@ -386,20 +398,20 @@ export default function NutritionPage() {
         {/* ── Header ── */}
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Nutrition</h1>
-            <p className="mt-1 text-sm text-zinc-500">Track your daily food intake, calories, and macros.</p>
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
+            <p className="mt-1 text-sm text-zinc-500">{t.subtitle}</p>
           </div>
           <button
             type="button"
             onClick={openAddForm}
             className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
           >
-            + Add Meal
+            {t.addMeal}
           </button>
         </div>
 
         {!hasMeals && !showForm ? (
-          <EmptyState onAdd={openAddForm} />
+          <EmptyState onAdd={openAddForm} t={t} />
         ) : (
           <>
             {/* ═══════════════════════════════════════════════════════════════════
@@ -407,7 +419,7 @@ export default function NutritionPage() {
             ═══════════════════════════════════════════════════════════════════ */}
             <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
-                <p className="text-sm font-semibold text-zinc-900">Today&apos;s Nutrition</p>
+                <p className="text-sm font-semibold text-zinc-900">{t.todaysNutrition}</p>
                 <span className="text-xs text-zinc-400">{today}</span>
               </div>
 
@@ -415,32 +427,32 @@ export default function NutritionPage() {
               <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
                 <div className="rounded-lg bg-zinc-50 p-3 text-center">
                   <p className="text-lg font-bold text-zinc-900">{todaySummary.totalCalories}</p>
-                  <p className="text-xs text-zinc-400">Consumed</p>
+                  <p className="text-xs text-zinc-400">{t.consumed}</p>
                 </div>
                 <div className="rounded-lg bg-zinc-50 p-3 text-center">
                   <p className="text-lg font-bold text-emerald-600">{Math.max(0, targets.calories - todaySummary.totalCalories)}</p>
-                  <p className="text-xs text-zinc-400">Remaining</p>
+                  <p className="text-xs text-zinc-400">{t.remaining}</p>
                 </div>
                 <div className="rounded-lg bg-blue-50 p-3 text-center">
                   <p className="text-lg font-bold text-blue-600">{todaySummary.totalProtein}g</p>
-                  <p className="text-xs text-zinc-400">Protein</p>
+                  <p className="text-xs text-zinc-400">{t.protein}</p>
                 </div>
                 <div className="rounded-lg bg-amber-50 p-3 text-center">
                   <p className="text-lg font-bold text-amber-600">{todaySummary.totalCarbs}g</p>
-                  <p className="text-xs text-zinc-400">Carbs</p>
+                  <p className="text-xs text-zinc-400">{t.carbs}</p>
                 </div>
                 <div className="rounded-lg bg-emerald-50 p-3 text-center">
                   <p className="text-lg font-bold text-emerald-600">{todaySummary.totalFat}g</p>
-                  <p className="text-xs text-zinc-400">Fat</p>
+                  <p className="text-xs text-zinc-400">{t.fat}</p>
                 </div>
               </div>
 
               {/* Progress bars */}
               <div className="flex flex-col gap-3">
-                <MacroBar label="Calories" current={todaySummary.totalCalories} target={targets.calories} color="#18181b" />
-                <MacroBar label="Protein" current={todaySummary.totalProtein} target={targets.protein} color="#2563eb" />
-                <MacroBar label="Carbs" current={todaySummary.totalCarbs} target={targets.carbs} color="#d97706" />
-                <MacroBar label="Fat" current={todaySummary.totalFat} target={targets.fat} color="#059669" />
+                <MacroBar label={t.calories} isCalories current={todaySummary.totalCalories} target={targets.calories} color="#18181b" />
+                <MacroBar label={t.protein} current={todaySummary.totalProtein} target={targets.protein} color="#2563eb" />
+                <MacroBar label={t.carbs} current={todaySummary.totalCarbs} target={targets.carbs} color="#d97706" />
+                <MacroBar label={t.fat} current={todaySummary.totalFat} target={targets.fat} color="#059669" />
               </div>
             </div>
 
@@ -448,9 +460,9 @@ export default function NutritionPage() {
                 4. DAILY MEAL TIMELINE
             ═══════════════════════════════════════════════════════════════════ */}
             <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-              <p className="mb-4 text-sm font-semibold text-zinc-900">Today&apos;s Meals</p>
+              <p className="mb-4 text-sm font-semibold text-zinc-900">{t.todaysMeals}</p>
               {todayMeals.length === 0 ? (
-                <p className="text-sm text-zinc-400">No meals logged today.</p>
+                <p className="text-sm text-zinc-400">{t.noMealsToday}</p>
               ) : (
                 <div className="flex flex-col gap-3">
                   {MEAL_TYPES.map((type) => {
@@ -458,7 +470,7 @@ export default function NutritionPage() {
                     if (typeMeals.length === 0) return null;
                     return (
                       <div key={type}>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">{type}</p>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">{mealTypeLabel(type)}</p>
                         <div className="flex flex-col gap-2">
                           {typeMeals.map((meal) => (
                             <div key={meal.id} className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 p-3">
@@ -520,7 +532,7 @@ export default function NutritionPage() {
             ═══════════════════════════════════════════════════════════════════ */}
             {insights.length > 0 && (
               <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-                <p className="mb-3 text-sm font-semibold text-zinc-900">Insights</p>
+                <p className="mb-3 text-sm font-semibold text-zinc-900">{t.insights}</p>
                 <div className="flex flex-col gap-2">
                   {insights.map((msg, i) => (
                     <div key={i} className="flex items-start gap-2 rounded-lg bg-zinc-50 p-3">
@@ -541,9 +553,9 @@ export default function NutritionPage() {
             ═══════════════════════════════════════════════════════════════════ */}
             <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
-                <p className="text-sm font-semibold text-zinc-900">Nutrition History</p>
+                <p className="text-sm font-semibold text-zinc-900">{t.historyTitle}</p>
                 <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-0.5">
-                  {([["today", "Today"], ["week", "This Week"], ["month", "This Month"]] as const).map(([key, label]) => (
+                  {([["today", dict.common.filterToday], ["week", dict.common.filterThisWeek], ["month", dict.common.filterThisMonth]] as const).map(([key, label]) => (
                     <button
                       key={key}
                       type="button"
@@ -562,23 +574,23 @@ export default function NutritionPage() {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                 <div className="rounded-lg bg-zinc-50 p-3 text-center">
                   <p className="text-lg font-bold text-zinc-900">{historyStats.totalCalories}</p>
-                  <p className="text-xs text-zinc-400">Total Calories</p>
+                  <p className="text-xs text-zinc-400">{t.totalCalories}</p>
                 </div>
                 <div className="rounded-lg bg-zinc-50 p-3 text-center">
                   <p className="text-lg font-bold text-zinc-900">{historyStats.avgCalories}</p>
-                  <p className="text-xs text-zinc-400">Avg Calories/Day</p>
+                  <p className="text-xs text-zinc-400">{t.avgCaloriesDay}</p>
                 </div>
                 <div className="rounded-lg bg-blue-50 p-3 text-center">
                   <p className="text-lg font-bold text-blue-600">{historyStats.avgProtein}g</p>
-                  <p className="text-xs text-zinc-400">Avg Protein</p>
+                  <p className="text-xs text-zinc-400">{t.avgProtein}</p>
                 </div>
                 <div className="rounded-lg bg-amber-50 p-3 text-center">
                   <p className="text-lg font-bold text-amber-600">{historyStats.avgCarbs}g</p>
-                  <p className="text-xs text-zinc-400">Avg Carbs</p>
+                  <p className="text-xs text-zinc-400">{t.avgCarbs}</p>
                 </div>
                 <div className="rounded-lg bg-emerald-50 p-3 text-center">
                   <p className="text-lg font-bold text-emerald-600">{historyStats.avgFat}g</p>
-                  <p className="text-xs text-zinc-400">Avg Fat</p>
+                  <p className="text-xs text-zinc-400">{t.avgFat}</p>
                 </div>
               </div>
             </div>
@@ -597,11 +609,11 @@ export default function NutritionPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-zinc-900">{editingId ? "Edit Meal" : "Add Meal"}</h2>
+              <h2 className="text-lg font-bold text-zinc-900">{editingId ? t.form.editTitle : t.form.addTitle}</h2>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                aria-label="Close"
+                aria-label={dict.common.close}
                 className="rounded-lg p-1 text-zinc-400 hover:text-zinc-700 focus-visible:outline-none"
               >
                 <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
@@ -613,26 +625,26 @@ export default function NutritionPage() {
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               {/* Meal Type */}
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="mealType" className="text-sm font-medium text-zinc-700">Meal Type</label>
+                <label htmlFor="mealType" className="text-sm font-medium text-zinc-700">{t.form.mealType}</label>
                 <select
                   id="mealType"
                   value={formType}
                   onChange={(e) => setFormType(e.target.value as MealType)}
                   className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
                 >
-                  {MEAL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  {MEAL_TYPES.map((mt) => <option key={mt} value={mt}>{mealTypeLabel(mt)}</option>)}
                 </select>
               </div>
 
               {/* Name */}
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="mealName" className="text-sm font-medium text-zinc-700">Meal Name *</label>
+                <label htmlFor="mealName" className="text-sm font-medium text-zinc-700">{t.form.mealName}</label>
                 <input
                   id="mealName"
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="e.g. Grilled Chicken Salad"
+                  placeholder={t.form.mealNamePlaceholder}
                   required
                   className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
                 />
@@ -640,13 +652,13 @@ export default function NutritionPage() {
 
               {/* Description */}
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="mealDesc" className="text-sm font-medium text-zinc-700">Description</label>
+                <label htmlFor="mealDesc" className="text-sm font-medium text-zinc-700">{t.form.description}</label>
                 <input
                   id="mealDesc"
                   type="text"
                   value={formDesc}
                   onChange={(e) => setFormDesc(e.target.value)}
-                  placeholder="Optional notes about the meal"
+                  placeholder={t.form.descriptionPlaceholder}
                   className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
                 />
               </div>
@@ -654,19 +666,19 @@ export default function NutritionPage() {
               {/* Macros grid */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="mealCal" className="text-sm font-medium text-zinc-700">Calories</label>
+                  <label htmlFor="mealCal" className="text-sm font-medium text-zinc-700">{t.form.calories}</label>
                   <input id="mealCal" type="number" min={0} max={5000} value={formCalories} onChange={(e) => setFormCalories(e.target.value)} placeholder="0" className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="mealPro" className="text-sm font-medium text-zinc-700">Protein (g)</label>
+                  <label htmlFor="mealPro" className="text-sm font-medium text-zinc-700">{t.form.proteinG}</label>
                   <input id="mealPro" type="number" min={0} max={500} value={formProtein} onChange={(e) => setFormProtein(e.target.value)} placeholder="0" className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="mealCarbs" className="text-sm font-medium text-zinc-700">Carbs (g)</label>
+                  <label htmlFor="mealCarbs" className="text-sm font-medium text-zinc-700">{t.form.carbsG}</label>
                   <input id="mealCarbs" type="number" min={0} max={500} value={formCarbs} onChange={(e) => setFormCarbs(e.target.value)} placeholder="0" className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="mealFat" className="text-sm font-medium text-zinc-700">Fat (g)</label>
+                  <label htmlFor="mealFat" className="text-sm font-medium text-zinc-700">{t.form.fatG}</label>
                   <input id="mealFat" type="number" min={0} max={500} value={formFat} onChange={(e) => setFormFat(e.target.value)} placeholder="0" className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                 </div>
               </div>
@@ -674,21 +686,21 @@ export default function NutritionPage() {
               {/* Date & Time */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="mealDate" className="text-sm font-medium text-zinc-700">Date</label>
+                  <label htmlFor="mealDate" className="text-sm font-medium text-zinc-700">{t.form.date}</label>
                   <input id="mealDate" type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="mealTime" className="text-sm font-medium text-zinc-700">Time</label>
+                  <label htmlFor="mealTime" className="text-sm font-medium text-zinc-700">{t.form.time}</label>
                   <input id="mealTime" type="time" value={formTime} onChange={(e) => setFormTime(e.target.value)} className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                 </div>
               </div>
 
               {/* Photo upload */}
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="mealPhoto" className="text-sm font-medium text-zinc-700">Meal Photo</label>
+                <label htmlFor="mealPhoto" className="text-sm font-medium text-zinc-700">{t.form.mealPhoto}</label>
                 <div className="flex items-center gap-3">
                   {formPhoto ? (
-                    <img src={formPhoto} alt="Meal preview" className="h-16 w-16 rounded-lg object-cover" />
+                    <img src={formPhoto} alt={t.form.mealPhoto} className="h-16 w-16 rounded-lg object-cover" />
                   ) : (
                     <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50">
                       <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-zinc-300" aria-hidden="true">
@@ -701,17 +713,17 @@ export default function NutritionPage() {
                       htmlFor="mealPhoto"
                       className="cursor-pointer rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
                     >
-                      {formPhoto ? "Change Photo" : "Upload Photo"}
+                      {formPhoto ? t.form.changePhoto : t.form.uploadPhoto}
                     </label>
                     <input id="mealPhoto" type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
                     {formPhoto && (
                       <button type="button" onClick={() => setFormPhoto(null)} className="text-left text-xs text-red-500 hover:text-red-700">
-                        Remove
+                        {dict.common.remove}
                       </button>
                     )}
                   </div>
                 </div>
-                <p className="text-xs text-zinc-400">Will connect to AI Food Recognition in a future update.</p>
+                <p className="text-xs text-zinc-400">{t.form.aiHint}</p>
               </div>
 
               {/* Submit */}
@@ -721,13 +733,13 @@ export default function NutritionPage() {
                   onClick={() => setShowForm(false)}
                   className="flex-1 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 focus-visible:ring-offset-2"
                 >
-                  Cancel
+                  {dict.common.cancel}
                 </button>
                 <button
                   type="submit"
                   className="flex-1 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
                 >
-                  {editingId ? "Update Meal" : "Add Meal"}
+                  {editingId ? t.form.updateMeal : t.form.addMeal}
                 </button>
               </div>
             </form>

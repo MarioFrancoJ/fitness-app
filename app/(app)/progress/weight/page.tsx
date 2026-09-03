@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,6 +18,8 @@ interface WeightEntry {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function WeightPage() {
+  const { dict } = useDictionary();
+  const t = dict.progress.weight;
   const [logs, setLogs] = useState<WeightEntry[]>([]);
   const [weight, setWeight] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
@@ -73,7 +76,7 @@ export default function WeightPage() {
 
     const parsed = parseFloat(weight);
     if (!weight.trim() || isNaN(parsed) || parsed < 20 || parsed > 500) {
-      setError("Enter a valid weight between 20 and 500 kg.");
+      setError(t.errorInvalid);
       return;
     }
 
@@ -83,7 +86,7 @@ export default function WeightPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      setError("Not authenticated.");
+      setError(dict.common.errorNotAuthenticated);
       setSaving(false);
       return;
     }
@@ -102,7 +105,7 @@ export default function WeightPage() {
       .single();
 
     if (upsertError) {
-      setError("Error saving: " + upsertError.message);
+      setError(t.errorSaving.replace("{msg}", String(upsertError.message)));
       setSaving(false);
       return;
     }
@@ -152,7 +155,7 @@ export default function WeightPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading weight data..." />
+      <PageLoader text={t.loading} />
     );
   }
 
@@ -160,29 +163,29 @@ export default function WeightPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-          Weight Tracker
+          {t.title}
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Log your body weight and track changes over time.
+          {t.subtitle}
         </p>
       </div>
 
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-medium text-zinc-400">Current Weight</p>
+          <p className="text-xs font-medium text-zinc-400">{t.currentWeight}</p>
           <p className="text-2xl font-bold text-zinc-900">
             {currentWeight !== null ? `${currentWeight} kg` : "—"}
           </p>
         </div>
         <div className="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-medium text-zinc-400">Starting Weight</p>
+          <p className="text-xs font-medium text-zinc-400">{t.startingWeight}</p>
           <p className="text-2xl font-bold text-zinc-900">
             {startingWeight !== null ? `${startingWeight} kg` : "—"}
           </p>
         </div>
         <div className="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-medium text-zinc-400">Difference</p>
+          <p className="text-xs font-medium text-zinc-400">{t.difference}</p>
           <p
             className={`text-2xl font-bold ${
               difference !== null && difference < 0
@@ -204,14 +207,14 @@ export default function WeightPage() {
         onSubmit={handleSubmit}
         className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm"
       >
-        <p className="mb-4 text-sm font-semibold text-zinc-700">Log Weight</p>
+        <p className="mb-4 text-sm font-semibold text-zinc-700">{t.logWeight}</p>
         <div className="flex flex-wrap items-end gap-4">
           <div className="w-40">
             <Input
               id="weight"
               type="number"
-              label="Weight (kg)"
-              placeholder="e.g. 75.4"
+              label={t.weightKg}
+              placeholder={t.weightPlaceholder}
               step={0.1}
               min={20}
               max={500}
@@ -227,13 +230,13 @@ export default function WeightPage() {
             <Input
               id="date"
               type="date"
-              label="Date"
+              label={dict.common.date}
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />
           </div>
           <Button type="submit" disabled={saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? dict.common.saving : dict.common.save}
           </Button>
         </div>
       </form>
@@ -242,22 +245,22 @@ export default function WeightPage() {
       <div className="rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div className="border-b border-zinc-100 px-6 py-4">
           <p className="text-sm font-semibold text-zinc-700">
-            History ({logs.length} entries)
+            {t.history.replace("{n}", String(logs.length))}
           </p>
         </div>
 
         {logs.length === 0 ? (
           <div className="flex h-32 items-center justify-center">
-            <p className="text-sm text-zinc-400">No weight entries yet.</p>
+            <p className="text-sm text-zinc-400">{t.noEntries}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-zinc-100 bg-zinc-50">
                 <tr>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Date</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Weight</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Change</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-700">{t.colDate}</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-700">{t.colWeight}</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-700">{t.colChange}</th>
                   <th className="px-5 py-3 font-semibold text-zinc-700"></th>
                 </tr>
               </thead>
@@ -300,7 +303,7 @@ export default function WeightPage() {
                           className="text-xs font-medium text-zinc-400 transition-colors hover:text-red-600"
                           aria-label={`Delete entry for ${entry.date}`}
                         >
-                          Delete
+                          {dict.common.delete}
                         </button>
                       </td>
                     </tr>

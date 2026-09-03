@@ -4,8 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type CoachDict = ReturnType<typeof useDictionary>["dict"]["ai"]["coach"];
 
 interface ChatMsg {
   id: string;
@@ -47,6 +50,8 @@ function getCoachResponse(input: string): string {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AiCoachChatPage() {
+  const { dict } = useDictionary();
+  const t = dict.ai.coach;
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [initialLoading, setInitialLoading] = useState(true);
@@ -69,7 +74,7 @@ export default function AiCoachChatPage() {
       if (data && data.length > 0) {
         setMessages(data.map((m) => ({ id: m.id, role: m.role as "user" | "coach", content: m.content, timestamp: m.timestamp })));
       } else {
-        const welcome: ChatMsg = { id: "welcome", role: "coach", content: "Hey! I'm your AI fitness coach. Ask me anything about training, nutrition, recovery, or motivation. I'm here to help!", timestamp: new Date().toISOString() };
+        const welcome: ChatMsg = { id: "welcome", role: "coach", content: t.chatWelcomeMessage, timestamp: new Date().toISOString() };
         setMessages([welcome]);
         await supabase.from("ai_chat_messages").insert({ user_id: user.id, role: "coach", content: welcome.content, channel: "coach_chat" });
       }
@@ -123,7 +128,7 @@ export default function AiCoachChatPage() {
       }
     } catch {}
 
-    const welcome: ChatMsg = { id: "welcome", role: "coach", content: "Chat cleared! How can I help you today?", timestamp: new Date().toISOString() };
+    const welcome: ChatMsg = { id: "welcome", role: "coach", content: dict.ai.chat.chatClearedMessage, timestamp: new Date().toISOString() };
     setMessages([welcome]);
 
     try {
@@ -137,7 +142,7 @@ export default function AiCoachChatPage() {
 
   if (initialLoading) {
     return (
-      <PageLoader text="Loading chat..." />
+      <PageLoader text={dict.ai.chat.loading} />
     );
   }
 
@@ -148,12 +153,12 @@ export default function AiCoachChatPage() {
         <div className="flex items-center gap-3">
           <Link href="/ai-coach" className="text-sm font-medium text-zinc-500 hover:text-zinc-900">&larr;</Link>
           <div>
-            <h1 className="text-lg font-bold text-zinc-900">AI Coach Chat</h1>
-            <p className="text-xs text-zinc-400">Rule-based responses · No external AI</p>
+            <h1 className="text-lg font-bold text-zinc-900">{t.chatHeaderTitle}</h1>
+            <p className="text-xs text-zinc-400">{t.chatHeaderSubtitle}</p>
           </div>
         </div>
         <button type="button" onClick={handleClearChat} className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50">
-          Clear Chat
+          {dict.ai.chat.clearChat}
         </button>
       </div>
 
@@ -171,7 +176,7 @@ export default function AiCoachChatPage() {
                 {msg.role === "coach" && (
                   <div className="mb-1 flex items-center gap-1.5">
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 text-xs">🤖</span>
-                    <span className="text-xs font-semibold text-zinc-400">Coach</span>
+                    <span className="text-xs font-semibold text-zinc-400">{dict.ai.chat.coachBadge}</span>
                   </div>
                 )}
                 <p className="text-sm leading-relaxed">{msg.content}</p>
@@ -192,7 +197,7 @@ export default function AiCoachChatPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about training, nutrition, recovery..."
+            placeholder={t.chatInputPlaceholder}
             aria-label="Message"
             className="h-10 flex-1 rounded-lg border border-zinc-200 bg-white px-4 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
           />
@@ -202,11 +207,11 @@ export default function AiCoachChatPage() {
             disabled={!input.trim()}
             className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
           >
-            Send
+            {dict.ai.chat.sendButton}
           </button>
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
-          {["How should I eat today?", "What workout should I do?", "I feel tired", "Help me stay motivated"].map((q) => (
+          {[t.suggestionEat, t.suggestionWorkout, t.suggestionTired, t.suggestionMotivation].map((q) => (
             <button key={q} type="button" onClick={() => { setInput(q); }}
               className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs text-zinc-600 hover:border-zinc-400">
               {q}

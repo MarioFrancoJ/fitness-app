@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
+
+// Dictionary slice for the dashboard home view.
+type HomeDict = ReturnType<typeof useDictionary>["dict"]["dashboard"]["home"];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -47,11 +51,11 @@ interface NextMeal {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getGreeting(): string {
+function getGreeting(t: HomeDict): string {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good Morning";
-  if (hour < 17) return "Good Afternoon";
-  return "Good Evening";
+  if (hour < 12) return t.goodMorning;
+  if (hour < 17) return t.goodAfternoon;
+  return t.goodEvening;
 }
 
 function formatDate(): string {
@@ -62,21 +66,20 @@ function formatDate(): string {
   });
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: HomeDict): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
+  if (mins < 1) return t.justNow;
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
-  if (days === 1) return "Yesterday";
+  if (days === 1) return t.yesterday;
   return `${days}d ago`;
 }
 
-function getDayLabels(): string[] {
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  return days;
+function getDayLabels(t: HomeDict): string[] {
+  return [t.dayMon, t.dayTue, t.dayWed, t.dayThu, t.dayFri, t.daySat, t.daySun];
 }
 
 function todayKey(): string {
@@ -101,6 +104,8 @@ const DEFAULT_SUPPLEMENTS = [
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function DashboardContent() {
+  const { dict } = useDictionary();
+  const t = dict.dashboard.home;
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<QuickStats | null>(null);
   const [focus, setFocus] = useState<TodayFocus | null>(null);
@@ -300,7 +305,10 @@ export default function DashboardContent() {
           activities.push({
             id: `s-${s.id}`,
             type: "workout",
-            title: `Completed ${s.workout_name || "Workout"}`,
+            title: t.activityCompletedWorkout.replace(
+              "{name}",
+              s.workout_name || t.fallbackWorkout
+            ),
             timestamp: s.start_time,
           });
       const { data: recentMeals } = await supabase
@@ -313,7 +321,7 @@ export default function DashboardContent() {
           activities.push({
             id: `m-${m.id}`,
             type: "meal",
-            title: `Logged ${m.name}`,
+            title: t.activityLoggedMeal.replace("{name}", m.name),
             timestamp: m.created_at,
           });
       const { data: recentWeightEntries } = await supabase
@@ -327,7 +335,7 @@ export default function DashboardContent() {
           activities.push({
             id: `w-${w.id}`,
             type: "weight",
-            title: "Added Weight Entry",
+            title: t.activityAddedWeight,
             timestamp: w.created_at,
           });
       activities.sort(
@@ -339,7 +347,7 @@ export default function DashboardContent() {
       setLoading(false);
     }
     loadDashboard();
-  }, []);
+  }, [t]);
 
   if (loading) return <SkeletonDashboard />;
 
@@ -351,7 +359,7 @@ export default function DashboardContent() {
       <header className="flex flex-col gap-golden-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-golden-lg font-bold tracking-tight text-zinc-900">
-            {getGreeting()}, {(profile?.name || "User").split(" ")[0]}
+            {getGreeting(t)}, {(profile?.name || "User").split(" ")[0]}
           </h1>
           <div className="mt-golden-1 flex flex-wrap items-center gap-golden-2 text-golden-sm text-zinc-500">
             {profile?.fitnessGoal && (
@@ -363,7 +371,7 @@ export default function DashboardContent() {
           </div>
         </div>
         <div className="flex items-center gap-golden-2 sm:self-start">
-          <QuickActionsMenu />
+          <QuickActionsMenu t={t} />
         </div>
       </header>
 
@@ -373,30 +381,30 @@ export default function DashboardContent() {
       <div className="grid grid-cols-2 gap-golden-3 sm:grid-cols-4">
         <KpiCard
           icon="⚖️"
-          label="Weight"
+          label={t.kpiWeight}
           value={stats?.lastWeight ? `${stats.lastWeight} kg` : "—"}
-          sub={stats?.lastWeight ? "Latest entry" : "No entries yet"}
+          sub={stats?.lastWeight ? t.kpiWeightLatest : t.kpiWeightEmpty}
           href="/progress/weight"
         />
         <KpiCard
           icon="🔥"
-          label="Calories Today"
+          label={t.kpiCaloriesToday}
           value={stats?.caloriesToday ? `${stats.caloriesToday.toLocaleString()} kcal` : "0 kcal"}
-          sub="Logged today"
+          sub={t.kpiLoggedToday}
           href="/nutrition"
         />
         <KpiCard
           icon="🥩"
-          label="Protein Today"
+          label={t.kpiProteinToday}
           value={stats?.proteinToday ? `${stats.proteinToday}g` : "0g"}
-          sub="Logged today"
+          sub={t.kpiLoggedToday}
           href="/nutrition"
         />
         <KpiCard
           icon="💪"
-          label="Workouts This Week"
+          label={t.kpiWorkoutsThisWeek}
           value={`${stats?.workoutsThisWeek ?? 0}`}
-          sub="Completed sessions"
+          sub={t.kpiCompletedSessions}
           href="/training/history"
         />
       </div>
@@ -411,14 +419,14 @@ export default function DashboardContent() {
         <div className="rounded-golden-xl border border-zinc-200 bg-white p-golden-4 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-golden-xs font-bold uppercase tracking-widest text-zinc-400">
-              Today&apos;s Workout
+              {t.todaysWorkout}
             </p>
             {focus?.hasWorkout && (
               <Link
                 href="/training/start"
                 className="inline-flex items-center gap-golden-1 rounded-golden-md bg-zinc-900 px-golden-3 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-zinc-700"
               >
-                Start Workout
+                {t.startWorkout}
               </Link>
             )}
           </div>
@@ -431,22 +439,22 @@ export default function DashboardContent() {
               <div className="mt-golden-3 flex flex-wrap items-center gap-golden-3 text-golden-sm text-zinc-500">
                 <span className="inline-flex items-center gap-1">
                   <span className="text-golden-base">💪</span>
-                  {focus.exerciseCount} exercise{focus.exerciseCount !== 1 ? "s" : ""}
+                  {focus.exerciseCount} {focus.exerciseCount !== 1 ? t.exercisePlural : t.exerciseSingular}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <span className="text-golden-base">⏱️</span>
-                  ~{Math.max(focus.exerciseCount * 4, 15)} min
+                  ~{Math.max(focus.exerciseCount * 4, 15)} {t.unitMin}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <span className="text-golden-base">📊</span>
-                  {weekly?.workoutsCompleted ?? 0}/{weekly?.workoutsGoal ?? 4} this week
+                  {weekly?.workoutsCompleted ?? 0}/{weekly?.workoutsGoal ?? 4} {t.thisWeekSuffix}
                 </span>
               </div>
 
               {/* Next up — exercise preview */}
               {focus.exerciseNames.length > 0 && (
                 <div className="mt-golden-4">
-                  <p className="mb-golden-2 text-golden-sm font-bold uppercase tracking-widest text-zinc-500">Next up</p>
+                  <p className="mb-golden-2 text-golden-sm font-bold uppercase tracking-widest text-zinc-500">{t.nextUp}</p>
                   <div className="flex flex-col gap-golden-1">
                     {focus.exerciseNames.map((name, i) => (
                       <div key={i} className="flex items-center gap-golden-2 rounded-golden-md bg-zinc-50 px-golden-3 py-golden-2">
@@ -459,7 +467,12 @@ export default function DashboardContent() {
                         href="/training/start"
                         className="mt-golden-1 inline-flex items-center gap-1 pl-golden-3 text-golden-sm font-semibold text-blue-600 transition-colors hover:text-blue-700"
                       >
-                        View {focus.exerciseCount - 3} more exercise{focus.exerciseCount - 3 !== 1 ? "s" : ""} →
+                        {t.viewMoreExercises
+                          .replace("{count}", String(focus.exerciseCount - 3))
+                          .replace(
+                            "{label}",
+                            focus.exerciseCount - 3 !== 1 ? t.exercisePlural : t.exerciseSingular
+                          )}
                       </Link>
                     )}
                   </div>
@@ -469,8 +482,10 @@ export default function DashboardContent() {
               {/* Weekly goal bar */}
               <div className="mt-golden-4">
                 <div className="mb-golden-1 flex items-center justify-between text-golden-sm text-zinc-600">
-                  <span className="font-medium">Weekly goal</span>
-                  <span className="font-semibold text-zinc-900">{weekly?.workoutsCompleted ?? 0} of {weekly?.workoutsGoal ?? 4} workouts</span>
+                  <span className="font-medium">{t.weeklyGoal}</span>
+                  <span className="font-semibold text-zinc-900">{t.workoutsProgress
+                    .replace("{completed}", String(weekly?.workoutsCompleted ?? 0))
+                    .replace("{goal}", String(weekly?.workoutsGoal ?? 4))}</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
                   <div
@@ -482,13 +497,13 @@ export default function DashboardContent() {
             </div>
           ) : (
             <div className="mt-golden-4 flex flex-col items-center justify-center py-golden-5">
-              <p className="text-golden-base font-medium text-zinc-500">No workout planned</p>
-              <p className="mt-golden-1 text-golden-sm text-zinc-400">Create a routine to get started</p>
+              <p className="text-golden-base font-medium text-zinc-500">{t.noWorkoutPlanned}</p>
+              <p className="mt-golden-1 text-golden-sm text-zinc-400">{t.createRoutineHint}</p>
               <Link
                 href="/workouts/new"
                 className="mt-golden-4 inline-flex items-center gap-golden-1 rounded-golden-md border border-zinc-200 px-golden-3 py-golden-2 text-golden-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
               >
-                Create Workout
+                {t.createWorkout}
               </Link>
             </div>
           )}
@@ -497,7 +512,7 @@ export default function DashboardContent() {
         {/* This Week — light card */}
         <div className="rounded-golden-xl border border-zinc-200 bg-white p-golden-4 shadow-sm">
           <div className="mb-golden-3 flex items-center justify-between">
-            <h2 className="text-golden-xs font-bold uppercase tracking-widest text-zinc-400">This Week</h2>
+            <h2 className="text-golden-xs font-bold uppercase tracking-widest text-zinc-400">{t.thisWeek}</h2>
           </div>
 
           {/* Workouts headline — prominent on light background */}
@@ -505,12 +520,12 @@ export default function DashboardContent() {
             <p className="text-golden-xl font-bold text-zinc-900">
               {weekly?.workoutsCompleted ?? 0}<span className="text-golden-lg font-medium text-zinc-400">/{weekly?.workoutsGoal ?? 4}</span>
             </p>
-            <p className="text-golden-sm text-zinc-500">workouts completed</p>
+            <p className="text-golden-sm text-zinc-500">{t.workoutsCompleted}</p>
           </div>
 
           {/* Day dots visualization */}
           <div className="mb-golden-4 grid grid-cols-7 gap-golden-1">
-            {getDayLabels().map((day, idx) => {
+            {getDayLabels(t).map((day, idx) => {
               const completed = weekly?.dailyWorkouts[idx] ?? false;
               const isToday = idx === ((new Date().getDay() + 6) % 7);
               return (
@@ -543,21 +558,21 @@ export default function DashboardContent() {
           {/* Progress bars — secondary info */}
           <div className="space-y-golden-3">
             <ProgressRow
-              label="Workouts"
+              label={t.progressWorkouts}
               current={weekly?.workoutsCompleted ?? 0}
               target={weekly?.workoutsGoal ?? 4}
-              suffix="sessions"
+              suffix={t.progressWorkoutsSuffix}
               color="bg-zinc-900"
             />
             <ProgressRow
-              label="Calories"
+              label={t.progressCalories}
               current={weekly?.avgCalories ?? 0}
               target={weekly?.caloriesTarget ?? 2200}
-              suffix="kcal avg"
+              suffix={t.progressCaloriesSuffix}
               color="bg-zinc-300"
             />
             <div className="flex items-center justify-between rounded-golden-md bg-zinc-50 px-golden-3 py-golden-2">
-              <span className="text-golden-sm font-medium text-zinc-600">Weight Δ</span>
+              <span className="text-golden-sm font-medium text-zinc-600">{t.weightDelta}</span>
               {weekly?.weightChange !== null &&
               weekly?.weightChange !== undefined ? (
                 <span
@@ -574,7 +589,7 @@ export default function DashboardContent() {
                   {weekly.weightChange} kg
                 </span>
               ) : (
-                <span className="text-golden-sm font-medium text-zinc-400">No data yet</span>
+                <span className="text-golden-sm font-medium text-zinc-400">{t.noDataYet}</span>
               )}
             </div>
           </div>
@@ -585,6 +600,7 @@ export default function DashboardContent() {
           SECTION 3.5 — DAILY HABITS (water, supplements, meals, workout)
       ═══════════════════════════════════════════════════════════════════════ */}
       <DailyHabits
+        t={t}
         mealsLoggedToday={(stats?.caloriesToday ?? 0) > 0}
         caloriesToday={stats?.caloriesToday ?? 0}
         workoutDoneToday={weekly?.dailyWorkouts?.[(new Date().getDay() + 6) % 7] ?? false}
@@ -597,12 +613,12 @@ export default function DashboardContent() {
         {/* Next Meal */}
         <div className="rounded-golden-xl border border-zinc-200 bg-white p-golden-4 shadow-sm">
           <div className="mb-golden-3 flex items-center justify-between">
-            <h2 className="text-golden-base font-bold text-zinc-900">Next Meal</h2>
+            <h2 className="text-golden-base font-bold text-zinc-900">{t.nextMeal}</h2>
             <Link
               href="/nutrition/meal-planner"
               className="text-golden-sm font-medium text-zinc-400 transition-colors hover:text-zinc-700"
             >
-              Meal Plan →
+              {t.mealPlanLink}
             </Link>
           </div>
           {nextMeal ? (
@@ -627,7 +643,7 @@ export default function DashboardContent() {
                 href="/nutrition"
                 className="shrink-0 rounded-golden-md border border-zinc-200 px-golden-3 py-golden-1 text-golden-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
               >
-                Log
+                {t.log}
               </Link>
             </div>
           ) : (
@@ -636,16 +652,16 @@ export default function DashboardContent() {
                 🍽️
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-golden-base text-zinc-500">No meal planned</p>
+                <p className="text-golden-base text-zinc-500">{t.noMealPlanned}</p>
                 <p className="text-golden-sm text-zinc-400">
-                  Set up your meal plan for the week
+                  {t.setupMealPlanHint}
                 </p>
               </div>
               <Link
                 href="/nutrition/meal-planner"
                 className="shrink-0 rounded-golden-md border border-zinc-200 px-golden-3 py-golden-1 text-golden-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
               >
-                Plan
+                {t.plan}
               </Link>
             </div>
           )}
@@ -654,20 +670,20 @@ export default function DashboardContent() {
         {/* Recent Activity */}
         <div className="rounded-golden-xl border border-zinc-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-zinc-100 px-golden-4 py-golden-3">
-            <h2 className="text-golden-base font-bold text-zinc-900">Recent Activity</h2>
+            <h2 className="text-golden-base font-bold text-zinc-900">{t.recentActivity}</h2>
             {activity.length > 0 && (
               <span className="text-golden-xs font-medium text-zinc-400">
-                {activity.length} entries
+                {activity.length} {t.entriesSuffix}
               </span>
             )}
           </div>
           {activity.length === 0 ? (
             <div className="px-golden-4 py-golden-4 text-center">
               <p className="text-golden-base text-zinc-400">
-                No activity yet
+                {t.noActivityYet}
               </p>
               <p className="mt-golden-1 text-golden-sm text-zinc-300">
-                Complete a workout or log a meal to see it here
+                {t.noActivityHint}
               </p>
             </div>
           ) : (
@@ -697,7 +713,7 @@ export default function DashboardContent() {
                     {item.title}
                   </p>
                   <span className="shrink-0 text-golden-xs text-zinc-400">
-                    {timeAgo(item.timestamp)}
+                    {timeAgo(item.timestamp, t)}
                   </span>
                 </div>
               ))}
@@ -716,10 +732,12 @@ export default function DashboardContent() {
 // ── Daily Habits (water + supplements + meal/workout status) ──────────────────
 
 function DailyHabits({
+  t,
   mealsLoggedToday,
   caloriesToday,
   workoutDoneToday,
 }: {
+  t: HomeDict;
   mealsLoggedToday: boolean;
   caloriesToday: number;
   workoutDoneToday: boolean;
@@ -759,9 +777,7 @@ function DailyHabits({
       // Surface load failures instead of silently showing empty state — this is
       // how a missing table/migration would otherwise masquerade as "no data".
       if (waterRes.error || suppRes.error) {
-        setError(
-          "Could not load your habit data. If this persists, the water/supplement tables may be missing from the database."
-        );
+        setError(t.habitsLoadError);
       }
 
       if (waterRes.data) {
@@ -774,7 +790,7 @@ function DailyHabits({
       setLoading(false);
     }
     load();
-  }, []);
+  }, [t]);
 
   // Persist water intake (upsert on user_id + date).
   // Returns true on success so the UI can roll back optimistic state on failure.
@@ -797,13 +813,13 @@ function DailyHabits({
     if (upsertError) {
       // Roll back optimistic update so the UI never shows unsaved data as saved.
       setIntakeMl(prev);
-      setError(`Could not save water: ${upsertError.message}`);
+      setError(t.waterSaveError.replace("{message}", upsertError.message));
     } else if (ml > 0) {
       // Remember the last added amount so it can be undone in one tap.
       setLastAddedMl(ml);
     }
     setSaving(false);
-  }, [intakeMl, goalMl, saving]);
+  }, [intakeMl, goalMl, saving, t]);
 
   // Undo the most recent water addition (removes exactly the last added amount).
   const undoLastWater = useCallback(() => {
@@ -832,20 +848,20 @@ function DailyHabits({
       );
     if (upsertError) {
       setTakenSupps(prev);
-      setError(`Could not save supplements: ${upsertError.message}`);
+      setError(t.supplementsSaveError.replace("{message}", upsertError.message));
     }
-  }, [takenSupps]);
+  }, [takenSupps, t]);
 
   // Add a custom water amount typed by the user (any positive number of ml).
   const submitCustomWater = useCallback(() => {
     const parsed = Number(customMl);
     if (!Number.isFinite(parsed) || parsed <= 0) {
-      setError("Enter a water amount greater than 0 ml.");
+      setError(t.customWaterError);
       return;
     }
     setCustomMl("");
     void addWater(Math.round(parsed));
-  }, [customMl, addWater]);
+  }, [customMl, addWater, t]);
 
   const waterPct = Math.min(Math.round((intakeMl / goalMl) * 100), 100);
   const waterReached = intakeMl >= goalMl;
@@ -855,8 +871,8 @@ function DailyHabits({
   return (
     <div className="rounded-golden-xl border border-zinc-200 bg-white p-golden-4 shadow-sm">
       <div className="mb-golden-3 flex items-center justify-between">
-        <h2 className="text-golden-base font-bold text-zinc-900">Daily Habits</h2>
-        <span className="text-golden-xs text-zinc-400">Resets daily</span>
+        <h2 className="text-golden-base font-bold text-zinc-900">{t.dailyHabits}</h2>
+        <span className="text-golden-xs text-zinc-400">{t.resetsDaily}</span>
       </div>
 
       {error && (
@@ -873,7 +889,7 @@ function DailyHabits({
         <div className="rounded-golden-lg border border-zinc-100 bg-zinc-50/50 p-golden-3">
           <div className="mb-golden-2 flex items-center justify-between">
             <span className="inline-flex items-center gap-golden-1 text-golden-sm font-semibold text-zinc-700">
-              💧 Water
+              💧 {t.water}
             </span>
             <span className="text-golden-sm font-semibold text-zinc-900">
               {(intakeMl / 1000).toFixed(2)}L <span className="font-medium text-zinc-400">/ {(goalMl / 1000).toFixed(1)}L</span>
@@ -916,8 +932,8 @@ function DailyHabits({
                   }
                 }}
                 disabled={loading || saving}
-                placeholder="Amount in ml"
-                aria-label="Custom water amount in millilitres"
+                placeholder={t.waterAmountPlaceholder}
+                aria-label={t.waterAmountLabel}
                 className="min-w-0 flex-1 rounded-golden-md bg-transparent px-golden-3 py-golden-1 text-golden-sm text-zinc-700 placeholder:text-zinc-400 focus:outline-none disabled:opacity-50"
               />
               <button
@@ -926,13 +942,13 @@ function DailyHabits({
                 disabled={loading || saving || customMl.trim() === ""}
                 className="shrink-0 rounded-golden-md bg-blue-500 px-golden-3 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
               >
-                Add
+                {t.add}
               </button>
             </div>
           </div>
           <div className="mt-golden-2 flex min-h-[1.25rem] items-center justify-between gap-golden-2">
             {waterReached ? (
-              <p className="text-golden-xs font-medium text-emerald-600">Goal reached! 🎉</p>
+              <p className="text-golden-xs font-medium text-emerald-600">{t.goalReached}</p>
             ) : (
               <span />
             )}
@@ -942,9 +958,9 @@ function DailyHabits({
                 onClick={undoLastWater}
                 disabled={loading || saving}
                 className="inline-flex items-center gap-golden-1 text-golden-xs font-medium text-zinc-400 transition-colors hover:text-zinc-700 disabled:opacity-50"
-                aria-label={`Undo last water add of ${lastAddedMl >= 1000 ? `${lastAddedMl / 1000}L` : `${lastAddedMl}ml`}`}
+                aria-label={t.undoLabel.replace("{amount}", lastAddedMl >= 1000 ? `${lastAddedMl / 1000}L` : `${lastAddedMl}ml`)}
               >
-                ↺ Undo {lastAddedMl >= 1000 ? `${lastAddedMl / 1000}L` : `${lastAddedMl}ml`}
+                ↺ {t.undo.replace("{amount}", lastAddedMl >= 1000 ? `${lastAddedMl / 1000}L` : `${lastAddedMl}ml`)}
               </button>
             )}
           </div>
@@ -954,10 +970,12 @@ function DailyHabits({
         <div className="rounded-golden-lg border border-zinc-100 bg-zinc-50/50 p-golden-3">
           <div className="mb-golden-2 flex items-center justify-between">
             <span className="inline-flex items-center gap-golden-1 text-golden-sm font-semibold text-zinc-700">
-              💊 Supplements
+              💊 {t.supplements}
             </span>
             <span className={`text-golden-sm font-semibold ${suppsComplete ? "text-emerald-600" : "text-zinc-900"}`}>
-              {suppsDone}/{DEFAULT_SUPPLEMENTS.length} taken
+              {t.supplementsTaken
+                .replace("{done}", String(suppsDone))
+                .replace("{total}", String(DEFAULT_SUPPLEMENTS.length))}
             </span>
           </div>
           <div className="flex flex-wrap gap-golden-2">
@@ -988,10 +1006,10 @@ function DailyHabits({
 
       {/* Today's status summary */}
       <div className="mt-golden-4 grid grid-cols-2 gap-golden-2 sm:grid-cols-4">
-        <HabitStatus label="Water" done={waterReached} detail={`${(intakeMl / 1000).toFixed(1)}L`} />
-        <HabitStatus label="Supplements" done={suppsComplete} detail={`${suppsDone}/${DEFAULT_SUPPLEMENTS.length}`} />
-        <HabitStatus label="Meals" done={mealsLoggedToday} detail={mealsLoggedToday ? `${caloriesToday} kcal` : "None"} />
-        <HabitStatus label="Workout" done={workoutDoneToday} detail={workoutDoneToday ? "Done" : "Pending"} />
+        <HabitStatus label={t.habitWater} done={waterReached} detail={`${(intakeMl / 1000).toFixed(1)}L`} />
+        <HabitStatus label={t.habitSupplements} done={suppsComplete} detail={`${suppsDone}/${DEFAULT_SUPPLEMENTS.length}`} />
+        <HabitStatus label={t.habitMeals} done={mealsLoggedToday} detail={mealsLoggedToday ? `${caloriesToday} kcal` : t.habitNone} />
+        <HabitStatus label={t.habitWorkout} done={workoutDoneToday} detail={workoutDoneToday ? t.habitDone : t.habitPending} />
       </div>
     </div>
   );
@@ -1018,16 +1036,19 @@ function HabitStatus({ label, done, detail }: { label: string; done: boolean; de
 
 // ── Quick Actions Dropdown / Bottom Sheet ─────────────────────────────────────
 
-const QUICK_ACTIONS = [
-  { label: "Log Meal", icon: "🥗", href: "/nutrition" },
-  { label: "Log Weight", icon: "⚖️", href: "/progress/weight" },
-  { label: "Add Measurement", icon: "📏", href: "/progress/measurements" },
-  { label: "Upload Progress Photo", icon: "📸", href: "/progress/photos" },
-  { label: "Start Workout", icon: "💪", href: "/training/start" },
-  { label: "Create Recipe", icon: "🍳", href: "/nutrition/recipes" },
-];
+function buildQuickActions(t: HomeDict) {
+  return [
+    { label: t.quickActionLogMeal, icon: "🥗", href: "/nutrition" },
+    { label: t.quickActionLogWeight, icon: "⚖️", href: "/progress/weight" },
+    { label: t.quickActionAddMeasurement, icon: "📏", href: "/progress/measurements" },
+    { label: t.quickActionUploadPhoto, icon: "📸", href: "/progress/photos" },
+    { label: t.quickActionStartWorkout, icon: "💪", href: "/training/start" },
+    { label: t.quickActionCreateRecipe, icon: "🍳", href: "/nutrition/recipes" },
+  ];
+}
 
-function QuickActionsMenu() {
+function QuickActionsMenu({ t }: { t: HomeDict }) {
+  const QUICK_ACTIONS = buildQuickActions(t);
   const [open, setOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
@@ -1136,11 +1157,11 @@ function QuickActionsMenu() {
           onClick={handleButtonClick}
           aria-haspopup="true"
           aria-expanded={open}
-          aria-label="Quick Actions"
+          aria-label={t.quickActions}
           className="inline-flex items-center gap-golden-1 rounded-golden-lg border border-zinc-200 bg-white px-golden-3 py-golden-2 text-golden-base font-semibold text-zinc-700 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-300"
         >
           <span>⚡</span>
-          <span className="hidden sm:inline">Quick Actions</span>
+          <span className="hidden sm:inline">{t.quickActions}</span>
           <svg
             className={`h-3.5 w-3.5 text-zinc-400 transition-transform ${
               open ? "rotate-180" : ""
@@ -1196,7 +1217,7 @@ function QuickActionsMenu() {
           className="fixed inset-0 z-[100] sm:hidden"
           role="dialog"
           aria-modal="true"
-          aria-label="Quick Actions"
+          aria-label={t.quickActions}
         >
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in-0"
@@ -1205,7 +1226,7 @@ function QuickActionsMenu() {
           <div className="absolute bottom-0 left-0 right-0 rounded-t-golden-xl bg-white pb-golden-6 pt-golden-3 shadow-2xl animate-in slide-in-from-bottom duration-200">
             <div className="mx-auto mb-golden-4 h-1 w-10 rounded-full bg-zinc-300" />
             <p className="mb-golden-2 px-golden-4 text-golden-sm font-bold uppercase tracking-widest text-zinc-400">
-              Quick Actions
+              {t.quickActions}
             </p>
             <div className="flex flex-col">
               {QUICK_ACTIONS.map((action) => (

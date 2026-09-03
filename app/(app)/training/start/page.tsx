@@ -7,8 +7,11 @@ import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useSandbox } from "@/contexts/SandboxContext";
 import { useToast } from "@/components/ui/Toast";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type StartDict = ReturnType<typeof useDictionary>["dict"]["training"]["start"];
 
 interface WorkoutOption {
   id: string;
@@ -58,6 +61,8 @@ export default function TrainingStartPage() {
   const searchParams = useSearchParams();
   const { isSandbox } = useSandbox();
   const { toast } = useToast();
+  const { dict } = useDictionary();
+  const t = dict.training.start;
   const [workouts, setWorkouts] = useState<WorkoutOption[]>([]);
   const [session, setSession] = useState<ActiveSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -120,7 +125,7 @@ export default function TrainingStartPage() {
           // Show notice for the most recent abandoned session
           const lastAbandoned = stale[0];
           setAbandonedNotice(
-            `Your previous workout "${lastAbandoned.workout_name || "Session"}" was automatically closed due to inactivity.`
+            t.abandonedNotice.replace("{name}", lastAbandoned.workout_name || "Session")
           );
         }
 
@@ -220,7 +225,7 @@ export default function TrainingStartPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      toast("You need to be signed in to start a workout.", "error");
+      toast(t.errorSignedIn, "error");
       setStarting(false);
       return;
     }
@@ -233,7 +238,7 @@ export default function TrainingStartPage() {
       .single();
 
     if (workoutErr || !workout) {
-      toast("We couldn't load that workout. Please try again.", "error");
+      toast(t.errorLoadWorkout, "error");
       setStarting(false);
       return;
     }
@@ -249,7 +254,7 @@ export default function TrainingStartPage() {
 
     // Guard: a workout with no exercises can't be trained — send the user to edit it
     if (allExercises.length === 0) {
-      toast("This workout has no exercises yet. Add some before starting.", "error");
+      toast(t.errorNoExercises, "error");
       setStarting(false);
       router.push(`/workouts/${workout.id}`);
       return;
@@ -282,7 +287,7 @@ export default function TrainingStartPage() {
         .single();
       if (retry.error || !retry.data) {
         console.error("Failed to start training session:", retry.error || firstTry.error);
-        toast(`We couldn't start your session: ${(retry.error || firstTry.error)?.message ?? "unknown error"}`, "error");
+        toast(t.errorStartMsg.replace("{msg}", (retry.error || firstTry.error)?.message ?? "unknown error"), "error");
         setStarting(false);
         return;
       }
@@ -292,7 +297,7 @@ export default function TrainingStartPage() {
     }
 
     if (!newSession) {
-      toast("We couldn't start your session. Please try again.", "error");
+      toast(t.errorStartGeneric, "error");
       setStarting(false);
       return;
     }
@@ -354,7 +359,7 @@ export default function TrainingStartPage() {
     setCurrentExIdx(0);
     setElapsed(0);
     setStarting(false);
-  }, [starting, isSandbox, router, toast]);
+  }, [starting, isSandbox, router, toast, t]);
 
   // ── Auto-start from ?workout= param ───────────────────────────────────────
   // Lets other pages deep-link into the training flow for a specific workout.
@@ -477,7 +482,7 @@ export default function TrainingStartPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading..." />
+      <PageLoader text={t.loading} />
     );
   }
 
@@ -491,7 +496,7 @@ export default function TrainingStartPage() {
             <span className="mt-0.5 text-lg">⏱️</span>
             <div className="flex-1">
               <p className="text-sm font-medium text-amber-900">{abandonedNotice}</p>
-              <p className="mt-0.5 text-xs text-amber-700">Sessions inactive for more than 4 hours are automatically closed.</p>
+              <p className="mt-0.5 text-xs text-amber-700">{t.abandonedInactive}</p>
             </div>
             <button
               type="button"
@@ -507,23 +512,23 @@ export default function TrainingStartPage() {
         )}
 
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Start Workout</h1>
-          <p className="mt-1 text-sm text-zinc-500">Select a workout to begin your training session.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
+          <p className="mt-1 text-sm text-zinc-500">{t.subtitle}</p>
         </div>
 
         {workouts.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white px-6 py-20 text-center">
             <span className="mb-4 text-3xl" aria-hidden="true">🏋️</span>
-            <p className="mb-1 text-base font-semibold text-zinc-900">No workout plan yet</p>
+            <p className="mb-1 text-base font-semibold text-zinc-900">{t.emptyTitle}</p>
             <p className="mb-6 max-w-sm text-sm text-zinc-500">
-              You don&apos;t have any workouts to train with. Create your own or start from a template.
+              {t.emptyDescription}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
               <Link href="/workouts/new" className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700">
-                Create Workout
+                {t.createWorkout}
               </Link>
               <Link href="/training/templates" className="rounded-lg border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50">
-                Browse Templates
+                {t.browseTemplates}
               </Link>
             </div>
           </div>
@@ -536,10 +541,10 @@ export default function TrainingStartPage() {
                 className="flex flex-col items-start rounded-xl border border-zinc-200 bg-white p-5 text-left shadow-sm transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60">
                 <p className="text-sm font-semibold text-zinc-900">{w.name}</p>
                 <p className="mt-1 text-xs text-zinc-400">
-                  {w.goal || "Custom"} · {w.exerciseCount} exercise{w.exerciseCount !== 1 ? "s" : ""}{w.duration ? ` · ${w.duration} min` : ""}
+                  {w.goal || t.custom} · {w.exerciseCount} exercise{w.exerciseCount !== 1 ? "s" : ""}{w.duration ? ` · ${w.duration} min` : ""}
                 </p>
                 {empty && (
-                  <span className="mt-2 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">Add exercises to train</span>
+                  <span className="mt-2 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">{t.addExercisesToTrain}</span>
                 )}
               </button>
               );
@@ -561,12 +566,12 @@ export default function TrainingStartPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-zinc-900">{session.workoutName}</h1>
-          <p className="text-xs text-zinc-400">Session: {formatTime(elapsed)}</p>
+          <p className="text-xs text-zinc-400">{t.session.replace("{time}", formatTime(elapsed))}</p>
         </div>
         <div className="flex gap-2">
-          <button type="button" onClick={handleCancel} className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">Cancel</button>
+          <button type="button" onClick={handleCancel} className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">{dict.common.cancel}</button>
           <button type="button" onClick={handleFinish} disabled={saving} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
-            {saving ? "Saving..." : "Finish"}
+            {saving ? t.saving : t.finish}
           </button>
         </div>
       </div>
@@ -574,7 +579,7 @@ export default function TrainingStartPage() {
       {/* Progress bar */}
       <div>
         <div className="mb-1 flex items-center justify-between text-xs text-zinc-500">
-          <span>{completedSets} / {totalSets} sets</span>
+          <span>{t.setsProgress.replace("{x}", String(completedSets)).replace("{y}", String(totalSets))}</span>
           <span>{totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0}%</span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
@@ -586,12 +591,12 @@ export default function TrainingStartPage() {
       {restRunning && (
         <div className="flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 p-4">
           <div>
-            <p className="text-sm font-semibold text-blue-900">Rest Timer</p>
+            <p className="text-sm font-semibold text-blue-900">{t.restTimer}</p>
             <p className="text-2xl font-bold text-blue-700">{formatTime(restTime)}</p>
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setRestRunning(false)} className="rounded-md bg-blue-200 px-3 py-1 text-xs font-semibold text-blue-800">Pause</button>
-            <button type="button" onClick={() => { setRestRunning(false); setRestTime(0); }} className="rounded-md bg-blue-200 px-3 py-1 text-xs font-semibold text-blue-800">Skip</button>
+            <button type="button" onClick={() => setRestRunning(false)} className="rounded-md bg-blue-200 px-3 py-1 text-xs font-semibold text-blue-800">{t.pause}</button>
+            <button type="button" onClick={() => { setRestRunning(false); setRestTime(0); }} className="rounded-md bg-blue-200 px-3 py-1 text-xs font-semibold text-blue-800">{t.skip}</button>
           </div>
         </div>
       )}
@@ -618,14 +623,14 @@ export default function TrainingStartPage() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold text-zinc-900">{currentEx.exerciseName}</p>
-              <p className="text-xs text-zinc-400">Exercise {currentExIdx + 1} of {session.exerciseLogs.length}</p>
+              <p className="text-xs text-zinc-400">{t.exerciseOf.replace("{i}", String(currentExIdx + 1)).replace("{n}", String(session.exerciseLogs.length))}</p>
             </div>
             <div className="flex gap-2">
               {currentExIdx > 0 && (
-                <button type="button" onClick={() => setCurrentExIdx((i) => i - 1)} className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50">Prev</button>
+                <button type="button" onClick={() => setCurrentExIdx((i) => i - 1)} className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50">{t.prev}</button>
               )}
               {currentExIdx < session.exerciseLogs.length - 1 && (
-                <button type="button" onClick={() => setCurrentExIdx((i) => i + 1)} className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50">Next</button>
+                <button type="button" onClick={() => setCurrentExIdx((i) => i + 1)} className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50">{t.next}</button>
               )}
             </div>
           </div>
@@ -635,16 +640,16 @@ export default function TrainingStartPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-100">
-                  <th className="pb-2 text-xs font-semibold text-zinc-400">Set</th>
-                  <th className="pb-2 text-xs font-semibold text-zinc-400">Target</th>
-                  <th className="pb-2 text-xs font-semibold text-zinc-400">Reps</th>
-                  <th className="pb-2 text-xs font-semibold text-zinc-400">Weight (kg)</th>
-                  <th className="pb-2 text-xs font-semibold text-zinc-400">Done</th>
+                  <th className="pb-2 text-xs font-semibold text-zinc-400">{t.colSet}</th>
+                  <th className="pb-2 text-xs font-semibold text-zinc-400">{t.colTarget}</th>
+                  <th className="pb-2 text-xs font-semibold text-zinc-400">{t.colReps}</th>
+                  <th className="pb-2 text-xs font-semibold text-zinc-400">{t.colWeight}</th>
+                  <th className="pb-2 text-xs font-semibold text-zinc-400">{t.colDone}</th>
                 </tr>
               </thead>
               <tbody>
                 {currentEx.sets.map((set, si) => (
-                  <SetRow key={si} set={set} exIdx={currentExIdx} setIdx={si} onComplete={handleSetComplete} onUndo={handleSetUndo} />
+                  <SetRow key={si} set={set} exIdx={currentExIdx} setIdx={si} onComplete={handleSetComplete} onUndo={handleSetUndo} t={t} />
                 ))}
               </tbody>
             </table>
@@ -657,10 +662,11 @@ export default function TrainingStartPage() {
 
 // ── Set Row Component ─────────────────────────────────────────────────────────
 
-function SetRow({ set, exIdx, setIdx, onComplete, onUndo }: {
+function SetRow({ set, exIdx, setIdx, onComplete, onUndo, t }: {
   set: SetLog; exIdx: number; setIdx: number;
   onComplete: (exIdx: number, setIdx: number, reps: number, weight: number) => void;
   onUndo: (exIdx: number, setIdx: number) => void;
+  t: StartDict;
 }) {
   const [reps, setReps] = useState(set.completedReps || set.targetReps);
   const [weight, setWeight] = useState(set.completedWeight || set.targetWeight);
@@ -668,7 +674,7 @@ function SetRow({ set, exIdx, setIdx, onComplete, onUndo }: {
   return (
     <tr className={`border-b border-zinc-50 ${set.completed ? "bg-emerald-50/50" : ""}`}>
       <td className="py-2 text-zinc-600">{set.setNumber}</td>
-      <td className="py-2 text-zinc-400">{set.targetReps} reps</td>
+      <td className="py-2 text-zinc-400">{t.targetReps.replace("{n}", String(set.targetReps))}</td>
       <td className="py-2">
         <input type="number" value={reps} onChange={(e) => setReps(parseInt(e.target.value) || 0)} min={0}
           disabled={set.completed}
@@ -682,11 +688,11 @@ function SetRow({ set, exIdx, setIdx, onComplete, onUndo }: {
       <td className="py-2">
         {set.completed ? (
           <button type="button" onClick={() => onUndo(exIdx, setIdx)} className="rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-200">
-            ✓ Done
+            {t.setDone}
           </button>
         ) : (
           <button type="button" onClick={() => onComplete(exIdx, setIdx, reps, weight)} className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200">
-            Complete
+            {t.complete}
           </button>
         )}
       </td>

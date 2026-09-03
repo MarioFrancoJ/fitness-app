@@ -11,6 +11,28 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { getLocaleFromHeader } from "@/lib/i18n/getLocale";
+
+const LOCALE_COOKIE = "locale";
+const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+
+/**
+ * Detect the user's preferred language on first visit and persist it
+ * in the "locale" cookie. Only runs when the cookie is absent, so it
+ * never overrides an explicit user choice from the EN/ES switcher.
+ */
+function ensureLocaleCookie(request: NextRequest, response: NextResponse): void {
+  const existing = request.cookies.get(LOCALE_COOKIE)?.value;
+  if (existing) return;
+
+  const detected = getLocaleFromHeader(request.headers.get("accept-language"));
+  response.cookies.set(LOCALE_COOKIE, detected, {
+    maxAge: LOCALE_COOKIE_MAX_AGE,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+}
 
 // ── Route Classification ─────────────────────────────────────────────────────
 
@@ -63,6 +85,9 @@ export async function middleware(request: NextRequest) {
     "Referrer-Policy",
     "strict-origin-when-cross-origin"
   );
+
+  // Detect and persist the locale on first visit (does not override user choice)
+  ensureLocaleCookie(request, supabaseResponse);
 
   // ── Public routes: allow through ───────────────────────────────────────────
   if (isPublicRoute(pathname)) {

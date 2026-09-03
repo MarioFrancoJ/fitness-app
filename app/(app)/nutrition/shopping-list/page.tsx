@@ -4,6 +4,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { readSlot, type PlanSlotValue } from "@/lib/nutrition";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,6 +18,8 @@ interface ShoppingItem {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function ShoppingListPage() {
+  const { dict } = useDictionary();
+  const t = dict.nutrition.shoppingList;
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [listId, setListId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -110,7 +113,7 @@ export default function ShoppingListPage() {
       .maybeSingle();
 
     if (!planData || !planData.plan_data) {
-      setError("No meal plan found for this week. Create a meal plan first.");
+      setError(t.errorNoPlan);
       return;
     }
 
@@ -132,7 +135,7 @@ export default function ShoppingListPage() {
     }
 
     if (recipeIds.size === 0) {
-      setError("Your meal plan is empty. Add recipes to your meal plan first.");
+      setError(t.errorPlanEmpty);
       return;
     }
 
@@ -150,7 +153,7 @@ export default function ShoppingListPage() {
       .in("id", Array.from(recipeIds));
 
     if (!recipesData || recipesData.length === 0) {
-      setError("Could not load recipe ingredients.");
+      setError(t.errorLoadIngredients);
       return;
     }
 
@@ -191,7 +194,7 @@ export default function ShoppingListPage() {
     e.preventDefault();
 
     if (!name.trim()) {
-      setError("Ingredient name is required.");
+      setError(t.errorNameRequired);
       return;
     }
 
@@ -236,7 +239,7 @@ export default function ShoppingListPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading shopping list..." />
+      <PageLoader text={t.loading} />
     );
   }
 
@@ -246,11 +249,11 @@ export default function ShoppingListPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-            Shopping List
+            {t.title}
           </h1>
           <p className="mt-1 text-sm text-zinc-500">
-            {items.length} item{items.length !== 1 ? "s" : ""} on your list
-            {saving && <span className="ml-2 text-xs text-zinc-400">(Saving...)</span>}
+            {t.itemCount.replace("{n}", String(items.length))}
+            {saving && <span className="ml-2 text-xs text-zinc-400">({dict.common.saving})</span>}
           </p>
         </div>
         <div className="flex gap-2">
@@ -259,7 +262,7 @@ export default function ShoppingListPage() {
             onClick={handleGenerate}
             className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
           >
-            Generate from Meal Plan
+            {t.generate}
           </button>
           {items.length > 0 && (
             <button
@@ -267,7 +270,7 @@ export default function ShoppingListPage() {
               onClick={handleClearAll}
               className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
             >
-              Clear All
+              {t.clearAll}
             </button>
           )}
         </div>
@@ -275,7 +278,7 @@ export default function ShoppingListPage() {
 
       {generated && (
         <p className="text-sm font-medium text-emerald-600">
-          ✓ Ingredients added from your meal plan.
+          {t.generatedSuccess}
         </p>
       )}
 
@@ -288,25 +291,25 @@ export default function ShoppingListPage() {
         onSubmit={handleAdd}
         className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm"
       >
-        <p className="mb-4 text-sm font-semibold text-zinc-700">Add Ingredient</p>
+        <p className="mb-4 text-sm font-semibold text-zinc-700">{t.addIngredient}</p>
         <div className="flex flex-wrap items-end gap-4">
           <div className="w-56">
-            <label htmlFor="ingredient-name" className="mb-1 block text-xs font-medium text-zinc-600">Ingredient</label>
+            <label htmlFor="ingredient-name" className="mb-1 block text-xs font-medium text-zinc-600">{t.ingredient}</label>
             <input
               id="ingredient-name"
               type="text"
-              placeholder="e.g. Chicken breast"
+              placeholder={t.ingredientPlaceholder}
               value={name}
               onChange={(e) => { setName(e.target.value); if (error) setError(""); }}
               className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
             />
           </div>
           <div className="w-36">
-            <label htmlFor="ingredient-qty" className="mb-1 block text-xs font-medium text-zinc-600">Quantity</label>
+            <label htmlFor="ingredient-qty" className="mb-1 block text-xs font-medium text-zinc-600">{t.quantity}</label>
             <input
               id="ingredient-qty"
               type="text"
-              placeholder="e.g. 500g"
+              placeholder={t.quantityPlaceholder}
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
               className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
@@ -316,7 +319,7 @@ export default function ShoppingListPage() {
             type="submit"
             className="inline-flex items-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
           >
-            Add
+            {dict.common.add}
           </button>
         </div>
       </form>
@@ -324,13 +327,13 @@ export default function ShoppingListPage() {
       {/* List */}
       <div className="rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div className="border-b border-zinc-100 px-6 py-4">
-          <p className="text-sm font-semibold text-zinc-700">Items</p>
+          <p className="text-sm font-semibold text-zinc-700">{t.items}</p>
         </div>
 
         {items.length === 0 ? (
           <div className="flex h-32 items-center justify-center">
             <p className="text-sm text-zinc-400">
-              Your shopping list is empty. Add items manually or generate from your meal plan.
+              {t.empty}
             </p>
           </div>
         ) : (

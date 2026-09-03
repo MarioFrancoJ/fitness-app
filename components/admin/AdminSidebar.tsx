@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import NavIcon from "@/components/ui/NavIcon";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 // Custom brand icons from /public/icons, masked via NavIcon so they inherit
@@ -31,23 +32,34 @@ function IconSettings() {
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 
-const navItems = [
-  { label: "Dashboard",     href: "/admin",               icon: <IconGrid /> },
-  { label: "Users",         href: "/admin/users",         icon: <IconUsers /> },
-  { label: "Exercises",     href: "/admin/exercises",     icon: <IconDumbbell /> },
-  { label: "Ingredients",   href: "/admin/ingredients",   icon: <IconBeaker /> },
-  { label: "Foods",         href: "/admin/foods",         icon: <IconApple /> },
-  { label: "Recipes",       href: "/admin/recipes",       icon: <IconBook /> },
-  { label: "Sync Images",   href: "/admin/recipes/sync-images", icon: <IconImage /> },
-  { label: "Meal Plans",    href: "/admin/meal-plans",    icon: <IconCalendar /> },
-  { label: "Workout Plans", href: "/admin/workout-plans", icon: <IconClipboard /> },
-  { label: "Progress",      href: "/admin/progress",      icon: <IconTrendUp /> },
-  { label: "AI",            href: "/admin/ai",            icon: <IconSpark /> },
-];
+type AdminNavDict = {
+  dashboard: string; users: string; exercises: string; ingredients: string;
+  foods: string; recipes: string; syncImages: string; mealPlans: string;
+  workoutPlans: string; progress: string; ai: string; settings: string;
+};
+
+function buildNavItems(n: AdminNavDict) {
+  return [
+    { label: n.dashboard,     href: "/admin",               icon: <IconGrid /> },
+    { label: n.users,         href: "/admin/users",         icon: <IconUsers /> },
+    { label: n.exercises,     href: "/admin/exercises",     icon: <IconDumbbell /> },
+    { label: n.ingredients,   href: "/admin/ingredients",   icon: <IconBeaker /> },
+    { label: n.foods,         href: "/admin/foods",         icon: <IconApple /> },
+    { label: n.recipes,       href: "/admin/recipes",       icon: <IconBook /> },
+    { label: n.syncImages,    href: "/admin/recipes/sync-images", icon: <IconImage /> },
+    { label: n.mealPlans,     href: "/admin/meal-plans",    icon: <IconCalendar /> },
+    { label: n.workoutPlans,  href: "/admin/workout-plans", icon: <IconClipboard /> },
+    { label: n.progress,      href: "/admin/progress",      icon: <IconTrendUp /> },
+    { label: n.ai,            href: "/admin/ai",            icon: <IconSpark /> },
+  ];
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function AdminSidebar() {
+  const { dict } = useDictionary();
+  const adminNav = dict.admin.nav;
+  const navItems = buildNavItems(adminNav);
   const pathname = usePathname();
 
   function isActive(href: string) {
@@ -63,10 +75,10 @@ export default function AdminSidebar() {
       {/* Logo */}
       <div className="flex h-16 items-center border-b border-zinc-100 px-5">
         <span className="text-base font-bold tracking-tight text-zinc-900">
-          Admin
+          {dict.admin.portalName}
         </span>
         <span className="ml-2 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600">
-          Portal
+          {dict.admin.portalBadge}
         </span>
       </div>
 
@@ -103,7 +115,7 @@ export default function AdminSidebar() {
           aria-current={isActive("/admin/settings") ? "page" : undefined}
         >
           <IconSettings />
-          Settings
+          {adminNav.settings}
         </Link>
       </div>
     </aside>

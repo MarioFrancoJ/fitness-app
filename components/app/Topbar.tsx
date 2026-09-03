@@ -9,6 +9,7 @@ import NotificationPanel from "./NotificationPanel";
 import SearchPanel from "./SearchPanel";
 import { createClient } from "@/lib/supabase/client";
 import { useSandbox } from "@/contexts/SandboxContext";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,8 @@ function IconMenu() {
 // ── Sandbox Toggle ────────────────────────────────────────────────────────────
 
 function SandboxToggle() {
+  const { dict } = useDictionary();
+  const t = dict.topbar;
   const { isSandbox, toggleSandbox } = useSandbox();
   const [toggling, setToggling] = useState(false);
 
@@ -59,7 +62,7 @@ function SandboxToggle() {
           ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
           : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200",
       ].join(" ")}
-      title={isSandbox ? "Exit Sandbox Mode" : "Enter Sandbox Mode"}
+      title={isSandbox ? t.exitSandbox : t.enterSandbox}
     >
       <span className="relative flex h-3 w-6 items-center rounded-full bg-current/20">
         <span
@@ -69,7 +72,7 @@ function SandboxToggle() {
           ].join(" ")}
         />
       </span>
-      {isSandbox ? "Sandbox ON" : "Sandbox"}
+      {isSandbox ? t.sandboxOn : t.sandbox}
     </button>
   );
 }
@@ -83,6 +86,8 @@ interface TopbarProps {
 
 export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
   const router = useRouter();
+  const { dict } = useDictionary();
+  const t = dict.topbar;
   const { isSuperAdmin, role } = useSandbox();
   const [unread, setUnread] = useState(0);
   const [userInitial, setUserInitial] = useState("U");
@@ -145,7 +150,7 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
         <button
           type="button"
           onClick={onMenuToggle}
-          aria-label="Open menu"
+          aria-label={dict.nav.openMenu}
           className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 md:hidden"
         >
           <IconMenu />
@@ -159,7 +164,7 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
             className="flex h-9 w-64 items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 pl-3 pr-3 text-sm text-zinc-400 transition-colors hover:border-zinc-300 hover:bg-white"
           >
             <IconSearch />
-            <span>Search...</span>
+            <span>{t.searchPlaceholder}</span>
             <kbd className="ml-auto rounded border border-zinc-200 bg-white px-1.5 py-0.5 font-mono text-xs text-zinc-400">/</kbd>
           </button>
           <SearchPanel open={searchOpen} onClose={() => setSearchOpen(false)} />
@@ -169,7 +174,7 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
-          aria-label="Search"
+          aria-label={dict.common.search}
           className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 sm:hidden"
         >
           <IconSearch />
@@ -192,7 +197,7 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
           <button
             type="button"
             onClick={toggleNotifications}
-            aria-label="Notifications"
+            aria-label={t.notifications}
             aria-expanded={notificationsOpen}
             className={[
               "relative rounded-lg p-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
@@ -214,7 +219,7 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
         {isSuperAdmin && (
           <div className="hidden items-center gap-2 sm:inline-flex">
             <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-bold text-purple-700">
-              ⚡ SuperAdmin
+              ⚡ {t.superAdmin}
             </span>
             <SandboxToggle />
           </div>
@@ -223,16 +228,16 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
         {/* User avatar → Profile link */}
         <Link
           href="/profile"
-          aria-label="Open profile"
-          title="Profile"
+          aria-label={t.openProfile}
+          title={t.profile}
           className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2"
         >
           {userInitial}
         </Link>
 
         {/* Logout - hidden on mobile */}
-        <button type="button" onClick={handleLogout} aria-label="Sign out" className="hidden rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 sm:block">
-          Sign out
+        <button type="button" onClick={handleLogout} aria-label={t.signOut} className="hidden rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 sm:block">
+          {t.signOut}
         </button>
       </div>
     </header>

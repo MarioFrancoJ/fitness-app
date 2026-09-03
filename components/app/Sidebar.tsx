@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import NavIcon from "@/components/ui/NavIcon";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 // Custom brand icons live in /public/icons. NavIcon masks them so they inherit
@@ -49,37 +50,48 @@ interface NavSection {
   matchPrefixes: string[];
 }
 
-const NAV_SECTIONS: NavSection[] = [
-  { id: "training", label: "Training", icon: <IconDumbbell />, matchPrefixes: ["/workouts", "/training"], items: [
-    { label: "Start Workout", href: "/training/start", icon: <IconPlay /> },
-    { label: "Workouts", href: "/workouts", icon: <IconDumbbell /> },
-    { label: "Workout Builder", href: "/training/workout-builder", icon: <IconHammer /> },
-    { label: "Exercises", href: "/training/exercises", icon: <IconExercises /> },
-    { label: "Templates", href: "/training/templates", icon: <IconTemplates /> },
-    { label: "History", href: "/training/history", icon: <IconClock /> },
-  ]},
-  { id: "nutrition", label: "Nutrition", icon: <IconLeaf />, matchPrefixes: ["/nutrition"], items: [
-    { label: "Meals", href: "/nutrition", icon: <IconMeal /> },
-    { label: "Recipes", href: "/nutrition/recipes", icon: <IconBook /> },
-    { label: "Meal Planner", href: "/nutrition/meal-planner", icon: <IconCalendar /> },
-    { label: "Shopping List", href: "/nutrition/shopping-list", icon: <IconCart /> },
-  ]},
-  { id: "progress", label: "Progress", icon: <IconTrendUp />, matchPrefixes: ["/progress"], items: [
-    { label: "Overview", href: "/progress", icon: <IconOverview /> },
-    { label: "Weight", href: "/progress/weight", icon: <IconScale /> },
-    { label: "Measurements", href: "/progress/measurements", icon: <IconRuler /> },
-    { label: "Photos", href: "/progress/photos", icon: <IconCamera /> },
-  ]},
-  { id: "ai", label: "AI", icon: <IconSpark />, matchPrefixes: ["/ai", "/ai-coach", "/recommendations", "/notifications"], items: [
-    { label: "AI Chat", href: "/ai/chat", icon: <IconAiChat /> },
-    { label: "AI Coach", href: "/ai-coach", icon: <IconAiCoach /> },
-    { label: "Recommendations", href: "/recommendations", icon: <IconStar /> },
-  ]},
-  { id: "account", label: "Account", icon: <IconUser />, matchPrefixes: ["/profile", "/subscription", "/settings"], items: [
-    { label: "Profile", href: "/profile", icon: <IconProfile /> },
-    { label: "Subscription", href: "/subscription", icon: <IconSubscription /> },
-  ]},
-];
+type NavDict = {
+  sections: { training: string; nutrition: string; progress: string; ai: string; account: string };
+  training: { startWorkout: string; workouts: string; workoutBuilder: string; exercises: string; templates: string; history: string };
+  nutrition: { meals: string; recipes: string; mealPlanner: string; shoppingList: string };
+  progress: { overview: string; weight: string; measurements: string; photos: string };
+  ai: { aiChat: string; aiCoach: string; recommendations: string };
+  account: { profile: string; subscription: string };
+};
+
+function buildNavSections(nav: NavDict): NavSection[] {
+  return [
+    { id: "training", label: nav.sections.training, icon: <IconDumbbell />, matchPrefixes: ["/workouts", "/training"], items: [
+      { label: nav.training.startWorkout, href: "/training/start", icon: <IconPlay /> },
+      { label: nav.training.workouts, href: "/workouts", icon: <IconDumbbell /> },
+      { label: nav.training.workoutBuilder, href: "/training/workout-builder", icon: <IconHammer /> },
+      { label: nav.training.exercises, href: "/training/exercises", icon: <IconExercises /> },
+      { label: nav.training.templates, href: "/training/templates", icon: <IconTemplates /> },
+      { label: nav.training.history, href: "/training/history", icon: <IconClock /> },
+    ]},
+    { id: "nutrition", label: nav.sections.nutrition, icon: <IconLeaf />, matchPrefixes: ["/nutrition"], items: [
+      { label: nav.nutrition.meals, href: "/nutrition", icon: <IconMeal /> },
+      { label: nav.nutrition.recipes, href: "/nutrition/recipes", icon: <IconBook /> },
+      { label: nav.nutrition.mealPlanner, href: "/nutrition/meal-planner", icon: <IconCalendar /> },
+      { label: nav.nutrition.shoppingList, href: "/nutrition/shopping-list", icon: <IconCart /> },
+    ]},
+    { id: "progress", label: nav.sections.progress, icon: <IconTrendUp />, matchPrefixes: ["/progress"], items: [
+      { label: nav.progress.overview, href: "/progress", icon: <IconOverview /> },
+      { label: nav.progress.weight, href: "/progress/weight", icon: <IconScale /> },
+      { label: nav.progress.measurements, href: "/progress/measurements", icon: <IconRuler /> },
+      { label: nav.progress.photos, href: "/progress/photos", icon: <IconCamera /> },
+    ]},
+    { id: "ai", label: nav.sections.ai, icon: <IconSpark />, matchPrefixes: ["/ai", "/ai-coach", "/recommendations", "/notifications"], items: [
+      { label: nav.ai.aiChat, href: "/ai/chat", icon: <IconAiChat /> },
+      { label: nav.ai.aiCoach, href: "/ai-coach", icon: <IconAiCoach /> },
+      { label: nav.ai.recommendations, href: "/recommendations", icon: <IconStar /> },
+    ]},
+    { id: "account", label: nav.sections.account, icon: <IconUser />, matchPrefixes: ["/profile", "/subscription", "/settings"], items: [
+      { label: nav.account.profile, href: "/profile", icon: <IconProfile /> },
+      { label: nav.account.subscription, href: "/subscription", icon: <IconSubscription /> },
+    ]},
+  ];
+}
 
 const STORAGE_KEY = "sidebar-collapsed";
 const CALENDAR_HREF = "/calendar";
@@ -89,6 +101,9 @@ const CALENDAR_HREF = "/calendar";
 interface SidebarProps { open?: boolean; onClose?: () => void; }
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
+  const { dict } = useDictionary();
+  const nav = dict.nav;
+  const NAV_SECTIONS = useMemo(() => buildNavSections(nav), [nav]);
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [popoverId, setPopoverId] = useState<string | null>(null);
@@ -206,7 +221,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               FitnessApp
             </Link>
           )}
-          <button type="button" onClick={onClose} className="rounded-md p-1 text-zinc-400 hover:text-zinc-700 md:hidden" aria-label="Close menu">
+          <button type="button" onClick={onClose} className="rounded-md p-1 text-zinc-400 hover:text-zinc-700 md:hidden" aria-label={nav.closeMenu}>
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
           </button>
         </div>
@@ -217,7 +232,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           <Link
             href="/dashboard"
             onClick={handleNavClick}
-            title={collapsed ? "Dashboard" : undefined}
+            title={collapsed ? nav.dashboard : undefined}
             className={[
               "flex items-center rounded-lg transition-colors",
               collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5 text-sm font-medium",
@@ -226,7 +241,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             aria-current={pathname === "/dashboard" ? "page" : undefined}
           >
             <IconGrid />
-            {!collapsed && "Dashboard"}
+            {!collapsed && nav.dashboard}
           </Link>
 
           {/* Sections */}
@@ -237,7 +252,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             <Link
               href={CALENDAR_HREF}
               onClick={handleNavClick}
-              title={collapsed ? "Calendar" : undefined}
+              title={collapsed ? nav.calendar : undefined}
               className={[
                 "flex items-center rounded-lg transition-colors",
                 collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5 text-sm font-medium",
@@ -248,7 +263,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               aria-current={calendarActive ? "page" : undefined}
             >
               <IconCalendar />
-              {!collapsed && "Calendar"}
+              {!collapsed && nav.calendar}
             </Link>
 
             {sectionsAfterCalendar.map(renderSection)}
@@ -261,11 +276,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             type="button"
             onClick={toggleCollapsed}
             className="flex w-full items-center justify-center gap-2 rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? nav.expandSidebar : nav.collapseSidebar}
+            aria-label={collapsed ? nav.expandSidebar : nav.collapseSidebar}
           >
             {collapsed ? <IconExpand /> : <IconCollapse />}
-            {!collapsed && <span className="text-xs font-medium">Collapse</span>}
+            {!collapsed && <span className="text-xs font-medium">{nav.collapse}</span>}
           </button>
         </div>
       </aside>

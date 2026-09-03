@@ -5,8 +5,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type CoachDict = ReturnType<typeof useDictionary>["dict"]["ai"]["coach"];
 
 type RecommendationCategory = "Nutrition" | "Training" | "Recovery" | "Motivation" | "Consistency";
 
@@ -66,6 +69,8 @@ function mapPriority(p: string): "high" | "medium" | "low" {
 
 export default function AiCoachPage() {
   const { success: showToast } = useToast();
+  const { dict } = useDictionary();
+  const t = dict.ai.coach;
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [checkIn, setCheckIn] = useState<DailyCheckIn | null>(null);
   const [energy, setEnergy] = useState(7);
@@ -187,7 +192,7 @@ export default function AiCoachPage() {
 
       setCheckIn({ date: today, energyLevel: energy, sleepQuality: sleep, stressLevel: stress, motivationLevel: motivation });
       setCheckInSaved(true);
-      showToast("Check-in saved!");
+      showToast(t.checkInSavedToast);
     } catch (err) {
       console.error("Failed to save check-in:", err);
     }
@@ -195,15 +200,15 @@ export default function AiCoachPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading AI Coach..." />
+      <PageLoader text={t.loading} />
     );
   }
 
   // Today's focus: highest priority recommendation
   const todaysFocus = recommendations.find((r) => r.priority === "high") || recommendations[0];
   const weeklyGoal = stats.workoutsThisWeek < 3
-    ? `Complete ${3 - stats.workoutsThisWeek} more workout${3 - stats.workoutsThisWeek > 1 ? "s" : ""} this week`
-    : "Maintain your training consistency";
+    ? t.weeklyGoalComplete.replace("{n}", String(3 - stats.workoutsThisWeek))
+    : t.weeklyGoalMaintain;
 
   return (
     <>
@@ -211,62 +216,62 @@ export default function AiCoachPage() {
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">AI Coach</h1>
-            <p className="mt-1 text-sm text-zinc-500">Personalized guidance based on your data.</p>
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
+            <p className="mt-1 text-sm text-zinc-500">{t.subtitle}</p>
           </div>
           <Link href="/ai-coach/chat" className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900">
-            Chat with Coach
+            {t.chatWithCoach}
           </Link>
         </div>
 
         {/* Dashboard Widgets */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Today&apos;s Focus</p>
-            <p className="mt-1 text-sm font-semibold text-zinc-900">{todaysFocus?.title || "Keep Going"}</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">{t.widgetTodaysFocus}</p>
+            <p className="mt-1 text-sm font-semibold text-zinc-900">{todaysFocus?.title || t.focusFallback}</p>
           </div>
           <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Weekly Goal</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">{t.widgetWeeklyGoal}</p>
             <p className="mt-1 text-sm font-semibold text-zinc-900">{weeklyGoal}</p>
           </div>
           <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Current Streak</p>
-            <p className="mt-1 text-xl font-bold text-blue-600">{stats.currentStreak} <span className="text-xs font-normal text-zinc-400">days</span></p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">{t.widgetCurrentStreak}</p>
+            <p className="mt-1 text-xl font-bold text-blue-600">{stats.currentStreak} <span className="text-xs font-normal text-zinc-400">{t.unitDays}</span></p>
           </div>
           <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">This Week</p>
-            <p className="mt-1 text-xl font-bold text-zinc-900">{stats.workoutsThisWeek} <span className="text-xs font-normal text-zinc-400">workouts</span></p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">{t.widgetThisWeek}</p>
+            <p className="mt-1 text-xl font-bold text-zinc-900">{stats.workoutsThisWeek} <span className="text-xs font-normal text-zinc-400">{t.unitWorkouts}</span></p>
           </div>
         </div>
 
         {/* Daily Check-In */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm font-semibold text-zinc-900">Daily Check-In</p>
-            {checkInSaved && <span className="text-xs font-medium text-emerald-600">Saved today</span>}
+            <p className="text-sm font-semibold text-zinc-900">{t.dailyCheckInHeading}</p>
+            {checkInSaved && <span className="text-xs font-medium text-emerald-600">{t.savedToday}</span>}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <SliderField label="Energy Level" value={energy} onChange={setEnergy} disabled={checkInSaved} />
-            <SliderField label="Sleep Quality" value={sleep} onChange={setSleep} disabled={checkInSaved} />
-            <SliderField label="Stress Level" value={stress} onChange={setStress} disabled={checkInSaved} />
-            <SliderField label="Motivation" value={motivation} onChange={setMotivation} disabled={checkInSaved} />
+            <SliderField label={t.sliderEnergy} value={energy} onChange={setEnergy} disabled={checkInSaved} />
+            <SliderField label={t.sliderSleep} value={sleep} onChange={setSleep} disabled={checkInSaved} />
+            <SliderField label={t.sliderStress} value={stress} onChange={setStress} disabled={checkInSaved} />
+            <SliderField label={t.sliderMotivation} value={motivation} onChange={setMotivation} disabled={checkInSaved} />
           </div>
 
           {!checkInSaved && (
             <button type="button" onClick={handleCheckInSave}
               className="mt-4 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900">
-              Save Check-In
+              {t.saveCheckIn}
             </button>
           )}
         </div>
 
         {/* Recommendations */}
         <div>
-          <p className="mb-3 text-sm font-semibold text-zinc-900">Recommendations</p>
+          <p className="mb-3 text-sm font-semibold text-zinc-900">{t.recommendationsHeading}</p>
           {recommendations.length === 0 ? (
             <div className="flex h-32 items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-sm">
-              <p className="text-sm text-zinc-400">No recommendations yet. Complete a check-in and train consistently to get personalized tips.</p>
+              <p className="text-sm text-zinc-400">{t.recommendationsEmpty}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-3">

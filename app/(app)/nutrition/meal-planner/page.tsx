@@ -5,6 +5,11 @@ import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
 import { readSlot, getWeekBounds, type PlanSlotValue } from "@/lib/nutrition";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
+
+// Dictionary slices for the meal-planner view.
+type NutritionDict = ReturnType<typeof useDictionary>["dict"]["nutrition"];
+type MealPlannerDict = NutritionDict["mealPlanner"];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -37,11 +42,62 @@ interface PlanTemplate {
   description: string;
 }
 
-const TEMPLATES: PlanTemplate[] = [
-  { name: "Fat Loss", goal: "Fat Loss", description: "Low-calorie plan focused on lean proteins and vegetables." },
-  { name: "Maintenance", goal: "Maintenance", description: "Balanced plan to maintain current weight and energy." },
-  { name: "Muscle Gain", goal: "Muscle Gain", description: "High-protein, high-calorie plan for muscle growth." },
-];
+// Templates carry a functional `goal` (used to filter recipes — data, not UI)
+// plus a localized display `name` (reusing the shared recipe goal labels).
+// The template descriptions have no matching keys, so they remain English.
+function buildTemplates(nt: NutritionDict): PlanTemplate[] {
+  return [
+    { name: nt.recipes.goalFatLoss, goal: "Fat Loss", description: "Low-calorie plan focused on lean proteins and vegetables." },
+    { name: nt.recipes.goalMaintenance, goal: "Maintenance", description: "Balanced plan to maintain current weight and energy." },
+    { name: nt.recipes.goalMuscleGain, goal: "Muscle Gain", description: "High-protein, high-calorie plan for muscle growth." },
+  ];
+}
+
+type CalendarDict = ReturnType<typeof useDictionary>["dict"]["calendar"];
+
+// Abbreviated weekday label. The mealPlanner namespace has no day-name keys,
+// so we reuse the shared calendar.weekday* abbreviations (Mon…Sun).
+function weekdayAbbrev(day: string, cal: CalendarDict): string {
+  switch (day) {
+    case "Monday":    return cal.weekdayMon;
+    case "Tuesday":   return cal.weekdayTue;
+    case "Wednesday": return cal.weekdayWed;
+    case "Thursday":  return cal.weekdayThu;
+    case "Friday":    return cal.weekdayFri;
+    case "Saturday":  return cal.weekdaySat;
+    case "Sunday":    return cal.weekdaySun;
+    default:          return day.slice(0, 3);
+  }
+}
+
+// Localized label for a meal slot (mealPlanner.slot* keys). The English slot
+// string is also the object key used for logic/state (MEAL_META, plan data).
+function slotLabel(meal: string, t: MealPlannerDict): string {
+  switch (meal) {
+    case "Breakfast": return t.slotBreakfast;
+    case "Snack AM":  return t.slotSnackAm;
+    case "Lunch":     return t.slotLunch;
+    case "Dinner":    return t.slotDinner;
+    case "Snack PM":  return t.slotSnackPm;
+    default:          return meal;
+  }
+}
+
+// Localized full weekday name (mealPlanner.dayFull* keys). The English day
+// string ("Monday"…) stays the internal state/logic key; this only affects
+// what the user sees.
+function fullWeekdayLabel(day: string, t: MealPlannerDict): string {
+  switch (day) {
+    case "Monday":    return t.dayFullMonday;
+    case "Tuesday":   return t.dayFullTuesday;
+    case "Wednesday": return t.dayFullWednesday;
+    case "Thursday":  return t.dayFullThursday;
+    case "Friday":    return t.dayFullFriday;
+    case "Saturday":  return t.dayFullSaturday;
+    case "Sunday":    return t.dayFullSunday;
+    default:          return day;
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -160,7 +216,12 @@ function dayTotals(plan: MealPlan, day: Day, recipes: RecipeSummary[]) {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function MealPlannerPage() {
+  const { dict } = useDictionary();
+  const nt = dict.nutrition;
+  const t = dict.nutrition.mealPlanner;
+  const cal = dict.calendar;
   const { success: showToast } = useToast();
+  const templates = useMemo(() => buildTemplates(nt), [nt]);
   const [plan, setPlan] = useState<MealPlan>(emptyPlan());
   const [planId, setPlanId] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
@@ -312,7 +373,7 @@ export default function MealPlannerPage() {
     const cleared = emptyPlan();
     setPlan(cleared);
     await savePlan(cleared);
-    showToast("Meal plan cleared");
+    showToast(t.toastCleared);
   }
 
   // ── Day tools (Copy / Paste / Clear the selected day) ────────────────────────
@@ -320,7 +381,7 @@ export default function MealPlannerPage() {
   function copyDay() {
     // Snapshot the selected day's 4 slots into the clipboard.
     setClipboardDay({ ...plan[selectedDay] });
-    showToast(`${selectedDay} copied`);
+    showToast(t.toastDayCopied.replace("{day}", fullWeekdayLabel(selectedDay, t)));
   }
 
   function pasteDay() {
@@ -328,14 +389,14 @@ export default function MealPlannerPage() {
     const updated = { ...plan, [selectedDay]: { ...clipboardDay } };
     setPlan(updated);
     savePlan(updated);
-    showToast(`Pasted to ${selectedDay}`);
+    showToast(t.toastPastedTo.replace("{day}", fullWeekdayLabel(selectedDay, t)));
   }
 
   function clearDay() {
     const updated = { ...plan, [selectedDay]: emptySlots() };
     setPlan(updated);
     savePlan(updated);
-    showToast(`${selectedDay} cleared`);
+    showToast(t.toastDayCleared.replace("{day}", fullWeekdayLabel(selectedDay, t)));
   }
 
   // Whether the selected day has anything to copy/clear.
@@ -378,20 +439,20 @@ export default function MealPlannerPage() {
   }
   function copyDayOf(day: Day) {
     setClipboardDay({ ...plan[day] });
-    showToast(`${day} copied`);
+    showToast(t.toastDayCopied.replace("{day}", fullWeekdayLabel(day, t)));
   }
   function pasteDayInto(day: Day) {
     if (!clipboardDay) return;
     const updated = { ...plan, [day]: { ...clipboardDay } };
     setPlan(updated);
     savePlan(updated);
-    showToast(`Pasted to ${day}`);
+    showToast(t.toastPastedTo.replace("{day}", fullWeekdayLabel(day, t)));
   }
   function clearDayOf(day: Day) {
     const updated = { ...plan, [day]: emptySlots() };
     setPlan(updated);
     savePlan(updated);
-    showToast(`${day} cleared`);
+    showToast(t.toastDayCleared.replace("{day}", fullWeekdayLabel(day, t)));
   }
   function dayHasMeals(day: Day) {
     return MEALS.some((m) => readSlot(plan[day][m]) !== null);
@@ -405,7 +466,7 @@ export default function MealPlannerPage() {
   function applyTemplate(template: PlanTemplate) {
     const goalRecipes = recipes.filter((r) => r.goal === template.goal);
     if (goalRecipes.length === 0) {
-      showToast(`No recipes match the ${template.name} goal`);
+      showToast(t.toastNoRecipesForGoal.replace("{name}", template.name));
       setShowTemplates(false);
       return;
     }
@@ -424,7 +485,7 @@ export default function MealPlannerPage() {
     setPlan(newPlan);
     savePlan(newPlan);
     setShowTemplates(false);
-    showToast(`${template.name} template applied`);
+    showToast(t.toastTemplateApplied.replace("{name}", template.name));
   }
 
   // ── Save / Load / Duplicate ──────────────────────────────────────────────────
@@ -432,7 +493,7 @@ export default function MealPlannerPage() {
   // Explicitly mark the current week's plan as saved (is_saved = true).
   async function handleSavePlan() {
     await savePlan(plan, true);
-    showToast(isSaved ? "Plan updated" : "Plan saved");
+    showToast(isSaved ? t.toastPlanUpdated : t.toastPlanSaved);
   }
 
   // Open the Load modal, fetching this user's saved plans (is_saved = true).
@@ -462,13 +523,13 @@ export default function MealPlannerPage() {
     setShowLoad(false);
     setWeekStart(weekStartKey);
     setSelectedDay("Monday");
-    showToast("Plan loaded");
+    showToast(t.toastPlanLoaded);
   }
 
   // Duplicate the current week's plan into the NEXT EMPTY week (going forward).
   // Uses load-or-create so it never violates the unique (user, week) index.
   async function handleDuplicateWeek() {
-    if (!weekHasMeals) { showToast("This week is empty — nothing to duplicate"); return; }
+    if (!weekHasMeals) { showToast(t.toastWeekEmpty); return; }
 
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -497,7 +558,7 @@ export default function MealPlannerPage() {
       cursor = shiftWeek(cursor, 1);
     }
 
-    if (!targetStart) { showToast("No empty week found in the next year"); return; }
+    if (!targetStart) { showToast(t.toastNoEmptyWeek); return; }
 
     const targetEnd = weekEnd(targetStart);
     // Write the copied plan into the target week as a DRAFT (is_saved = false).
@@ -523,7 +584,7 @@ export default function MealPlannerPage() {
       });
     }
 
-    showToast(`Duplicated to ${formatWeekRange(targetStart)}`);
+    showToast(t.toastDuplicatedTo.replace("{range}", formatWeekRange(targetStart)));
     setWeekStart(targetStart); // jump to the new week so the user sees it
   }
 
@@ -533,8 +594,8 @@ export default function MealPlannerPage() {
   const weekTotals = useMemo(() => {
     return DAYS.reduce(
       (acc, day) => {
-        const t = dayTotals(plan, day, recipes);
-        return { calories: acc.calories + t.calories, protein: acc.protein + t.protein, carbs: acc.carbs + t.carbs, fat: acc.fat + t.fat };
+        const dt = dayTotals(plan, day, recipes);
+        return { calories: acc.calories + dt.calories, protein: acc.protein + dt.protein, carbs: acc.carbs + dt.carbs, fat: acc.fat + dt.fat };
       },
       { calories: 0, protein: 0, carbs: 0, fat: 0 }
     );
@@ -542,7 +603,7 @@ export default function MealPlannerPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading meal planner..." />
+      <PageLoader text={t.loading} />
     );
   }
 
@@ -552,11 +613,11 @@ export default function MealPlannerPage() {
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Meal Planner</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
             <p className="mt-1 text-sm text-zinc-500">
-              Plan your meals for the week by assigning recipes to each slot.
-              {weekLoading && <span className="ml-2 text-xs text-zinc-400">(Loading week...)</span>}
-              {saving && <span className="ml-2 text-xs text-zinc-400">(Saving...)</span>}
+              {t.subtitle}
+              {weekLoading && <span className="ml-2 text-xs text-zinc-400">{t.loadingWeek}</span>}
+              {saving && <span className="ml-2 text-xs text-zinc-400">({dict.common.saving})</span>}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -565,35 +626,35 @@ export default function MealPlannerPage() {
               onClick={() => setShowTemplates(true)}
               className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
             >
-              Templates
+              {t.templates}
             </button>
             <button
               type="button"
               onClick={handleOpenLoad}
               className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
             >
-              Load Plan
+              {t.loadPlan}
             </button>
             <button
               type="button"
               onClick={handleDuplicateWeek}
               className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
             >
-              Duplicate Week
+              {t.duplicateWeek}
             </button>
             <button
               type="button"
               onClick={handleSavePlan}
               className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
             >
-              {isSaved ? "Update Plan" : "Save Plan"}
+              {isSaved ? t.updatePlan : t.savePlan}
             </button>
             <button
               type="button"
               onClick={handleClearAll}
               className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
             >
-              Clear Week
+              {t.clearWeek}
             </button>
           </div>
         </div>
@@ -604,19 +665,19 @@ export default function MealPlannerPage() {
             type="button"
             onClick={goPrevWeek}
             className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
-            aria-label="Previous week"
+            aria-label={t.previousWeek}
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" /></svg>
-            <span className="hidden sm:inline">Previous Week</span>
+            <span className="hidden sm:inline">{t.previousWeek}</span>
           </button>
 
           <div className="flex items-center gap-2 text-center">
             <span className="text-sm font-semibold text-zinc-900">{formatWeekRange(weekStart)}</span>
             {isSaved && (
-              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600">Saved</span>
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600">{t.saved}</span>
             )}
             {isCurrentWeek ? (
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-600">Current Week</span>
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-600">{t.currentWeek}</span>
             ) : (
               <button
                 type="button"
@@ -624,7 +685,7 @@ export default function MealPlannerPage() {
                 className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
               >
                 <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true"><path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5Z" clipRule="evenodd" /></svg>
-                Go to Current Week
+                {t.goToCurrentWeek}
               </button>
             )}
           </div>
@@ -633,9 +694,9 @@ export default function MealPlannerPage() {
             type="button"
             onClick={goNextWeek}
             className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
-            aria-label="Next week"
+            aria-label={t.nextWeek}
           >
-            <span className="hidden sm:inline">Next Week</span>
+            <span className="hidden sm:inline">{t.nextWeek}</span>
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" /></svg>
           </button>
         </div>
@@ -644,19 +705,19 @@ export default function MealPlannerPage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-2xl font-bold text-zinc-900">{weekTotals.calories}</p>
-            <p className="mt-0.5 text-xs font-medium text-zinc-400">Weekly Calories</p>
+            <p className="mt-0.5 text-xs font-medium text-zinc-400">{t.weeklyCalories}</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-2xl font-bold text-blue-600">{weekTotals.protein}g</p>
-            <p className="mt-0.5 text-xs font-medium text-zinc-400">Weekly Protein</p>
+            <p className="mt-0.5 text-xs font-medium text-zinc-400">{t.weeklyProtein}</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-2xl font-bold text-amber-600">{weekTotals.carbs}g</p>
-            <p className="mt-0.5 text-xs font-medium text-zinc-400">Weekly Carbs</p>
+            <p className="mt-0.5 text-xs font-medium text-zinc-400">{t.weeklyCarbs}</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-2xl font-bold text-emerald-600">{weekTotals.fat}g</p>
-            <p className="mt-0.5 text-xs font-medium text-zinc-400">Weekly Fat</p>
+            <p className="mt-0.5 text-xs font-medium text-zinc-400">{t.weeklyFat}</p>
           </div>
         </div>
 
@@ -677,14 +738,14 @@ export default function MealPlannerPage() {
                   : "text-zinc-500 hover:text-zinc-900",
               ].join(" ")}
             >
-              {day.slice(0, 3)}
+              {weekdayAbbrev(day, cal)}
             </button>
           ))}
         </div>
 
         {/* Selected day header + "···" day actions (Copy / Paste / Clear) */}
         <div className="relative flex items-center justify-between">
-          <span className="text-sm font-semibold text-zinc-800">{selectedDay}</span>
+          <span className="text-sm font-semibold text-zinc-800">{fullWeekdayLabel(selectedDay, t)}</span>
           <button
             type="button"
             onClick={() => setOpenDayMenu((d) => (d === selectedDay ? null : selectedDay))}
@@ -698,6 +759,7 @@ export default function MealPlannerPage() {
           {openDayMenu === selectedDay && (
             <DayMenu
               day={selectedDay}
+              t={t}
               canCopyOrClear={selectedDayHasMeals}
               canPaste={clipboardDay !== null}
               onCopy={() => { copyDay(); setOpenDayMenu(null); }}
@@ -712,27 +774,27 @@ export default function MealPlannerPage() {
         <div className="grid gap-3 sm:grid-cols-4">
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-lg font-bold text-zinc-900">{totals.calories}</p>
-            <p className="text-xs text-zinc-400">Calories</p>
+            <p className="text-xs text-zinc-400">{nt.calories}</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-lg font-bold text-blue-600">{totals.protein}g</p>
-            <p className="text-xs text-zinc-400">Protein</p>
+            <p className="text-xs text-zinc-400">{nt.protein}</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-lg font-bold text-amber-600">{totals.carbs}g</p>
-            <p className="text-xs text-zinc-400">Carbs</p>
+            <p className="text-xs text-zinc-400">{nt.carbs}</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-lg font-bold text-emerald-600">{totals.fat}g</p>
-            <p className="text-xs text-zinc-400">Fat</p>
+            <p className="text-xs text-zinc-400">{nt.fat}</p>
           </div>
         </div>
 
         {/* Meal slots */}
         {recipes.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white py-16">
-            <p className="mb-1 text-base font-semibold text-zinc-900">No recipes available</p>
-            <p className="text-sm text-zinc-500">Create recipes first to start building your meal plan.</p>
+            <p className="mb-1 text-base font-semibold text-zinc-900">{t.noRecipesTitle}</p>
+            <p className="text-sm text-zinc-500">{t.noRecipesDescription}</p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -744,7 +806,7 @@ export default function MealPlannerPage() {
                 <div key={meal} className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
                   <div className="mb-3 flex items-center justify-between">
                     <p className={`text-sm font-semibold ${MEAL_META[meal].accent}`}>
-                      {meal}
+                      {slotLabel(meal, t)}
                     </p>
                     {selected && (
                       <button
@@ -752,7 +814,7 @@ export default function MealPlannerPage() {
                         onClick={() => handleClear(meal)}
                         className="text-xs font-medium text-zinc-400 transition-colors hover:text-red-600"
                       >
-                        Remove
+                        {t.slotRemove}
                       </button>
                     )}
                   </div>
@@ -779,7 +841,7 @@ export default function MealPlannerPage() {
                       className="flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 text-sm font-medium text-zinc-500 transition-colors hover:border-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
                     >
                       <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path d="M10 5a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 10 5Z" /></svg>
-                      Add recipe
+                      {t.addRecipe}
                     </button>
                   )}
                 </div>
@@ -793,8 +855,8 @@ export default function MealPlannerPage() {
         {/* ── DESKTOP: full 7-day week grid (all days + 4 slots + day totals) ── */}
         {recipes.length === 0 ? (
           <div className="hidden lg:flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white py-16">
-            <p className="mb-1 text-base font-semibold text-zinc-900">No recipes available</p>
-            <p className="text-sm text-zinc-500">Create recipes first to start building your meal plan.</p>
+            <p className="mb-1 text-base font-semibold text-zinc-900">{t.noRecipesTitle}</p>
+            <p className="text-sm text-zinc-500">{t.noRecipesDescription}</p>
           </div>
         ) : (
           <div className="hidden lg:block overflow-x-auto">
@@ -804,7 +866,7 @@ export default function MealPlannerPage() {
                 <div />
                 {DAYS.map((day) => (
                   <div key={day} className="relative flex items-center justify-between px-1 pb-1">
-                    <span className="text-sm font-bold tracking-tight text-zinc-800">{day.slice(0, 3)}</span>
+                    <span className="text-sm font-bold tracking-tight text-zinc-800">{weekdayAbbrev(day, cal)}</span>
                     <button
                       type="button"
                       onClick={() => setOpenDayMenu((d) => (d === day ? null : day))}
@@ -818,6 +880,7 @@ export default function MealPlannerPage() {
                     {openDayMenu === day && (
                       <DayMenu
                         day={day}
+                        t={t}
                         canCopyOrClear={dayHasMeals(day)}
                         canPaste={clipboardDay !== null}
                         onCopy={() => { copyDayOf(day); setOpenDayMenu(null); }}
@@ -836,7 +899,7 @@ export default function MealPlannerPage() {
                 return (
                 <div key={meal} className="mt-2 grid grid-cols-[104px_repeat(7,1fr)] gap-2">
                   <div className={`flex items-center rounded-xl ${m.tint} px-3`}>
-                    <span className={`text-sm font-semibold ${m.accent}`}>{meal}</span>
+                    <span className={`text-sm font-semibold ${m.accent}`}>{slotLabel(meal, t)}</span>
                   </div>
                   {DAYS.map((day) => {
                     const slotData = getSlot(plan[day][meal], recipes);
@@ -880,7 +943,7 @@ export default function MealPlannerPage() {
                             type="button"
                             onClick={() => clearSlotFor(day, meal)}
                             aria-label={`Remove ${selected.name} from ${day} ${meal}`}
-                            title="Remove"
+                            title={t.slotRemove}
                             className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100"
                           >
                             <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
@@ -901,7 +964,7 @@ export default function MealPlannerPage() {
                         ].join(" ")}
                       >
                         <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path d="M10 5a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 10 5Z" /></svg>
-                        Add
+                        {t.add}
                       </button>
                     );
                   })}
@@ -914,19 +977,19 @@ export default function MealPlannerPage() {
               <div className="mt-3 border-t border-zinc-200 pt-3">
                 <div className="grid grid-cols-[104px_repeat(7,1fr)] gap-2">
                   <div className="flex items-center pl-3">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Day total</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{t.dayTotal}</span>
                   </div>
                   {DAYS.map((day) => {
-                    const t = dayTotals(plan, day, recipes);
+                    const dt = dayTotals(plan, day, recipes);
                     return (
                       <div key={`${day}-totals`} className="rounded-xl border border-zinc-100 bg-zinc-50/70 px-2 py-2 text-center">
                         <p className="text-sm font-bold text-zinc-900">
-                          {t.calories}<span className="text-xs font-medium text-zinc-400"> kcal</span>
+                          {dt.calories}<span className="text-xs font-medium text-zinc-400"> kcal</span>
                         </p>
                         <div className="mt-1 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-[11px] font-medium">
-                          <span className="text-blue-600">{t.protein}g Prot.</span>
-                          <span className="text-amber-600">{t.carbs}g Carb.</span>
-                          <span className="text-emerald-600">{t.fat}g Fat</span>
+                          <span className="text-blue-600">{dt.protein}g Prot.</span>
+                          <span className="text-amber-600">{dt.carbs}g Carb.</span>
+                          <span className="text-emerald-600">{dt.fat}g Fat</span>
                         </div>
                       </div>
                     );
@@ -945,6 +1008,8 @@ export default function MealPlannerPage() {
           recipes={recipes}
           day={pickerTarget.day}
           meal={pickerTarget.meal}
+          t={t}
+          nt={nt}
           onSelect={(recipeId) => {
             setSlotFor(pickerTarget.day, pickerTarget.meal, recipeId);
             setPickerTarget(null);
@@ -957,6 +1022,8 @@ export default function MealPlannerPage() {
       {showTemplates && (
         <TemplatesModal
           weekHasMeals={weekHasMeals}
+          templates={templates}
+          t={t}
           onApply={applyTemplate}
           onClose={() => setShowTemplates(false)}
         />
@@ -977,13 +1044,13 @@ export default function MealPlannerPage() {
             style={{ maxHeight: "80vh", overflowY: "auto" }}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-zinc-900">Saved Plans</h2>
-              <button type="button" onClick={() => setShowLoad(false)} aria-label="Close" className="text-zinc-400 hover:text-zinc-700">
+              <h2 className="text-lg font-bold text-zinc-900">{t.savedPlans}</h2>
+              <button type="button" onClick={() => setShowLoad(false)} aria-label={dict.common.close} className="text-zinc-400 hover:text-zinc-700">
                 <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
               </button>
             </div>
             {savedPlans.length === 0 ? (
-              <p className="text-sm text-zinc-400">No saved plans yet. Use “Save Plan” to keep the current week.</p>
+              <p className="text-sm text-zinc-400">{t.noSavedPlans}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {savedPlans.map((p) => (
@@ -994,7 +1061,7 @@ export default function MealPlannerPage() {
                     className="flex items-center justify-between rounded-lg border border-zinc-200 p-3 text-left transition-colors hover:border-zinc-400 hover:bg-zinc-50"
                   >
                     <span className="text-sm font-medium text-zinc-900">{formatWeekRange(p.weekStart)}</span>
-                    <span className="text-xs font-medium text-zinc-500">Load</span>
+                    <span className="text-xs font-medium text-zinc-500">{t.load}</span>
                   </button>
                 ))}
               </div>
@@ -1010,6 +1077,7 @@ export default function MealPlannerPage() {
 
 function DayMenu({
   day,
+  t,
   canCopyOrClear,
   canPaste,
   onCopy,
@@ -1018,6 +1086,7 @@ function DayMenu({
   onClose,
 }: {
   day: Day;
+  t: MealPlannerDict;
   canCopyOrClear: boolean;
   canPaste: boolean;
   onCopy: () => void;
@@ -1045,16 +1114,16 @@ function DayMenu({
     >
       <button type="button" role="menuitem" onClick={onCopy} disabled={!canCopyOrClear} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-40">
         <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-zinc-400" aria-hidden="true"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h5A1.5 1.5 0 0 1 15 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-5A1.5 1.5 0 0 1 7 12.5v-9Z" /><path d="M5 6.5A1.5 1.5 0 0 0 3.5 8v8A1.5 1.5 0 0 0 5 17.5h5A1.5 1.5 0 0 0 11.5 16H8.5A2.5 2.5 0 0 1 6 13.5V6.5H5Z" /></svg>
-        Copy day
+        {t.copyDay}
       </button>
       <button type="button" role="menuitem" onClick={onPaste} disabled={!canPaste} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-40">
         <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-emerald-500" aria-hidden="true"><path d="M8 2a2 2 0 0 0-1.94 1.5H5.5A1.5 1.5 0 0 0 4 5v11a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 16 16V5a1.5 1.5 0 0 0-1.5-1.5h-.56A2 2 0 0 0 12 2H8Zm0 1.5h4a.5.5 0 0 1 .5.5v.5h-5V4a.5.5 0 0 1 .5-.5Z" /></svg>
-        Paste day
+        {t.pasteDay}
       </button>
       <div className="my-1 h-px bg-zinc-100" />
       <button type="button" role="menuitem" onClick={onClear} disabled={!canCopyOrClear} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-40">
         <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41 41 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5Z" clipRule="evenodd" /></svg>
-        Clear day
+        {t.clearDay}
       </button>
     </div>
   );
@@ -1066,12 +1135,16 @@ function RecipePicker({
   recipes,
   day,
   meal,
+  t,
+  nt,
   onSelect,
   onClose,
 }: {
   recipes: RecipeSummary[];
   day: Day;
   meal: Meal;
+  t: MealPlannerDict;
+  nt: NutritionDict;
   onSelect: (recipeId: string) => void;
   onClose: () => void;
 }) {
@@ -1090,6 +1163,17 @@ function RecipePicker({
     () => Array.from(new Set(recipes.map((r) => r.goal).filter(Boolean))),
     [recipes]
   );
+
+  // Localize a goal value (data string) using the shared recipe goal labels.
+  const goalDisplay = (g: string): string => {
+    switch (g) {
+      case "All":         return nt.recipes.goalAll;
+      case "Fat Loss":    return nt.recipes.goalFatLoss;
+      case "Muscle Gain": return nt.recipes.goalMuscleGain;
+      case "Maintenance": return nt.recipes.goalMaintenance;
+      default:            return g;
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -1116,8 +1200,8 @@ function RecipePicker({
         <div className="border-b border-zinc-100 p-4">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-zinc-900">Add a recipe</h2>
-              <p className="text-xs text-zinc-400">{day} · {meal}</p>
+              <h2 className="text-base font-bold text-zinc-900">{t.pickerTitle}</h2>
+              <p className="text-xs text-zinc-400">{fullWeekdayLabel(day, t)} · {slotLabel(meal, t)}</p>
             </div>
             <button type="button" onClick={onClose} aria-label="Close" className="rounded-md p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700">
               <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
@@ -1130,8 +1214,8 @@ function RecipePicker({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search recipes..."
-              aria-label="Search recipes"
+              placeholder={t.pickerSearchPlaceholder}
+              aria-label={t.pickerSearchPlaceholder}
               className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
             />
           </div>
@@ -1148,7 +1232,7 @@ function RecipePicker({
                     goalFilter === g ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400",
                   ].join(" ")}
                 >
-                  {g}
+                  {goalDisplay(g)}
                 </button>
               ))}
             </div>
@@ -1158,7 +1242,7 @@ function RecipePicker({
         {/* Results */}
         <div className="flex-1 overflow-y-auto p-2">
           {filtered.length === 0 ? (
-            <p className="px-3 py-6 text-center text-sm text-zinc-400">No recipes match “{query}”.</p>
+            <p className="px-3 py-6 text-center text-sm text-zinc-400">{t.pickerNoMatch.replace("{query}", query)}</p>
           ) : (
             <ul className="flex flex-col">
               {filtered.map((r) => (
@@ -1176,7 +1260,7 @@ function RecipePicker({
                       </span>
                     </span>
                     {r.goal && (
-                      <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">{r.goal}</span>
+                      <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">{goalDisplay(r.goal)}</span>
                     )}
                   </button>
                 </li>
@@ -1186,7 +1270,7 @@ function RecipePicker({
         </div>
 
         <div className="border-t border-zinc-100 px-4 py-2 text-center text-xs text-zinc-400">
-          {filtered.length} of {recipes.length} recipes
+          {t.pickerCountSummary.replace("{x}", String(filtered.length)).replace("{y}", String(recipes.length))}
         </div>
       </div>
     </div>
@@ -1197,20 +1281,24 @@ function RecipePicker({
 
 function TemplatesModal({
   weekHasMeals,
+  templates,
+  t,
   onApply,
   onClose,
 }: {
   weekHasMeals: boolean;
-  onApply: (t: PlanTemplate) => void;
+  templates: PlanTemplate[];
+  t: MealPlannerDict;
+  onApply: (tpl: PlanTemplate) => void;
   onClose: () => void;
 }) {
   // When the week already has meals, require an explicit confirm before a
   // template overwrites it (rule #5).
   const [pending, setPending] = useState<PlanTemplate | null>(null);
 
-  function handlePick(t: PlanTemplate) {
-    if (weekHasMeals) setPending(t);
-    else onApply(t);
+  function handlePick(tpl: PlanTemplate) {
+    if (weekHasMeals) setPending(tpl);
+    else onApply(tpl);
   }
 
   return (
@@ -1223,7 +1311,7 @@ function TemplatesModal({
     >
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-zinc-900">Meal Plan Templates</h2>
+          <h2 className="text-lg font-bold text-zinc-900">{t.templatesTitle}</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="text-zinc-400 hover:text-zinc-700">
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
           </button>
@@ -1233,9 +1321,7 @@ function TemplatesModal({
           // Confirmation step (week not empty)
           <div className="flex flex-col gap-4">
             <p className="text-sm text-zinc-700">
-              This week already has planned meals. Applying the{" "}
-              <strong className="font-semibold">{pending.name}</strong> template will{" "}
-              <strong className="font-semibold text-red-600">overwrite the entire week</strong>. Continue?
+              {t.overwriteConfirm.replace("{name}", pending.name)}
             </p>
             <div className="flex justify-end gap-2">
               <button
@@ -1250,7 +1336,7 @@ function TemplatesModal({
                 onClick={() => onApply(pending)}
                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
               >
-                Overwrite week
+                {t.overwriteWeek}
               </button>
             </div>
           </div>
@@ -1258,18 +1344,18 @@ function TemplatesModal({
           <div className="flex flex-col gap-3">
             {weekHasMeals && (
               <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-                This week has planned meals — choosing a template will ask before overwriting.
+                {t.weekHasMealsWarning}
               </p>
             )}
-            {TEMPLATES.map((t) => (
+            {templates.map((tpl) => (
               <button
-                key={t.name}
+                key={tpl.name}
                 type="button"
-                onClick={() => handlePick(t)}
+                onClick={() => handlePick(tpl)}
                 className="flex flex-col items-start rounded-xl border border-zinc-200 p-4 text-left transition-colors hover:border-zinc-400 hover:bg-zinc-50"
               >
-                <p className="text-sm font-semibold text-zinc-900">{t.name}</p>
-                <p className="mt-0.5 text-xs text-zinc-400">{t.description}</p>
+                <p className="text-sm font-semibold text-zinc-900">{tpl.name}</p>
+                <p className="mt-0.5 text-xs text-zinc-400">{tpl.description}</p>
               </button>
             ))}
           </div>

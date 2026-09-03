@@ -4,8 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type AiSettingsDict = ReturnType<typeof useDictionary>["dict"]["ai"]["settings"];
 
 interface AIUsageStats {
   dailyRequests: number;
@@ -25,6 +28,8 @@ interface AIFeatureFlags {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AISettingsPage() {
+  const { dict } = useDictionary();
+  const t = dict.ai.settings;
   const [usage, setUsage] = useState<AIUsageStats>({ dailyRequests: 0, monthlyRequests: 0, dailyTokens: 0, monthlyTokens: 0, estimatedMonthlyCost: 0 });
   const [provider, setProvider] = useState("rule_based");
   const [model, setModel] = useState("gpt-4o-mini");
@@ -95,7 +100,7 @@ export default function AISettingsPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading AI settings..." />
+      <PageLoader text={t.loading} />
     );
   }
 
@@ -104,41 +109,41 @@ export default function AISettingsPage() {
       <div className="flex items-center gap-3">
         <Link href="/ai" className="text-sm font-medium text-zinc-500 hover:text-zinc-900">&larr;</Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">AI Settings</h1>
-          <p className="mt-1 text-sm text-zinc-500">View your AI configuration and usage.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
+          <p className="mt-1 text-sm text-zinc-500">{t.subtitle}</p>
         </div>
       </div>
 
       {/* Current config */}
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <p className="mb-4 text-sm font-semibold text-zinc-900">Configuration</p>
+        <p className="mb-4 text-sm font-semibold text-zinc-900">{t.configHeading}</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg bg-zinc-50 p-4">
-            <p className="text-xs text-zinc-400">Active Provider</p>
+            <p className="text-xs text-zinc-400">{t.activeProvider}</p>
             <p className="text-sm font-bold text-zinc-900 capitalize">{provider.replace("_", " ")}</p>
           </div>
           <div className="rounded-lg bg-zinc-50 p-4">
-            <p className="text-xs text-zinc-400">Model</p>
+            <p className="text-xs text-zinc-400">{t.modelLabel}</p>
             <p className="text-sm font-bold text-zinc-900">{model}</p>
           </div>
         </div>
-        <p className="mt-3 text-xs text-zinc-400">Provider configuration is managed by administrators. Contact support to change providers.</p>
+        <p className="mt-3 text-xs text-zinc-400">{t.providerManagedNote}</p>
       </div>
 
       {/* Feature status */}
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <p className="mb-4 text-sm font-semibold text-zinc-900">AI Features</p>
+        <p className="mb-4 text-sm font-semibold text-zinc-900">{t.featuresHeading}</p>
         <div className="flex flex-col gap-2">
           {[
-            { label: "AI Coach", enabled: flags.aiCoach },
-            { label: "AI Meal Planner", enabled: flags.aiMealPlanner },
-            { label: "AI Workout Generator", enabled: flags.aiWorkoutGenerator },
-            { label: "AI Insights", enabled: flags.aiInsights },
+            { label: t.featureAiCoach, enabled: flags.aiCoach },
+            { label: t.featureMealPlanner, enabled: flags.aiMealPlanner },
+            { label: t.featureWorkoutGen, enabled: flags.aiWorkoutGenerator },
+            { label: t.featureInsights, enabled: flags.aiInsights },
           ].map((f) => (
             <div key={f.label} className="flex items-center justify-between rounded-lg bg-zinc-50 p-3">
               <span className="text-sm text-zinc-700">{f.label}</span>
               <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${f.enabled ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-500"}`}>
-                {f.enabled ? "Enabled" : "Disabled"}
+                {f.enabled ? dict.common.enabled : dict.common.disabled}
               </span>
             </div>
           ))}
@@ -147,33 +152,33 @@ export default function AISettingsPage() {
 
       {/* Usage */}
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <p className="mb-4 text-sm font-semibold text-zinc-900">Usage This Month</p>
+        <p className="mb-4 text-sm font-semibold text-zinc-900">{t.usageThisMonthHeading}</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-lg bg-zinc-50 p-3 text-center">
             <p className="text-lg font-bold text-zinc-900">{usage.monthlyRequests}</p>
-            <p className="text-xs text-zinc-400">Requests</p>
+            <p className="text-xs text-zinc-400">{t.statRequests}</p>
           </div>
           <div className="rounded-lg bg-zinc-50 p-3 text-center">
             <p className="text-lg font-bold text-zinc-900">{usage.monthlyTokens.toLocaleString()}</p>
-            <p className="text-xs text-zinc-400">Tokens</p>
+            <p className="text-xs text-zinc-400">{t.statTokens}</p>
           </div>
           <div className="rounded-lg bg-zinc-50 p-3 text-center">
             <p className="text-lg font-bold text-zinc-900">{usage.dailyRequests}</p>
-            <p className="text-xs text-zinc-400">Today</p>
+            <p className="text-xs text-zinc-400">{t.statToday}</p>
           </div>
           <div className="rounded-lg bg-zinc-50 p-3 text-center">
             <p className="text-lg font-bold text-emerald-600">${usage.estimatedMonthlyCost.toFixed(4)}</p>
-            <p className="text-xs text-zinc-400">Est. Cost</p>
+            <p className="text-xs text-zinc-400">{t.statEstCost}</p>
           </div>
         </div>
       </div>
 
       {/* Subscription note */}
       <div className="rounded-xl border border-violet-200 bg-violet-50 p-5">
-        <p className="text-sm font-semibold text-violet-900">Premium AI Features</p>
-        <p className="mt-1 text-xs text-violet-700">Free users get limited AI requests. Upgrade to Premium for higher limits and advanced AI features.</p>
+        <p className="text-sm font-semibold text-violet-900">{t.premiumHeading}</p>
+        <p className="mt-1 text-xs text-violet-700">{t.premiumDesc}</p>
         <Link href="/pricing" className="mt-3 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-700">
-          View Plans
+          {t.viewPlans}
         </Link>
       </div>
     </div>

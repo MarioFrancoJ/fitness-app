@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -22,6 +23,9 @@ interface Measurement {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function MeasurementsPage() {
+  const { dict } = useDictionary();
+  const t = dict.progress.measurements;
+  const labels = dict.progress.measurementLabels;
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [form, setForm] = useState({
     neck: "",
@@ -87,7 +91,7 @@ export default function MeasurementsPage() {
     // Require at least one field filled
     const hasValue = Object.values(form).some((v) => v.trim() !== "");
     if (!hasValue) {
-      setError("Enter at least one measurement.");
+      setError(t.errorAtLeastOne);
       return;
     }
 
@@ -97,7 +101,7 @@ export default function MeasurementsPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      setError("Not authenticated.");
+      setError(dict.common.errorNotAuthenticated);
       setSaving(false);
       return;
     }
@@ -120,7 +124,7 @@ export default function MeasurementsPage() {
       .single();
 
     if (insertError) {
-      setError("Error saving: " + insertError.message);
+      setError(t.errorSaving.replace("{msg}", String(insertError.message)));
       setSaving(false);
       return;
     }
@@ -164,7 +168,7 @@ export default function MeasurementsPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading measurements..." />
+      <PageLoader text={t.loading} />
     );
   }
 
@@ -172,10 +176,10 @@ export default function MeasurementsPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-          Body Measurements
+          {t.title}
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Track your body measurements over time. All values in centimeters.
+          {t.subtitle}
         </p>
       </div>
 
@@ -185,7 +189,7 @@ export default function MeasurementsPage() {
         className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm"
       >
         <p className="mb-4 text-sm font-semibold text-zinc-700">
-          New Measurement
+          {t.newMeasurement}
         </p>
 
         {error && (
@@ -195,16 +199,16 @@ export default function MeasurementsPage() {
         )}
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Input id="neck" type="number" label="Neck (cm)" placeholder="e.g. 38" step={0.1} value={form.neck} onChange={handleChange} />
-          <Input id="chest" type="number" label="Chest (cm)" placeholder="e.g. 100" step={0.1} value={form.chest} onChange={handleChange} />
-          <Input id="waist" type="number" label="Waist (cm)" placeholder="e.g. 80" step={0.1} value={form.waist} onChange={handleChange} />
-          <Input id="hips" type="number" label="Hips (cm)" placeholder="e.g. 95" step={0.1} value={form.hips} onChange={handleChange} />
-          <Input id="arm" type="number" label="Arm (cm)" placeholder="e.g. 35" step={0.1} value={form.arm} onChange={handleChange} />
-          <Input id="thigh" type="number" label="Thigh (cm)" placeholder="e.g. 55" step={0.1} value={form.thigh} onChange={handleChange} />
+          <Input id="neck" type="number" label={t.neckCm} placeholder="e.g. 38" step={0.1} value={form.neck} onChange={handleChange} />
+          <Input id="chest" type="number" label={t.chestCm} placeholder="e.g. 100" step={0.1} value={form.chest} onChange={handleChange} />
+          <Input id="waist" type="number" label={t.waistCm} placeholder="e.g. 80" step={0.1} value={form.waist} onChange={handleChange} />
+          <Input id="hips" type="number" label={t.hipsCm} placeholder="e.g. 95" step={0.1} value={form.hips} onChange={handleChange} />
+          <Input id="arm" type="number" label={t.armCm} placeholder="e.g. 35" step={0.1} value={form.arm} onChange={handleChange} />
+          <Input id="thigh" type="number" label={t.thighCm} placeholder="e.g. 55" step={0.1} value={form.thigh} onChange={handleChange} />
         </div>
         <div className="mt-5">
           <Button type="submit" disabled={saving}>
-            {saving ? "Saving..." : "Save Measurement"}
+            {saving ? dict.common.saving : t.save}
           </Button>
         </div>
       </form>
@@ -213,26 +217,26 @@ export default function MeasurementsPage() {
       <div className="rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div className="border-b border-zinc-100 px-6 py-4">
           <p className="text-sm font-semibold text-zinc-700">
-            History ({measurements.length} entries)
+            {t.history.replace("{n}", String(measurements.length))}
           </p>
         </div>
 
         {measurements.length === 0 ? (
           <div className="flex h-32 items-center justify-center">
-            <p className="text-sm text-zinc-400">No measurements recorded yet.</p>
+            <p className="text-sm text-zinc-400">{t.noRecords}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-zinc-100 bg-zinc-50">
                 <tr>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Date</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Neck</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Chest</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Waist</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Hips</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Arm</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-700">Thigh</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-700">{t.colDate}</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-700">{labels.neck}</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-700">{labels.chest}</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-700">{labels.waist}</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-700">{labels.hips}</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-700">{t.colArm}</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-700">{t.colThigh}</th>
                   <th className="px-5 py-3 font-semibold text-zinc-700"></th>
                 </tr>
               </thead>
@@ -253,7 +257,7 @@ export default function MeasurementsPage() {
                         className="text-xs font-medium text-zinc-400 transition-colors hover:text-red-600"
                         aria-label={`Delete measurement from ${m.date}`}
                       >
-                        Delete
+                        {dict.common.delete}
                       </button>
                     </td>
                   </tr>

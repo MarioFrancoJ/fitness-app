@@ -4,12 +4,36 @@ import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type WorkoutsDict = ReturnType<typeof useDictionary>["dict"]["workouts"];
 
 type WorkoutGoal = "Fat Loss" | "Muscle Gain" | "Strength" | "Endurance" | "Mobility" | "General Fitness";
 type WorkoutDifficulty = "Beginner" | "Intermediate" | "Advanced";
 type DayName = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
+
+// Localized display label for a goal value (value stays the logic/DB key).
+function goalLabel(g: WorkoutGoal, w: WorkoutsDict): string {
+  switch (g) {
+    case "Fat Loss":        return w.goalFatLoss;
+    case "Muscle Gain":     return w.goalMuscleGain;
+    case "Strength":        return w.goalStrength;
+    case "Endurance":       return w.goalEndurance;
+    case "Mobility":        return w.goalMobility;
+    case "General Fitness": return w.goalGeneralFitness;
+  }
+}
+
+// Localized display label for a difficulty value (value stays the logic/DB key).
+function difficultyLabel(d: WorkoutDifficulty, w: WorkoutsDict): string {
+  switch (d) {
+    case "Beginner":     return w.difficultyBeginner;
+    case "Intermediate": return w.difficultyIntermediate;
+    case "Advanced":     return w.difficultyAdvanced;
+  }
+}
 
 interface ExerciseOption {
   id: string;
@@ -38,6 +62,9 @@ const DAY_NAMES: DayName[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Fri
 
 export default function NewWorkoutPage() {
   const router = useRouter();
+  const { dict } = useDictionary();
+  const nt = dict.workouts.new;
+  const w = dict.workouts;
   const [exercises, setExercises] = useState<ExerciseOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -130,15 +157,15 @@ export default function NewWorkoutPage() {
     e.preventDefault();
     setError("");
 
-    if (!name.trim()) { setError("Workout name is required."); return; }
-    if (workoutDays.length === 0) { setError("Add at least one workout day."); return; }
+    if (!name.trim()) { setError(nt.errorNameRequired); return; }
+    if (workoutDays.length === 0) { setError(nt.errorAddDay); return; }
 
     setSaving(true);
 
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      setError("Not authenticated.");
+      setError(dict.common.errorNotAuthenticated);
       setSaving(false);
       return;
     }
@@ -159,7 +186,7 @@ export default function NewWorkoutPage() {
       .single();
 
     if (workoutErr || !workout) {
-      setError("Error creating workout: " + (workoutErr?.message || "unknown"));
+      setError(nt.errorCreating.replace("{msg}", workoutErr?.message || "unknown"));
       setSaving(false);
       return;
     }
@@ -180,7 +207,7 @@ export default function NewWorkoutPage() {
         .single();
 
       if (dayErr || !newDay) {
-        setError("Error creating day: " + (dayErr?.message || "unknown"));
+        setError(nt.errorCreatingDay.replace("{msg}", dayErr?.message || "unknown"));
         setSaving(false);
         return;
       }
@@ -204,7 +231,7 @@ export default function NewWorkoutPage() {
           .insert(exerciseInserts);
 
         if (exErr) {
-          setError("Error saving exercises: " + exErr.message);
+          setError(nt.errorSavingExercises.replace("{msg}", exErr.message));
           setSaving(false);
           return;
         }
@@ -219,15 +246,15 @@ export default function NewWorkoutPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading exercises..." />
+      <PageLoader text={nt.loading} />
     );
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Create Workout</h1>
-        <p className="mt-1 text-sm text-zinc-500">Build a custom workout routine from your exercise library.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{nt.title}</h1>
+        <p className="mt-1 text-sm text-zinc-500">{nt.subtitle}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -235,35 +262,35 @@ export default function NewWorkoutPage() {
 
         {/* Basic info */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="mb-4 text-sm font-semibold text-zinc-700">Workout Details</p>
+          <p className="mb-4 text-sm font-semibold text-zinc-700">{nt.details}</p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="w-name" className="text-sm font-medium text-zinc-700">Name *</label>
-              <input id="w-name" type="text" value={name} onChange={(e) => { setName(e.target.value); setError(""); }} placeholder="My Workout"
+              <label htmlFor="w-name" className="text-sm font-medium text-zinc-700">{nt.name}</label>
+              <input id="w-name" type="text" value={name} onChange={(e) => { setName(e.target.value); setError(""); }} placeholder={nt.namePlaceholder}
                 className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="w-goal" className="text-sm font-medium text-zinc-700">Goal</label>
+              <label htmlFor="w-goal" className="text-sm font-medium text-zinc-700">{nt.goal}</label>
               <select id="w-goal" value={goal} onChange={(e) => setGoal(e.target.value as WorkoutGoal)}
                 className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
-                {WORKOUT_GOALS.map((g) => <option key={g} value={g}>{g}</option>)}
+                {WORKOUT_GOALS.map((g) => <option key={g} value={g}>{goalLabel(g, w)}</option>)}
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="w-diff" className="text-sm font-medium text-zinc-700">Difficulty</label>
+              <label htmlFor="w-diff" className="text-sm font-medium text-zinc-700">{nt.difficulty}</label>
               <select id="w-diff" value={difficulty} onChange={(e) => setDifficulty(e.target.value as WorkoutDifficulty)}
                 className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
-                {WORKOUT_DIFFICULTIES.map((d) => <option key={d} value={d}>{d}</option>)}
+                {WORKOUT_DIFFICULTIES.map((d) => <option key={d} value={d}>{difficultyLabel(d, w)}</option>)}
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="w-dur" className="text-sm font-medium text-zinc-700">Duration (min)</label>
+              <label htmlFor="w-dur" className="text-sm font-medium text-zinc-700">{nt.durationMin}</label>
               <input id="w-dur" type="number" value={duration} onChange={(e) => setDuration(e.target.value)} min={5} max={180}
                 className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
             </div>
             <div className="sm:col-span-2 flex flex-col gap-1.5">
-              <label htmlFor="w-desc" className="text-sm font-medium text-zinc-700">Description</label>
-              <input id="w-desc" type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description"
+              <label htmlFor="w-desc" className="text-sm font-medium text-zinc-700">{nt.description}</label>
+              <input id="w-desc" type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={nt.descriptionPlaceholder}
                 className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
             </div>
           </div>
@@ -272,7 +299,7 @@ export default function NewWorkoutPage() {
         {/* Workout Days */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm font-semibold text-zinc-700">Workout Days</p>
+            <p className="text-sm font-semibold text-zinc-700">{nt.workoutDays}</p>
             <div className="flex gap-2">
               <select value={selectedDay} onChange={(e) => setSelectedDay(e.target.value as DayName)}
                 className="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-200">
@@ -282,20 +309,20 @@ export default function NewWorkoutPage() {
               </select>
               <button type="button" onClick={handleAddDay}
                 className="rounded-lg bg-zinc-900 px-3 py-1 text-xs font-semibold text-white hover:bg-zinc-700">
-                + Add Day
+                {nt.addDay}
               </button>
             </div>
           </div>
 
           {workoutDays.length === 0 ? (
-            <p className="text-xs text-zinc-400">No days added yet. Add a day to start building your routine.</p>
+            <p className="text-xs text-zinc-400">{nt.noDays}</p>
           ) : (
             <div className="flex flex-col gap-4">
               {workoutDays.map((day, dayIdx) => (
                 <div key={day.dayName} className="rounded-lg border border-zinc-100 bg-zinc-50 p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <p className="text-xs font-semibold text-zinc-700">{day.dayName}</p>
-                    <button type="button" onClick={() => handleRemoveDay(dayIdx)} className="text-xs text-red-400 hover:text-red-600">Remove Day</button>
+                    <button type="button" onClick={() => handleRemoveDay(dayIdx)} className="text-xs text-red-400 hover:text-red-600">{nt.removeDay}</button>
                   </div>
 
                   {/* Exercises list */}
@@ -315,39 +342,39 @@ export default function NewWorkoutPage() {
                   {addingDayIdx === dayIdx ? (
                     <div className="flex flex-wrap items-end gap-2 rounded-md bg-white p-3">
                       <div className="flex flex-col gap-1 min-w-[160px] flex-1">
-                        <label className="text-xs text-zinc-400">Exercise</label>
+                        <label className="text-xs text-zinc-400">{nt.exercise}</label>
                         <select value={addExId} onChange={(e) => setAddExId(e.target.value)}
                           className="h-8 w-full rounded border border-zinc-200 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-200">
-                          <option value="">Select…</option>
+                          <option value="">{nt.selectPlaceholder}</option>
                           {exercises.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
                         </select>
                       </div>
                       <div className="flex flex-col gap-1 w-14">
-                        <label className="text-xs text-zinc-400">Sets</label>
+                        <label className="text-xs text-zinc-400">{nt.sets}</label>
                         <input type="number" value={addSets} onChange={(e) => setAddSets(e.target.value)} min={1}
                           className="h-8 w-full rounded border border-zinc-200 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                       </div>
                       <div className="flex flex-col gap-1 w-14">
-                        <label className="text-xs text-zinc-400">Reps</label>
+                        <label className="text-xs text-zinc-400">{nt.reps}</label>
                         <input type="number" value={addReps} onChange={(e) => setAddReps(e.target.value)} min={1}
                           className="h-8 w-full rounded border border-zinc-200 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                       </div>
                       <div className="flex flex-col gap-1 w-16">
-                        <label className="text-xs text-zinc-400">Rest (s)</label>
+                        <label className="text-xs text-zinc-400">{nt.restS}</label>
                         <input type="number" value={addRest} onChange={(e) => setAddRest(e.target.value)} min={0}
                           className="h-8 w-full rounded border border-zinc-200 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                       </div>
                       <div className="flex flex-col gap-1 flex-1 min-w-[100px]">
-                        <label className="text-xs text-zinc-400">Notes</label>
-                        <input type="text" value={addNotes} onChange={(e) => setAddNotes(e.target.value)} placeholder="Optional"
+                        <label className="text-xs text-zinc-400">{nt.notes}</label>
+                        <input type="text" value={addNotes} onChange={(e) => setAddNotes(e.target.value)} placeholder={dict.common.optional}
                           className="h-8 w-full rounded border border-zinc-200 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                       </div>
-                      <button type="button" onClick={() => handleAddExercise(dayIdx)} className="h-8 rounded bg-zinc-900 px-3 text-xs font-semibold text-white hover:bg-zinc-700">Add</button>
-                      <button type="button" onClick={() => setAddingDayIdx(null)} className="h-8 text-xs text-zinc-400 hover:text-zinc-700">Cancel</button>
+                      <button type="button" onClick={() => handleAddExercise(dayIdx)} className="h-8 rounded bg-zinc-900 px-3 text-xs font-semibold text-white hover:bg-zinc-700">{dict.common.add}</button>
+                      <button type="button" onClick={() => setAddingDayIdx(null)} className="h-8 text-xs text-zinc-400 hover:text-zinc-700">{dict.common.cancel}</button>
                     </div>
                   ) : (
                     <button type="button" onClick={() => setAddingDayIdx(dayIdx)} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">
-                      + Add Exercise
+                      {nt.addExercise}
                     </button>
                   )}
                 </div>
@@ -360,10 +387,10 @@ export default function NewWorkoutPage() {
         <div className="flex gap-3">
           <button type="submit" disabled={saving}
             className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 disabled:opacity-50">
-            {saving ? "Creating..." : "Create Workout"}
+            {saving ? nt.creating : nt.createWorkout}
           </button>
           <button type="button" onClick={() => router.push("/workouts")} className="text-sm font-medium text-zinc-500 hover:text-zinc-900">
-            Cancel
+            {dict.common.cancel}
           </button>
         </div>
       </form>

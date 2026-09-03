@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
 import EmptyState from "@/components/ui/EmptyState";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
+
+type NotificationsDict = ReturnType<typeof useDictionary>["dict"]["notifications"];
 
 interface NotificationItem {
   id: string;
@@ -44,18 +47,20 @@ function priorityDot(p: string): string {
   }
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: NotificationsDict): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t.timeJustNow;
+  if (mins < 60) return t.timeMinutesAgo.replace("{n}", String(mins));
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return t.timeHoursAgo.replace("{n}", String(hrs));
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return t.timeDaysAgo.replace("{n}", String(days));
 }
 
 export default function NotificationsPage() {
+  const { dict } = useDictionary();
+  const t = dict.notifications;
   const { success: showToast } = useToast();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [filter, setFilter] = useState<FilterTab>("all");
@@ -130,7 +135,7 @@ export default function NotificationsPage() {
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, status: "Archived" } : n))
       );
-      showToast("Archived");
+      showToast(t.toastArchived);
     } catch (err) {
       console.error("Failed to archive notification:", err);
     }
@@ -145,7 +150,7 @@ export default function NotificationsPage() {
         .eq("id", id);
       if (error) throw error;
       setNotifications((prev) => prev.filter((n) => n.id !== id));
-      showToast("Deleted");
+      showToast(t.toastDeleted);
     } catch (err) {
       console.error("Failed to delete notification:", err);
     }
@@ -166,7 +171,7 @@ export default function NotificationsPage() {
       setNotifications((prev) =>
         prev.map((n) => (n.status === "Unread" ? { ...n, status: "Read", read_at: new Date().toISOString() } : n))
       );
-      showToast("All marked as read");
+      showToast(t.toastAllMarkedRead);
     } catch (err) {
       console.error("Failed to mark all as read:", err);
     }
@@ -192,16 +197,16 @@ export default function NotificationsPage() {
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Notifications</h1>
-            <p className="mt-1 text-sm text-zinc-500">{unreadCount} unread notification{unreadCount !== 1 ? "s" : ""}</p>
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
+            <p className="mt-1 text-sm text-zinc-500">{t.subtitle.replace("{n}", String(unreadCount))}</p>
           </div>
           <div className="flex gap-2">
             <Link href="/settings/notifications" className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">
-              Preferences
+              {t.preferences}
             </Link>
             {unreadCount > 0 && (
               <button type="button" onClick={handleMarkAllRead} className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">
-                Mark All Read
+                {t.markAllRead}
               </button>
             )}
           </div>
@@ -209,7 +214,7 @@ export default function NotificationsPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-0.5 w-fit">
-          {([["all", "All"], ["unread", "Unread"], ["archived", "Archived"]] as [FilterTab, string][]).map(([key, label]) => (
+          {([["all", t.tabAll], ["unread", t.tabUnread], ["archived", t.tabArchived]] as [FilterTab, string][]).map(([key, label]) => (
             <button key={key} type="button" onClick={() => setFilter(key)}
               className={["rounded-md px-4 py-1.5 text-xs font-semibold transition-colors", filter === key ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}>
               {label}{key === "unread" && unreadCount > 0 ? ` (${unreadCount})` : ""}
@@ -221,8 +226,8 @@ export default function NotificationsPage() {
         {filtered.length === 0 ? (
           <EmptyState
             icon={filter === "unread" ? "📭" : filter === "archived" ? "📦" : "🔔"}
-            title={filter === "unread" ? "No unread notifications" : filter === "archived" ? "No archived notifications" : "No notifications yet"}
-            description={filter === "all" ? "Notifications will appear here as you use the app." : `You have no ${filter} notifications right now.`}
+            title={filter === "unread" ? t.emptyUnreadTitle : filter === "archived" ? t.emptyArchivedTitle : t.emptyAllTitle}
+            description={filter === "all" ? t.emptyAllDesc : t.emptyFilteredDesc.replace("{filter}", filter === "unread" ? t.tabUnread : t.tabArchived)}
           />
         ) : (
           <div className="flex flex-col gap-2">
@@ -243,10 +248,10 @@ export default function NotificationsPage() {
                   <p className="mt-0.5 text-xs text-zinc-500">{notif.message}</p>
                   <div className="mt-2 flex items-center gap-3 text-xs text-zinc-400">
                     <span>{notif.type}</span>
-                    <span>{timeAgo(notif.created_at)}</span>
+                    <span>{timeAgo(notif.created_at, t)}</span>
                     {notif.action_url && (
                       <Link href={notif.action_url} className="font-medium text-zinc-600 hover:text-zinc-900 underline underline-offset-2">
-                        View
+                        {t.viewLink}
                       </Link>
                     )}
                   </div>
@@ -255,14 +260,14 @@ export default function NotificationsPage() {
                 {/* Actions */}
                 <div className="flex shrink-0 gap-1">
                   {notif.status === "Unread" ? (
-                    <button type="button" onClick={() => handleMarkRead(notif.id)} className="rounded-md px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-100">Read</button>
+                    <button type="button" onClick={() => handleMarkRead(notif.id)} className="rounded-md px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-100">{t.actionRead}</button>
                   ) : notif.status === "Read" ? (
-                    <button type="button" onClick={() => handleMarkUnread(notif.id)} className="rounded-md px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-100">Unread</button>
+                    <button type="button" onClick={() => handleMarkUnread(notif.id)} className="rounded-md px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-100">{t.actionUnread}</button>
                   ) : null}
                   {notif.status !== "Archived" && (
-                    <button type="button" onClick={() => handleArchive(notif.id)} className="rounded-md px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-100">Archive</button>
+                    <button type="button" onClick={() => handleArchive(notif.id)} className="rounded-md px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-100">{t.actionArchive}</button>
                   )}
-                  <button type="button" onClick={() => handleDelete(notif.id)} className="rounded-md px-2 py-1 text-xs font-semibold text-red-400 hover:bg-red-50">Delete</button>
+                  <button type="button" onClick={() => handleDelete(notif.id)} className="rounded-md px-2 py-1 text-xs font-semibold text-red-400 hover:bg-red-50">{t.actionDelete}</button>
                 </div>
               </div>
             ))}

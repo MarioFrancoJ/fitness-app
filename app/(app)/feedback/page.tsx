@@ -2,13 +2,38 @@
 
 import { useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
+
+type FeedbackDict = ReturnType<typeof useDictionary>["dict"]["feedback"];
 
 type FeedbackType = "Bug Report" | "Feature Request" | "General Feedback";
 
 const TYPES: FeedbackType[] = ["Bug Report", "Feature Request", "General Feedback"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
 
+// Localized display label for a feedback-type value (value stays the logic key).
+function typeLabel(value: FeedbackType, t: FeedbackDict): string {
+  switch (value) {
+    case "Bug Report":      return t.typeBugReport;
+    case "Feature Request": return t.typeFeatureRequest;
+    case "General Feedback": return t.typeGeneralFeedback;
+  }
+}
+
+// Localized display label for a priority/severity value (value stays the logic key).
+function priorityLabel(value: string, t: FeedbackDict): string {
+  switch (value) {
+    case "Low":      return t.priorityLow;
+    case "Medium":   return t.priorityMedium;
+    case "High":     return t.priorityHigh;
+    case "Critical": return t.priorityCritical;
+    default:         return value;
+  }
+}
+
 export default function FeedbackPage() {
+  const { dict } = useDictionary();
+  const t = dict.feedback;
   const [type, setType] = useState<FeedbackType>("General Feedback");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -47,8 +72,8 @@ export default function FeedbackPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Feedback</h1>
-        <p className="mt-1 text-sm text-zinc-500">Help us improve by reporting bugs, requesting features, or sharing your thoughts.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
+        <p className="mt-1 text-sm text-zinc-500">{t.subtitle}</p>
       </div>
 
       {submitted ? (
@@ -58,52 +83,52 @@ export default function FeedbackPage() {
               <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
             </svg>
           </div>
-          <p className="mb-1 text-base font-semibold text-emerald-900">Thank you!</p>
-          <p className="mb-6 text-sm text-emerald-700">Your feedback has been submitted and will be reviewed by our team.</p>
+          <p className="mb-1 text-base font-semibold text-emerald-900">{t.submittedThankYou}</p>
+          <p className="mb-6 text-sm text-emerald-700">{t.submittedDesc}</p>
           <button type="button" onClick={handleReset} className="rounded-lg border border-emerald-300 px-5 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100">
-            Submit Another
+            {t.submitAnother}
           </button>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-zinc-700">Feedback Type</label>
+              <label className="text-sm font-medium text-zinc-700">{t.fieldFeedbackType}</label>
               <div className="flex gap-2">
-                {TYPES.map((t) => (
-                  <button key={t} type="button" onClick={() => setType(t)}
-                    className={["rounded-lg px-4 py-2 text-xs font-semibold transition-colors", type === t ? "bg-zinc-900 text-white" : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"].join(" ")}>
-                    {t}
+                {TYPES.map((ft) => (
+                  <button key={ft} type="button" onClick={() => setType(ft)}
+                    className={["rounded-lg px-4 py-2 text-xs font-semibold transition-colors", type === ft ? "bg-zinc-900 text-white" : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"].join(" ")}>
+                    {typeLabel(ft, t)}
                   </button>
                 ))}
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="fb-title" className="text-sm font-medium text-zinc-700">Title *</label>
+              <label htmlFor="fb-title" className="text-sm font-medium text-zinc-700">{t.fieldTitle}</label>
               <input id="fb-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} required
-                placeholder={type === "Bug Report" ? "Describe the bug briefly" : type === "Feature Request" ? "What feature would you like?" : "What's on your mind?"}
+                placeholder={type === "Bug Report" ? t.titlePlaceholderBug : type === "Feature Request" ? t.titlePlaceholderFeature : t.titlePlaceholderGeneral}
                 className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="fb-desc" className="text-sm font-medium text-zinc-700">Description</label>
-              <textarea id="fb-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder="Provide more details..."
+              <label htmlFor="fb-desc" className="text-sm font-medium text-zinc-700">{t.fieldDescription}</label>
+              <textarea id="fb-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder={t.fieldDescriptionPlaceholder}
                 className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" />
             </div>
 
             {type === "Bug Report" && (
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="fb-priority" className="text-sm font-medium text-zinc-700">Severity</label>
+                <label htmlFor="fb-priority" className="text-sm font-medium text-zinc-700">{t.fieldSeverity}</label>
                 <select id="fb-priority" value={priority} onChange={(e) => setPriority(e.target.value)}
                   className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">
-                  {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+                  {PRIORITIES.map((p) => <option key={p} value={p}>{priorityLabel(p, t)}</option>)}
                 </select>
               </div>
             )}
 
             <button type="submit" disabled={saving} className="mt-2 h-11 w-full rounded-lg bg-zinc-900 text-sm font-semibold text-white hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2">
-              {saving ? "Submitting..." : "Submit Feedback"}
+              {saving ? t.submitting : t.submitButton}
             </button>
           </div>
         </form>

@@ -7,8 +7,11 @@ import PageLoader from "@/components/ui/PageLoader";
 import { SkeletonPage } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import EmptyState from "@/components/ui/EmptyState";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type WorkoutsDict = ReturnType<typeof useDictionary>["dict"]["workouts"];
 
 type WorkoutGoal = "Fat Loss" | "Muscle Gain" | "Strength" | "Endurance" | "Mobility" | "General Fitness";
 type WorkoutDifficulty = "Beginner" | "Intermediate" | "Advanced";
@@ -47,23 +50,46 @@ function goalColor(g: WorkoutGoal | null): string {
   }
 }
 
+// Localized display label for a goal value (value stays the logic/DB key).
+function goalLabel(g: WorkoutGoal | null, t: WorkoutsDict): string {
+  switch (g) {
+    case "Fat Loss":        return t.goalFatLoss;
+    case "Muscle Gain":     return t.goalMuscleGain;
+    case "Strength":        return t.goalStrength;
+    case "Endurance":       return t.goalEndurance;
+    case "Mobility":        return t.goalMobility;
+    case "General Fitness": return t.goalGeneralFitness;
+    default:                return g ?? "";
+  }
+}
+
+// Localized display label for a difficulty value (value stays the logic/DB key).
+function difficultyLabel(d: WorkoutDifficulty | null, t: WorkoutsDict): string {
+  switch (d) {
+    case "Beginner":     return t.difficultyBeginner;
+    case "Intermediate": return t.difficultyIntermediate;
+    case "Advanced":     return t.difficultyAdvanced;
+    default:             return d ?? "";
+  }
+}
+
 // ── Workout Card ──────────────────────────────────────────────────────────────
 
-function WorkoutCard({ workout, href }: { workout: WorkoutItem; href: string }) {
+function WorkoutCard({ workout, href, t }: { workout: WorkoutItem; href: string; t: WorkoutsDict }) {
   return (
     <Link href={href} className="flex flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="mb-2 flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold text-zinc-900">{workout.name}</h3>
         {workout.difficulty && (
           <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${difficultyColor(workout.difficulty)}`}>
-            {workout.difficulty}
+            {difficultyLabel(workout.difficulty, t)}
           </span>
         )}
       </div>
       {workout.description && <p className="mb-3 text-xs text-zinc-400 line-clamp-2">{workout.description}</p>}
       <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-zinc-100 pt-3">
         {workout.goal && (
-          <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${goalColor(workout.goal)}`}>{workout.goal}</span>
+          <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${goalColor(workout.goal)}`}>{goalLabel(workout.goal, t)}</span>
         )}
         <span className="text-xs text-zinc-400">{workout.exerciseCount} exercises</span>
         {workout.duration && <span className="text-xs text-zinc-400">{workout.duration} min</span>}
@@ -76,6 +102,8 @@ function WorkoutCard({ workout, href }: { workout: WorkoutItem; href: string }) 
 
 export default function WorkoutsPage() {
   const { success: showToast } = useToast();
+  const { dict } = useDictionary();
+  const t = dict.workouts;
   const [workouts, setWorkouts] = useState<WorkoutItem[]>([]);
   const [templates, setTemplates] = useState<WorkoutItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -209,7 +237,7 @@ export default function WorkoutsPage() {
 
     // Refresh list
     await loadData();
-    showToast("Template loaded as your workout!");
+    showToast(t.toastTemplateLoaded);
   }
 
   // ── Delete Workout ────────────────────────────────────────────────────────
@@ -226,7 +254,7 @@ export default function WorkoutsPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading workouts..." />
+      <PageLoader text={t.loading} />
     );
   }
 
@@ -235,32 +263,32 @@ export default function WorkoutsPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Workouts</h1>
-          <p className="mt-1 text-sm text-zinc-500">Create and manage your workout routines.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
+          <p className="mt-1 text-sm text-zinc-500">{t.subtitle}</p>
         </div>
         <Link href="/workouts/new" className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900">
-          + New Workout
+          {t.newWorkout}
         </Link>
       </div>
 
       {/* My Workouts */}
       <div>
-        <h2 className="mb-3 text-sm font-semibold text-zinc-900">My Workouts</h2>
+        <h2 className="mb-3 text-sm font-semibold text-zinc-900">{t.myWorkouts}</h2>
         {workouts.length === 0 ? (
           <EmptyState
             icon="🏋️"
-            title="No workouts yet"
-            description="Create your first workout from scratch or load a template to get started."
-            actionLabel="Create Workout"
+            title={t.emptyTitle}
+            description={t.emptyDescription}
+            actionLabel={t.emptyAction}
             actionHref="/workouts/new"
-            secondaryLabel="Browse Templates"
+            secondaryLabel={t.emptySecondary}
             secondaryHref="/training/templates"
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {workouts.map((w) => (
               <div key={w.id} className="relative">
-                <WorkoutCard workout={w} href={`/workouts/${w.id}`} />
+                <WorkoutCard workout={w} href={`/workouts/${w.id}`} t={t} />
                 <button
                   type="button"
                   onClick={() => handleDelete(w.id)}
@@ -280,7 +308,7 @@ export default function WorkoutsPage() {
       {/* Templates */}
       {templates.length > 0 && (
         <div>
-          <h2 className="mb-3 text-sm font-semibold text-zinc-900">Workout Templates</h2>
+          <h2 className="mb-3 text-sm font-semibold text-zinc-900">{t.templates}</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {templates.map((tpl) => (
               <div key={tpl.id} className="flex flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
@@ -288,19 +316,19 @@ export default function WorkoutsPage() {
                   <h3 className="text-sm font-semibold text-zinc-900">{tpl.name}</h3>
                   {tpl.difficulty && (
                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${difficultyColor(tpl.difficulty)}`}>
-                      {tpl.difficulty}
+                      {difficultyLabel(tpl.difficulty, t)}
                     </span>
                   )}
                 </div>
                 {tpl.description && <p className="mb-3 text-xs text-zinc-400 line-clamp-2">{tpl.description}</p>}
                 <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-3">
                   <div className="flex items-center gap-2">
-                    {tpl.goal && <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${goalColor(tpl.goal)}`}>{tpl.goal}</span>}
+                    {tpl.goal && <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${goalColor(tpl.goal)}`}>{goalLabel(tpl.goal, t)}</span>}
                     {tpl.duration && <span className="text-xs text-zinc-400">{tpl.duration} min</span>}
                     <span className="text-xs text-zinc-400">{tpl.exerciseCount} ex.</span>
                   </div>
                   <button type="button" onClick={() => handleUseTemplate(tpl.id)} className="text-xs font-semibold text-zinc-600 hover:text-zinc-900">
-                    Use Template
+                    {t.useTemplate}
                   </button>
                 </div>
               </div>

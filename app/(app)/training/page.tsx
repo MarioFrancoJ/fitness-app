@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,8 @@ interface RecentSession {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function TrainingPage() {
+  const { dict } = useDictionary();
+  const t = dict.training;
   const [stats, setStats] = useState<TrainingStats>({ workoutsThisWeek: 0, currentStreak: 0, totalSessions: 0, totalTrainingTime: 0 });
   const [records, setRecords] = useState<PersonalRecord[]>([]);
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
@@ -173,7 +176,7 @@ export default function TrainingPage() {
 
   if (loading) {
     return (
-      <PageLoader text="Loading training data..." />
+      <PageLoader text={t.loading} />
     );
   }
 
@@ -182,11 +185,11 @@ export default function TrainingPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Training</h1>
-          <p className="mt-1 text-sm text-zinc-500">Track workouts, view history, and beat your records.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
+          <p className="mt-1 text-sm text-zinc-500">{t.subtitle}</p>
         </div>
         <Link href="/training/start" className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900">
-          Start Workout
+          {t.startWorkout}
         </Link>
       </div>
 
@@ -194,10 +197,10 @@ export default function TrainingPage() {
       {hasActiveSession && (
         <Link href="/training/start" className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4">
           <div>
-            <p className="text-sm font-semibold text-amber-900">Workout In Progress</p>
+            <p className="text-sm font-semibold text-amber-900">{t.inProgressTitle}</p>
             <p className="text-xs text-amber-700">{activeWorkoutName}</p>
           </div>
-          <span className="rounded-lg bg-amber-200 px-3 py-1 text-xs font-semibold text-amber-900">Resume</span>
+          <span className="rounded-lg bg-amber-200 px-3 py-1 text-xs font-semibold text-amber-900">{t.inProgressResume}</span>
         </Link>
       )}
 
@@ -205,42 +208,42 @@ export default function TrainingPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="text-2xl font-bold text-zinc-900">{stats.workoutsThisWeek}</p>
-          <p className="text-xs text-zinc-400">This Week</p>
+          <p className="text-xs text-zinc-400">{t.thisWeek}</p>
         </div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="text-2xl font-bold text-blue-600">{stats.currentStreak}</p>
-          <p className="text-xs text-zinc-400">Day Streak</p>
+          <p className="text-xs text-zinc-400">{t.dayStreak}</p>
         </div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="text-2xl font-bold text-zinc-900">{stats.totalSessions}</p>
-          <p className="text-xs text-zinc-400">Total Workouts</p>
+          <p className="text-xs text-zinc-400">{t.totalWorkouts}</p>
         </div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="text-2xl font-bold text-emerald-600">{Math.round(stats.totalTrainingTime / 60)}h</p>
-          <p className="text-xs text-zinc-400">Training Time</p>
+          <p className="text-xs text-zinc-400">{t.trainingTime}</p>
         </div>
       </div>
 
       {/* Quick links */}
       <div className="grid gap-3 sm:grid-cols-3">
         <Link href="/training/start" className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
-          <p className="text-sm font-semibold text-zinc-900">Start Workout</p>
-          <p className="text-xs text-zinc-400">Begin a training session</p>
+          <p className="text-sm font-semibold text-zinc-900">{t.quickStartTitle}</p>
+          <p className="text-xs text-zinc-400">{t.quickStartDesc}</p>
         </Link>
         <Link href="/training/history" className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
-          <p className="text-sm font-semibold text-zinc-900">Training History</p>
-          <p className="text-xs text-zinc-400">View past sessions</p>
+          <p className="text-sm font-semibold text-zinc-900">{t.quickHistoryTitle}</p>
+          <p className="text-xs text-zinc-400">{t.quickHistoryDesc}</p>
         </Link>
         <Link href="/workouts" className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
-          <p className="text-sm font-semibold text-zinc-900">My Workouts</p>
-          <p className="text-xs text-zinc-400">Manage routines</p>
+          <p className="text-sm font-semibold text-zinc-900">{t.quickMyWorkoutsTitle}</p>
+          <p className="text-xs text-zinc-400">{t.quickMyWorkoutsDesc}</p>
         </Link>
       </div>
 
       {/* Personal Records */}
       {records.length > 0 && (
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="mb-4 text-sm font-semibold text-zinc-900">Personal Records</p>
+          <p className="mb-4 text-sm font-semibold text-zinc-900">{t.personalRecords}</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {records.map((pr) => (
               <div key={pr.exerciseName} className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 p-3">
@@ -260,12 +263,12 @@ export default function TrainingPage() {
       {/* Recent Sessions */}
       <div className="rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div className="border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
-          <p className="text-sm font-semibold text-zinc-900">Recent Sessions</p>
-          <Link href="/training/history" className="text-xs font-medium text-zinc-500 hover:text-zinc-900">View all</Link>
+          <p className="text-sm font-semibold text-zinc-900">{t.recentSessions}</p>
+          <Link href="/training/history" className="text-xs font-medium text-zinc-500 hover:text-zinc-900">{dict.common.viewAll}</Link>
         </div>
         {recentSessions.length === 0 ? (
           <div className="flex h-32 items-center justify-center">
-            <p className="text-sm text-zinc-400">No sessions completed yet. Start your first workout!</p>
+            <p className="text-sm text-zinc-400">{t.noSessions}</p>
           </div>
         ) : (
           <div className="divide-y divide-zinc-50">
@@ -275,7 +278,7 @@ export default function TrainingPage() {
                   <p className="text-sm font-medium text-zinc-900">{s.workoutName}</p>
                   <p className="text-xs text-zinc-400">{s.date} · {s.durationMinutes} min</p>
                 </div>
-                <span className="text-xs text-zinc-400">{s.exerciseCount} exercises</span>
+                <span className="text-xs text-zinc-400">{t.exercisesSuffix.replace("{n}", String(s.exerciseCount))}</span>
               </Link>
             ))}
           </div>

@@ -14,11 +14,36 @@ import {
   type MealSlot,
 } from "@/lib/nutrition";
 import MealPlanModal, { type MealPlanModalRecipe } from "@/components/nutrition/MealPlanModal";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type RecipeGoal = "Fat Loss" | "Muscle Gain" | "Maintenance";
 type MealType = "Breakfast" | "Lunch" | "Dinner" | "Snack";
+
+type NutritionDict = ReturnType<typeof useDictionary>["dict"]["nutrition"];
+
+// Localized label for a goal badge (recipeDetail namespace has no goal keys,
+// so we reuse the shared nutrition.recipes.goal* labels).
+function goalLabel(goal: string, nt: NutritionDict): string {
+  switch (goal) {
+    case "Fat Loss":    return nt.recipes.goalFatLoss;
+    case "Muscle Gain": return nt.recipes.goalMuscleGain;
+    case "Maintenance": return nt.recipes.goalMaintenance;
+    default:            return goal;
+  }
+}
+
+// Localized label for a meal type / slot value.
+function mealTypeLabel(type: string, nt: NutritionDict): string {
+  switch (type) {
+    case "Breakfast": return nt.mealTypeBreakfast;
+    case "Lunch":     return nt.mealTypeLunch;
+    case "Dinner":    return nt.mealTypeDinner;
+    case "Snack":     return nt.mealTypeSnack;
+    default:          return type;
+  }
+}
 
 interface RecipeIngredient {
   id: string;
@@ -60,6 +85,9 @@ function goalColor(goal: string) {
 export default function RecipeDetailPage() {
   const params = useParams();
   const id = params.id as string;
+  const { dict } = useDictionary();
+  const t = dict.nutrition.recipeDetail;
+  const nt = dict.nutrition;
   const { success, error: toastError } = useToast();
 
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -164,8 +192,8 @@ export default function RecipeDetailPage() {
     setBusy("shop");
     const res = await addRecipeIngredientsToShoppingList(recipe.ingredients, { multiplier: servings });
     setBusy(null);
-    if (res.ok) success(`Added ${res.addedCount} ingredient${res.addedCount === 1 ? "" : "s"} to your shopping list.`);
-    else toastError(res.error || "Could not add ingredients.");
+    if (res.ok) success(nt.recipes.toastAddedIngredients.replace("{n}", String(res.addedCount)));
+    else toastError(res.error || nt.recipes.toastAddError);
   }
 
   async function handleLogMeal() {
@@ -174,26 +202,31 @@ export default function RecipeDetailPage() {
     const res = await logMealFromRecipe(recipe, { servings, slot });
     setBusy(null);
     if (res.ok) {
-      success(`Logged ${servings} serving${servings === 1 ? "" : "s"} of "${recipe.name}" (${Math.round(recipe.calories * servings)} kcal).`);
+      success(
+        t.toastLogged
+          .replace("{n}", String(servings))
+          .replace("{name}", recipe.name)
+          .replace("{cal}", String(Math.round(recipe.calories * servings))),
+      );
     } else {
-      toastError(res.error || "Could not log meal.");
+      toastError(res.error || t.toastLogError);
     }
   }
 
   if (loading) {
-    return <PageLoader text="Loading recipe..." />;
+    return <PageLoader text={t.loading} />;
   }
 
   if (notFound || !recipe) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <p className="mb-2 text-lg font-semibold text-zinc-900">Recipe Not Found</p>
-        <p className="mb-6 text-golden-sm text-zinc-500">This recipe doesn&apos;t exist or has been removed.</p>
+        <p className="mb-2 text-lg font-semibold text-zinc-900">{t.notFoundTitle}</p>
+        <p className="mb-6 text-golden-sm text-zinc-500">{t.notFoundDescription}</p>
         <Link
           href="/nutrition/recipes"
           className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 px-4 py-2 text-golden-sm font-semibold text-white hover:bg-zinc-700"
         >
-          &larr; Back to Recipes
+          {t.backToRecipes}
         </Link>
       </div>
     );
@@ -206,7 +239,7 @@ export default function RecipeDetailPage() {
         href="/nutrition/recipes"
         className="inline-flex items-center gap-1 text-golden-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900"
       >
-        &larr; Back to Recipes
+        {t.backToRecipes}
       </Link>
 
       {/* Header */}
@@ -218,17 +251,17 @@ export default function RecipeDetailPage() {
           )}
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <span className={`inline-block rounded-full px-3 py-1 text-golden-xs font-semibold ${goalColor(recipe.goal)}`}>
-              {recipe.goal}
+              {goalLabel(recipe.goal, nt)}
             </span>
             {recipe.mealType && (
               <span className="inline-block rounded-full bg-zinc-100 px-3 py-1 text-golden-xs font-medium text-zinc-700">
-                {recipe.mealType}
+                {mealTypeLabel(recipe.mealType, nt)}
               </span>
             )}
             {recipe.prepTime > 0 && (
-              <span className="text-golden-xs text-zinc-400">{recipe.prepTime} min prep</span>
+              <span className="text-golden-xs text-zinc-400">{t.prepSuffix.replace("{n}", String(recipe.prepTime))}</span>
             )}
-            <span className="text-golden-xs text-zinc-400">{recipe.servings} serving{recipe.servings > 1 ? "s" : ""}</span>
+            <span className="text-golden-xs text-zinc-400">{t.servings.replace("{n}", String(recipe.servings))}</span>
           </div>
         </div>
       </div>
@@ -246,7 +279,7 @@ export default function RecipeDetailPage() {
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <path d="m21 15-5-5L5 21" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <span className="text-golden-xs font-medium">Recipe photo</span>
+              <span className="text-golden-xs font-medium">{t.recipePhoto}</span>
             </div>
           </div>
         )}
@@ -256,19 +289,19 @@ export default function RecipeDetailPage() {
       <div className="grid gap-4 sm:grid-cols-4">
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="text-2xl font-bold text-zinc-900">{recipe.calories}</p>
-          <p className="text-golden-xs text-zinc-400">Calories</p>
+          <p className="text-golden-xs text-zinc-400">{t.calories}</p>
         </div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="text-2xl font-bold text-blue-600">{recipe.protein}g</p>
-          <p className="text-golden-xs text-zinc-400">Protein</p>
+          <p className="text-golden-xs text-zinc-400">{t.protein}</p>
         </div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="text-2xl font-bold text-amber-600">{recipe.carbs}g</p>
-          <p className="text-golden-xs text-zinc-400">Carbs</p>
+          <p className="text-golden-xs text-zinc-400">{t.carbs}</p>
         </div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="text-2xl font-bold text-emerald-600">{recipe.fat}g</p>
-          <p className="text-golden-xs text-zinc-400">Fat</p>
+          <p className="text-golden-xs text-zinc-400">{t.fat}</p>
         </div>
       </div>
 
@@ -277,10 +310,10 @@ export default function RecipeDetailPage() {
         {/* Ingredients */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-golden-sm font-semibold uppercase tracking-widest text-zinc-400">
-            Ingredients
+            {t.ingredients}
           </h2>
           {recipe.ingredients.length === 0 ? (
-            <p className="text-golden-sm text-zinc-400">No ingredients listed.</p>
+            <p className="text-golden-sm text-zinc-400">{t.noIngredients}</p>
           ) : (
             <ul className="flex flex-col gap-2.5">
               {recipe.ingredients.map((item) => (
@@ -301,10 +334,10 @@ export default function RecipeDetailPage() {
         {/* Instructions */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-golden-sm font-semibold uppercase tracking-widest text-zinc-400">
-            Instructions
+            {t.instructions}
           </h2>
           {recipe.instructions.length === 0 ? (
-            <p className="text-golden-sm text-zinc-400">No instructions listed.</p>
+            <p className="text-golden-sm text-zinc-400">{t.noInstructions}</p>
           ) : (
             <ol className="flex flex-col gap-3">
               {recipe.instructions.map((step, i) => (
@@ -323,14 +356,14 @@ export default function RecipeDetailPage() {
       {/* Actions panel — Recipe is the source of truth for meals */}
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-golden-sm font-semibold uppercase tracking-widest text-zinc-400">
-          Use this recipe
+          {t.useThisRecipe}
         </h2>
 
         {/* Slot + servings — used by "Log as Meal" and shopping-list multiplier.
             (Meal Plan scheduling uses the assignment modal instead.) */}
         <div className="mb-4 flex flex-wrap items-end gap-4">
           <div>
-            <label htmlFor="meal-slot" className="mb-1 block text-golden-xs font-medium text-zinc-600">Meal</label>
+            <label htmlFor="meal-slot" className="mb-1 block text-golden-xs font-medium text-zinc-600">{t.mealLabel}</label>
             <select
               id="meal-slot"
               value={slot}
@@ -338,12 +371,12 @@ export default function RecipeDetailPage() {
               className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-golden-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
             >
               {MEAL_SLOTS.map((m) => (
-                <option key={m} value={m}>{m}</option>
+                <option key={m} value={m}>{mealTypeLabel(m, nt)}</option>
               ))}
             </select>
           </div>
           <div>
-            <label htmlFor="servings" className="mb-1 block text-golden-xs font-medium text-zinc-600">Servings</label>
+            <label htmlFor="servings" className="mb-1 block text-golden-xs font-medium text-zinc-600">{t.servingsLabel}</label>
             <input
               id="servings"
               type="number"
@@ -367,7 +400,7 @@ export default function RecipeDetailPage() {
             disabled={busy !== null}
             className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-golden-sm font-semibold text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
           >
-            + Add to Meal Plan
+            {t.addToMealPlan}
           </button>
 
           {/* Log meal — populates macros automatically */}
@@ -377,7 +410,7 @@ export default function RecipeDetailPage() {
             disabled={busy !== null}
             className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-5 py-2.5 text-golden-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 disabled:opacity-50"
           >
-            {busy === "log" ? "Logging…" : "Log as Meal Today"}
+            {busy === "log" ? t.logging : t.logAsMealToday}
           </button>
 
           {/* Secondary CTA */}
@@ -387,7 +420,7 @@ export default function RecipeDetailPage() {
             disabled={busy !== null || recipe.ingredients.length === 0}
             className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-5 py-2.5 text-golden-sm font-semibold text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-40"
           >
-            {busy === "shop" ? "Adding…" : "Add Ingredients to Shopping List"}
+            {busy === "shop" ? t.adding : t.addIngredientsToShopping}
           </button>
         </div>
 

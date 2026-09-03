@@ -5,6 +5,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { SkeletonPage } from "@/components/ui/Skeleton";
+import { useDictionary } from "@/lib/i18n/DictionaryProvider";
+
+type ProgressDict = ReturnType<typeof useDictionary>["dict"]["progress"];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -46,26 +49,30 @@ type MeasurementKey = keyof BodyMeasurements;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const MEASUREMENT_LABELS: Record<MeasurementKey, string> = {
-  neck: "Neck",
-  chest: "Chest",
-  waist: "Waist",
-  hips: "Hips",
-  leftArm: "Left Arm",
-  rightArm: "Right Arm",
-  leftThigh: "Left Thigh",
-  rightThigh: "Right Thigh",
-  leftCalf: "Left Calf",
-  rightCalf: "Right Calf",
-};
+function buildMeasurementLabels(t: ProgressDict): Record<MeasurementKey, string> {
+  return {
+    neck: t.measurementLabels.neck,
+    chest: t.measurementLabels.chest,
+    waist: t.measurementLabels.waist,
+    hips: t.measurementLabels.hips,
+    leftArm: t.measurementLabels.leftArm,
+    rightArm: t.measurementLabels.rightArm,
+    leftThigh: t.measurementLabels.leftThigh,
+    rightThigh: t.measurementLabels.rightThigh,
+    leftCalf: t.measurementLabels.leftCalf,
+    rightCalf: t.measurementLabels.rightCalf,
+  };
+}
 
-const CHART_MEASUREMENT_OPTIONS: { label: string; keys: MeasurementKey[] }[] = [
-  { label: "Waist", keys: ["waist"] },
-  { label: "Chest", keys: ["chest"] },
-  { label: "Hips", keys: ["hips"] },
-  { label: "Arms", keys: ["leftArm", "rightArm"] },
-  { label: "Legs", keys: ["leftThigh", "rightThigh"] },
-];
+function buildChartMeasurementOptions(t: ProgressDict): { label: string; keys: MeasurementKey[] }[] {
+  return [
+    { label: t.chartOptions.waist, keys: ["waist"] },
+    { label: t.chartOptions.chest, keys: ["chest"] },
+    { label: t.chartOptions.hips, keys: ["hips"] },
+    { label: t.chartOptions.arms, keys: ["leftArm", "rightArm"] },
+    { label: t.chartOptions.legs, keys: ["leftThigh", "rightThigh"] },
+  ];
+}
 
 // ── Chart helpers ─────────────────────────────────────────────────────────────
 
@@ -162,7 +169,7 @@ function LineChart({
 
 // ── Achievements logic ────────────────────────────────────────────────────────
 
-function computeAchievements(profile: ProfileData, history: MeasurementRecord[]): Achievement[] {
+function computeAchievements(profile: ProfileData, history: MeasurementRecord[], t: ProgressDict): Achievement[] {
   const totalLost =
     profile.startingWeight !== null && profile.currentWeight !== null
       ? profile.startingWeight - profile.currentWeight
@@ -172,19 +179,20 @@ function computeAchievements(profile: ProfileData, history: MeasurementRecord[])
   const goalReached =
     profile.goalWeight !== null && profile.currentWeight !== null && profile.currentWeight <= profile.goalWeight;
 
+  const a = t.achievementItems;
   return [
-    { id: "first-measurement", title: "First Measurement", description: "Recorded your first measurement", unlocked: history.length >= 1, icon: "📏" },
-    { id: "5kg-lost", title: "5 kg Lost", description: "Lost 5 kg from starting weight", unlocked: totalLost >= 5, icon: "🔥" },
-    { id: "10kg-lost", title: "10 kg Lost", description: "Lost 10 kg from starting weight", unlocked: totalLost >= 10, icon: "💪" },
-    { id: "goal-reached", title: "Goal Weight Reached", description: "Reached your target weight", unlocked: goalReached, icon: "🎯" },
-    { id: "30-days", title: "30 Days Active", description: "Recorded measurements on 30 different days", unlocked: daysActive >= 30, icon: "📅" },
-    { id: "90-days", title: "90 Days Active", description: "Recorded measurements on 90 different days", unlocked: daysActive >= 90, icon: "🏆" },
+    { id: "first-measurement", title: a.firstMeasurementTitle, description: a.firstMeasurementDesc, unlocked: history.length >= 1, icon: "📏" },
+    { id: "5kg-lost", title: a.fiveKgTitle, description: a.fiveKgDesc, unlocked: totalLost >= 5, icon: "🔥" },
+    { id: "10kg-lost", title: a.tenKgTitle, description: a.tenKgDesc, unlocked: totalLost >= 10, icon: "💪" },
+    { id: "goal-reached", title: a.goalReachedTitle, description: a.goalReachedDesc, unlocked: goalReached, icon: "🎯" },
+    { id: "30-days", title: a.thirtyDaysTitle, description: a.thirtyDaysDesc, unlocked: daysActive >= 30, icon: "📅" },
+    { id: "90-days", title: a.ninetyDaysTitle, description: a.ninetyDaysDesc, unlocked: daysActive >= 90, icon: "🏆" },
   ];
 }
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
-function EmptyState() {
+function EmptyState({ t }: { t: ProgressDict }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white py-20">
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100">
@@ -192,13 +200,13 @@ function EmptyState() {
           <path fillRule="evenodd" d="M12 7a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0V9.414l-5.293 5.293a1 1 0 0 1-1.414 0L7 12.414l-3.293 3.293a1 1 0 0 1-1.414-1.414l4-4a1 1 0 0 1 1.414 0L10 12.586 14.586 8H13a1 1 0 0 1-1-1Z" clipRule="evenodd" />
         </svg>
       </div>
-      <p className="mb-1 text-base font-semibold text-zinc-900">No progress data yet</p>
-      <p className="mb-6 text-sm text-zinc-500">Save your profile measurements to start tracking progress.</p>
+      <p className="mb-1 text-base font-semibold text-zinc-900">{t.emptyTitle}</p>
+      <p className="mb-6 text-sm text-zinc-500">{t.emptyDescription}</p>
       <Link
         href="/profile"
         className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
       >
-        Go to Profile
+        {t.emptyAction}
       </Link>
     </div>
   );
@@ -207,6 +215,10 @@ function EmptyState() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ProgressPage() {
+  const { dict } = useDictionary();
+  const t = dict.progress;
+  const measurementLabels = useMemo(() => buildMeasurementLabels(t), [t]);
+  const chartMeasurementOptions = useMemo(() => buildChartMeasurementOptions(t), [t]);
   const [profile, setProfile] = useState<ProfileData>({ currentWeight: null, goalWeight: null, startingWeight: null });
   const [history, setHistory] = useState<MeasurementRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -304,7 +316,7 @@ export default function ProgressPage() {
 
   // Measurement chart data
   const measurementChartData = useMemo(() => {
-    const option = CHART_MEASUREMENT_OPTIONS[selectedMeasurement];
+    const option = chartMeasurementOptions[selectedMeasurement];
     if (!option) return [];
     return sortedHistory
       .filter((r) => option.keys.some((k) => r.measurements[k]))
@@ -315,14 +327,14 @@ export default function ProgressPage() {
         return { label: r.date.slice(5), value: avg };
       })
       .filter((d) => d.value > 0);
-  }, [sortedHistory, selectedMeasurement]);
+  }, [sortedHistory, selectedMeasurement, chartMeasurementOptions]);
 
   // Achievements
-  const achievements = useMemo(() => computeAchievements(profile, history), [profile, history]);
+  const achievements = useMemo(() => computeAchievements(profile, history, t), [profile, history, t]);
 
   if (loading) {
     return (
-      <PageLoader text="Loading progress data..." />
+      <PageLoader text={t.loading} />
     );
   }
 
@@ -333,45 +345,45 @@ export default function ProgressPage() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Progress Tracking</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Visualize changes in body weight, measurements, and transformation over time.
+            {t.subtitle}
           </p>
         </div>
         <Link
           href="/profile"
           className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 focus-visible:ring-offset-2"
         >
-          Update Measurements
+          {t.updateMeasurements}
         </Link>
       </div>
 
       {!hasData ? (
-        <EmptyState />
+        <EmptyState t={t} />
       ) : (
         <>
           {/* Summary cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-medium text-zinc-400">Starting Weight</p>
+              <p className="text-xs font-medium text-zinc-400">{t.startingWeight}</p>
               <p className="text-xl font-bold text-zinc-900">
                 {startingWeight !== null ? `${startingWeight} kg` : "—"}
               </p>
             </div>
             <div className="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-medium text-zinc-400">Current Weight</p>
+              <p className="text-xs font-medium text-zinc-400">{t.currentWeight}</p>
               <p className="text-xl font-bold text-zinc-900">
                 {currentWeight !== null ? `${currentWeight} kg` : "—"}
               </p>
             </div>
             <div className="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-medium text-zinc-400">Goal Weight</p>
+              <p className="text-xs font-medium text-zinc-400">{t.goalWeight}</p>
               <p className="text-xl font-bold text-zinc-900">
                 {goalWeight !== null ? `${goalWeight} kg` : "—"}
               </p>
             </div>
             <div className="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-medium text-zinc-400">Total Change</p>
+              <p className="text-xs font-medium text-zinc-400">{t.totalChange}</p>
               <p
                 className={[
                   "text-xl font-bold",
@@ -389,24 +401,24 @@ export default function ProgressPage() {
 
           {/* Weight Progress */}
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <p className="mb-4 text-sm font-semibold text-zinc-900">Weight Progress</p>
+            <p className="mb-4 text-sm font-semibold text-zinc-900">{t.weightProgress}</p>
             <div className="grid gap-3 sm:grid-cols-4">
               <div className="rounded-lg bg-zinc-50 p-4">
-                <p className="text-xs text-zinc-400">Current</p>
+                <p className="text-xs text-zinc-400">{t.current}</p>
                 <p className="text-lg font-bold text-zinc-900">{currentWeight !== null ? `${currentWeight} kg` : "—"}</p>
               </div>
               <div className="rounded-lg bg-zinc-50 p-4">
-                <p className="text-xs text-zinc-400">Goal</p>
+                <p className="text-xs text-zinc-400">{t.goal}</p>
                 <p className="text-lg font-bold text-zinc-900">{goalWeight !== null ? `${goalWeight} kg` : "—"}</p>
               </div>
               <div className="rounded-lg bg-zinc-50 p-4">
-                <p className="text-xs text-zinc-400">Lost / Gained</p>
+                <p className="text-xs text-zinc-400">{t.lostGained}</p>
                 <p className={["text-lg font-bold", totalChange !== null && totalChange < 0 ? "text-emerald-600" : totalChange !== null && totalChange > 0 ? "text-red-500" : "text-zinc-900"].join(" ")}>
                   {totalChange !== null ? `${totalChange > 0 ? "+" : ""}${totalChange.toFixed(1)} kg` : "—"}
                 </p>
               </div>
               <div className="rounded-lg bg-zinc-50 p-4">
-                <p className="text-xs text-zinc-400">Progress</p>
+                <p className="text-xs text-zinc-400">{t.progressPct}</p>
                 <p className="text-lg font-bold text-blue-600">{percentProgress !== null ? `${percentProgress.toFixed(0)}%` : "—"}</p>
                 {percentProgress !== null && (
                   <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
@@ -419,28 +431,28 @@ export default function ProgressPage() {
 
           {/* Body Measurements Comparison */}
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <p className="mb-4 text-sm font-semibold text-zinc-900">Body Measurements Comparison</p>
+            <p className="mb-4 text-sm font-semibold text-zinc-900">{t.bodyMeasurementsComparison}</p>
             {!latestRecord ? (
-              <p className="text-sm text-zinc-400">No measurement records yet.</p>
+              <p className="text-sm text-zinc-400">{t.noMeasurementRecords}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-zinc-100">
-                      <th className="px-4 py-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">Measurement</th>
-                      <th className="px-4 py-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">Current</th>
-                      <th className="px-4 py-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">Previous</th>
-                      <th className="px-4 py-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">Difference</th>
+                      <th className="px-4 py-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">{t.colMeasurement}</th>
+                      <th className="px-4 py-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">{t.colCurrent}</th>
+                      <th className="px-4 py-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">{t.colPrevious}</th>
+                      <th className="px-4 py-2 text-xs font-semibold uppercase tracking-widest text-zinc-400">{t.colDifference}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-50">
-                    {(Object.keys(MEASUREMENT_LABELS) as MeasurementKey[]).map((key) => {
+                    {(Object.keys(measurementLabels) as MeasurementKey[]).map((key) => {
                       const curr = latestRecord?.measurements[key] ? parseFloat(latestRecord.measurements[key]) : null;
                       const prev = previousRecord?.measurements[key] ? parseFloat(previousRecord.measurements[key]) : null;
                       const diff = curr !== null && prev !== null ? curr - prev : null;
                       return (
                         <tr key={key} className="hover:bg-zinc-50">
-                          <td className="px-4 py-2.5 font-medium text-zinc-700">{MEASUREMENT_LABELS[key]}</td>
+                          <td className="px-4 py-2.5 font-medium text-zinc-700">{measurementLabels[key]}</td>
                           <td className="px-4 py-2.5 text-zinc-600">{curr !== null ? `${curr} cm` : "—"}</td>
                           <td className="px-4 py-2.5 text-zinc-600">{prev !== null ? `${prev} cm` : "—"}</td>
                           <td className="px-4 py-2.5">
@@ -463,31 +475,31 @@ export default function ProgressPage() {
 
           {/* Weight Chart */}
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <p className="mb-4 text-sm font-semibold text-zinc-900">Weight Chart</p>
-            <LineChart data={weightChartData} color="#18181b" emptyText="No weight history recorded yet" />
+            <p className="mb-4 text-sm font-semibold text-zinc-900">{t.weightChart}</p>
+            <LineChart data={weightChartData} color="#18181b" emptyText={t.weightChartEmpty} />
           </div>
 
           {/* Measurement Charts */}
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm font-semibold text-zinc-900">Measurement Chart</p>
+              <p className="text-sm font-semibold text-zinc-900">{t.measurementChart}</p>
               <select
                 value={selectedMeasurement}
                 onChange={(e) => setSelectedMeasurement(Number(e.target.value))}
                 aria-label="Select measurement to chart"
                 className="h-8 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-xs font-medium text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
               >
-                {CHART_MEASUREMENT_OPTIONS.map((opt, i) => (
+                {chartMeasurementOptions.map((opt, i) => (
                   <option key={opt.label} value={i}>{opt.label}</option>
                 ))}
               </select>
             </div>
-            <LineChart data={measurementChartData} color="#2563eb" emptyText="No measurement data for this category" />
+            <LineChart data={measurementChartData} color="#2563eb" emptyText={t.measurementChartEmpty} />
           </div>
 
           {/* Progress Photos */}
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <p className="mb-4 text-sm font-semibold text-zinc-900">Progress Photos</p>
+            <p className="mb-4 text-sm font-semibold text-zinc-900">{t.progressPhotos}</p>
             <div className="mb-4 flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1">
               {(["front", "side", "back"] as const).map((tab) => (
                 <button
@@ -507,7 +519,7 @@ export default function ProgressPage() {
                     <svg viewBox="0 0 20 20" fill="currentColor" className="h-8 w-8" aria-hidden="true">
                       <path fillRule="evenodd" d="M1 5.25A2.25 2.25 0 0 1 3.25 3h13.5A2.25 2.25 0 0 1 19 5.25v9.5A2.25 2.25 0 0 1 16.75 17H3.25A2.25 2.25 0 0 1 1 14.75v-9.5Zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 0 0 .75-.75v-2.69l-2.22-2.219a.75.75 0 0 0-1.06 0l-1.91 1.909-4.97-4.969a.75.75 0 0 0-1.06 0L2.5 11.06Zm12.22-4.81a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-xs font-medium">First Photo</span>
+                    <span className="text-xs font-medium">{t.firstPhoto}</span>
                   </div>
                 </div>
                 <p className="text-xs font-medium text-zinc-500">First ({photoTab})</p>
@@ -518,20 +530,20 @@ export default function ProgressPage() {
                     <svg viewBox="0 0 20 20" fill="currentColor" className="h-8 w-8" aria-hidden="true">
                       <path fillRule="evenodd" d="M1 5.25A2.25 2.25 0 0 1 3.25 3h13.5A2.25 2.25 0 0 1 19 5.25v9.5A2.25 2.25 0 0 1 16.75 17H3.25A2.25 2.25 0 0 1 1 14.75v-9.5Zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 0 0 .75-.75v-2.69l-2.22-2.219a.75.75 0 0 0-1.06 0l-1.91 1.909-4.97-4.969a.75.75 0 0 0-1.06 0L2.5 11.06Zm12.22-4.81a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-xs font-medium">Latest Photo</span>
+                    <span className="text-xs font-medium">{t.latestPhoto}</span>
                   </div>
                 </div>
                 <p className="text-xs font-medium text-zinc-500">Latest ({photoTab})</p>
               </div>
             </div>
             <p className="mt-4 text-xs text-zinc-400">
-              Photo comparison will be available once you upload progress photos in your profile.
+              {t.photoComparisonHint}
             </p>
           </div>
 
           {/* Achievements */}
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <p className="mb-4 text-sm font-semibold text-zinc-900">Achievements</p>
+            <p className="mb-4 text-sm font-semibold text-zinc-900">{t.achievements}</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {achievements.map((a) => (
                 <div
