@@ -89,7 +89,7 @@ function todayKey(): string {
 // ── Daily Habits config ─────────────────────────────────────────────────────
 
 const WATER_GOAL_ML = 3000;
-const WATER_QUICK_ADD = [250, 500, 1000]; // ml
+const WATER_QUICK_ADD = [100, 250, 500, 1000]; // ml
 
 // Default supplement catalog. Adding a supplement here requires no migration —
 // supplement_logs.taken is a JSONB array of names.
@@ -749,6 +749,8 @@ function DailyHabits({
   const [takenSupps, setTakenSupps] = useState<string[]>([]);
   const [customMl, setCustomMl] = useState("");
   const [lastAddedMl, setLastAddedMl] = useState(0); // for "Undo" of the last water add
+  const [editOpen, setEditOpen] = useState(false); // "Adjust total" modal
+  const [editValue, setEditValue] = useState(""); // draft value inside the modal
   const [error, setError] = useState<string | null>(null);
 
   // Load today's water + supplement logs
@@ -863,6 +865,27 @@ function DailyHabits({
     void addWater(Math.round(parsed));
   }, [customMl, addWater, t]);
 
+  // Open the "Adjust total" modal, pre-filling the draft with the current total.
+  const openEditTotal = useCallback(() => {
+    setEditValue(String(intakeMl));
+    setEditOpen(true);
+  }, [intakeMl]);
+
+  // Set today's total directly. Reuses addWater via a delta (newTotal - current)
+  // so persistence/optimistic logic is shared; addWater already clamps to >= 0.
+  // No DB schema change — water_logs still stores a single daily total.
+  const submitEditTotal = useCallback(() => {
+    const parsed = Number(editValue);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      setError(t.editTotalError);
+      return;
+    }
+    const target = Math.round(parsed);
+    const delta = target - intakeMl;
+    setEditOpen(false);
+    if (delta !== 0) void addWater(delta);
+  }, [editValue, intakeMl, addWater, t]);
+
   const waterPct = Math.min(Math.round((intakeMl / goalMl) * 100), 100);
   const waterReached = intakeMl >= goalMl;
   const suppsDone = takenSupps.filter((s) => DEFAULT_SUPPLEMENTS.includes(s)).length;
@@ -901,9 +924,8 @@ function DailyHabits({
               style={{ width: `${waterPct}%` }}
             />
           </div>
-          {/* Compact single-row control group: quick adds + custom amount + Add.
-              Flex-wrap keeps it responsive; the input flex-grows so the whole
-              thing reads as one interaction group aligned with the chips UI. */}
+          {/* Control group: quick adds, then a narrow custom input separated
+              from its Add button. Flex-wrap keeps it responsive. */}
           <div className="mt-golden-3 flex flex-wrap items-center gap-golden-2">
             {WATER_QUICK_ADD.map((ml) => (
               <button
@@ -916,35 +938,34 @@ function DailyHabits({
                 +{ml >= 1000 ? `${ml / 1000}L` : `${ml}ml`}
               </button>
             ))}
-            {/* Custom water amount — users can log any amount in ml */}
-            <div className="flex min-w-[7.5rem] flex-1 items-center gap-golden-1 rounded-golden-md border border-zinc-200 bg-white pr-golden-1 transition-colors focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-400">
-              <input
-                type="number"
-                inputMode="numeric"
-                min={1}
-                step={50}
-                value={customMl}
-                onChange={(e) => setCustomMl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    submitCustomWater();
-                  }
-                }}
-                disabled={loading || saving}
-                placeholder={t.waterAmountPlaceholder}
-                aria-label={t.waterAmountLabel}
-                className="min-w-0 flex-1 rounded-golden-md bg-transparent px-golden-3 py-golden-1 text-golden-sm text-zinc-700 placeholder:text-zinc-400 focus:outline-none disabled:opacity-50"
-              />
-              <button
-                type="button"
-                onClick={submitCustomWater}
-                disabled={loading || saving || customMl.trim() === ""}
-                className="shrink-0 rounded-golden-md bg-blue-500 px-golden-3 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
-              >
-                {t.add}
-              </button>
-            </div>
+            {/* Custom water amount — narrow input, visually separated from the
+                Add button (own borders + gap) so they don't read as one control. */}
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              step={50}
+              value={customMl}
+              onChange={(e) => setCustomMl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  submitCustomWater();
+                }
+              }}
+              disabled={loading || saving}
+              placeholder={t.waterAmountPlaceholder}
+              aria-label={t.waterAmountLabel}
+              className="w-24 rounded-golden-md border border-zinc-200 bg-white px-golden-3 py-golden-1 text-golden-sm text-zinc-700 placeholder:text-zinc-400 transition-colors focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={submitCustomWater}
+              disabled={loading || saving || customMl.trim() === ""}
+              className="shrink-0 rounded-golden-md bg-blue-500 px-golden-3 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
+            >
+              {t.add}
+            </button>
           </div>
           <div className="mt-golden-2 flex min-h-[1.25rem] items-center justify-between gap-golden-2">
             {waterReached ? (
@@ -952,18 +973,93 @@ function DailyHabits({
             ) : (
               <span />
             )}
-            {lastAddedMl > 0 && (
+            <div className="flex items-center gap-golden-3">
+              {lastAddedMl > 0 && (
+                <button
+                  type="button"
+                  onClick={undoLastWater}
+                  disabled={loading || saving}
+                  className="inline-flex items-center gap-golden-1 text-golden-xs font-medium text-zinc-400 transition-colors hover:text-zinc-700 disabled:opacity-50"
+                  aria-label={t.undoLabel.replace("{amount}", lastAddedMl >= 1000 ? `${lastAddedMl / 1000}L` : `${lastAddedMl}ml`)}
+                >
+                  ↺ {t.undo.replace("{amount}", lastAddedMl >= 1000 ? `${lastAddedMl / 1000}L` : `${lastAddedMl}ml`)}
+                </button>
+              )}
+              {/* Adjust total — opens a modal to set today's total directly */}
               <button
                 type="button"
-                onClick={undoLastWater}
+                onClick={openEditTotal}
                 disabled={loading || saving}
                 className="inline-flex items-center gap-golden-1 text-golden-xs font-medium text-zinc-400 transition-colors hover:text-zinc-700 disabled:opacity-50"
-                aria-label={t.undoLabel.replace("{amount}", lastAddedMl >= 1000 ? `${lastAddedMl / 1000}L` : `${lastAddedMl}ml`)}
               >
-                ↺ {t.undo.replace("{amount}", lastAddedMl >= 1000 ? `${lastAddedMl / 1000}L` : `${lastAddedMl}ml`)}
+                ✎ {t.editTotal}
               </button>
-            )}
+            </div>
           </div>
+
+          {/* Adjust-total modal — sets today's total directly (delta reuses
+              addWater; no DB change; value is clamped to >= 0). */}
+          {editOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-golden-4"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="water-edit-title"
+              onClick={() => setEditOpen(false)}
+            >
+              <div
+                className="w-full max-w-sm rounded-golden-xl border border-zinc-200 bg-white p-golden-4 shadow-lg"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 id="water-edit-title" className="text-golden-base font-bold text-zinc-900">
+                  {t.editTotalTitle}
+                </h3>
+                <p className="mt-golden-1 text-golden-xs text-zinc-500">{t.editTotalDescription}</p>
+
+                <label htmlFor="water-edit-input" className="mt-golden-3 mb-golden-1 block text-golden-xs font-medium text-zinc-600">
+                  {t.editTotalLabel}
+                </label>
+                <input
+                  id="water-edit-input"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step={50}
+                  autoFocus
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); submitEditTotal(); }
+                    if (e.key === "Escape") setEditOpen(false);
+                  }}
+                  className="w-full rounded-golden-md border border-zinc-200 bg-white px-golden-3 py-golden-2 text-golden-sm text-zinc-700 transition-colors focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                />
+                {Number.isFinite(Number(editValue)) && Number(editValue) >= 0 && (
+                  <p className="mt-golden-1 text-golden-xs text-zinc-400">
+                    {(Math.round(Number(editValue)) / 1000).toFixed(2)}L / {(goalMl / 1000).toFixed(1)}L
+                  </p>
+                )}
+
+                <div className="mt-golden-4 flex justify-end gap-golden-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditOpen(false)}
+                    className="rounded-golden-md border border-zinc-200 bg-white px-golden-3 py-golden-1 text-golden-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-50"
+                  >
+                    {t.editTotalCancel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={submitEditTotal}
+                    disabled={saving}
+                    className="rounded-golden-md bg-primary px-golden-3 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+                  >
+                    {t.editTotalSave}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Supplement tracking */}
