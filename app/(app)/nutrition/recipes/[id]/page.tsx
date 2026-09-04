@@ -415,7 +415,7 @@ export default function RecipeDetailPage() {
                 disabled={busy !== null}
                 className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-golden-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
-                <span aria-hidden="true">➕</span> {t.addToMealPlan}
+                <span aria-hidden="true">+</span> {t.addToMealPlan}
               </button>
               <button
                 type="button"
@@ -423,7 +423,7 @@ export default function RecipeDetailPage() {
                 disabled={busy !== null}
                 className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-golden-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 disabled:opacity-50"
               >
-                <span aria-hidden="true">🍽</span> {busy === "log" ? t.logging : t.logAsMealToday}
+                {busy === "log" ? t.logging : t.logAsMealToday}
               </button>
               <button
                 type="button"
@@ -431,7 +431,7 @@ export default function RecipeDetailPage() {
                 disabled={busy !== null || recipe.ingredients.length === 0}
                 className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-golden-sm font-semibold text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-40"
               >
-                <span aria-hidden="true">🛒</span> {busy === "shop" ? t.adding : t.addIngredientsToShopping}
+                {busy === "shop" ? t.adding : t.addIngredientsToShopping}
               </button>
             </div>
           </div>
