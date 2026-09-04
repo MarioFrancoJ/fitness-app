@@ -362,8 +362,10 @@ export default function RecipeDetailPage() {
 
           {/* Actions — Meal + Servings + short buttons with icons */}
           <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm">
+            {/* Meal + servings — meal select narrowed (~30%) since options are
+                short; frees width and keeps the row tidy. */}
             <div className="flex items-end gap-3">
-              <div className="flex-1">
+              <div className="w-40">
                 <label htmlFor="meal-slot" className="mb-1 block text-golden-xs font-medium text-zinc-600">{t.mealLabel}</label>
                 <select
                   id="meal-slot"
@@ -388,12 +390,22 @@ export default function RecipeDetailPage() {
                   className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-golden-sm text-zinc-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
-              <p className="hidden pb-2 text-golden-xs text-zinc-400 md:block">
-                {Math.round(recipe.calories * servings)} kcal · P {Math.round(recipe.protein * servings)}g · C {Math.round(recipe.carbs * servings)}g · F {Math.round(recipe.fat * servings)}g
-              </p>
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-2">
+            {/* Per-serving nutrition summary — Movive macro naming + colors,
+                mirroring the top nutrition line for visual continuity. Extra top
+                spacing separates it from the selectors. */}
+            <p className="mt-3 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-golden-sm">
+              <span className="font-semibold text-zinc-900">{Math.round(recipe.calories * servings)} {t.macroKcal}</span>
+              <span className="text-zinc-300">·</span>
+              <span className="font-semibold text-success">{Math.round(recipe.protein * servings)} {t.macroProtein}</span>
+              <span className="text-zinc-300">·</span>
+              <span className="font-semibold text-movive-900">{Math.round(recipe.carbs * servings)} {t.macroCarbs}</span>
+              <span className="text-zinc-300">·</span>
+              <span className="font-semibold text-movive-800">{Math.round(recipe.fat * servings)} {t.macroFat}</span>
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-2">
               {/* Primary CTA — Movive brand */}
               <button
                 type="button"
