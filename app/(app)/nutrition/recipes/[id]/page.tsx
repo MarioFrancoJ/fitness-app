@@ -242,37 +242,38 @@ export default function RecipeDetailPage() {
         {t.backToRecipes}
       </Link>
 
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{recipe.name}</h1>
-          {recipe.description && (
-            <p className="mt-1 text-golden-sm text-zinc-500">{recipe.description}</p>
-          )}
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <span className={`inline-block rounded-full px-3 py-1 text-golden-xs font-semibold ${goalColor(recipe.goal)}`}>
-              {goalLabel(recipe.goal, nt)}
+      {/* Header — title, description, info chips in one line */}
+      <div>
+        <h1 className="text-golden-xl font-bold tracking-tight text-zinc-900">{recipe.name}</h1>
+        {recipe.description && (
+          <p className="mt-1 text-golden-sm text-zinc-500">{recipe.description}</p>
+        )}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-golden-xs font-semibold ${goalColor(recipe.goal)}`}>
+            {goalLabel(recipe.goal, nt)}
+          </span>
+          {recipe.prepTime > 0 && (
+            <span className="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-1 text-golden-xs font-medium text-zinc-600">
+              {t.prepSuffix.replace("{n}", String(recipe.prepTime))}
             </span>
-            {recipe.mealType && (
-              <span className="inline-block rounded-full bg-zinc-100 px-3 py-1 text-golden-xs font-medium text-zinc-700">
-                {mealTypeLabel(recipe.mealType, nt)}
-              </span>
-            )}
-            {recipe.prepTime > 0 && (
-              <span className="text-golden-xs text-zinc-400">{t.prepSuffix.replace("{n}", String(recipe.prepTime))}</span>
-            )}
-            <span className="text-golden-xs text-zinc-400">{t.servings.replace("{n}", String(recipe.servings))}</span>
-          </div>
+          )}
+          <span className="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-1 text-golden-xs font-medium text-zinc-600">
+            {t.servings.replace("{n}", String(recipe.servings))}
+          </span>
+          {recipe.mealType && (
+            <span className="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-1 text-golden-xs font-medium text-zinc-600">
+              {mealTypeLabel(recipe.mealType, nt)}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Hero: image + macros side by side (50/50 on desktop).
-          The photo is the primary element; KPIs sit beside it in a 2×2 grid.
-          Responsive: on tablet/mobile the image stacks on top, KPIs (still 2×2)
-          below — so the grid never collapses to a tall single column. */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Image — protagonist, fixed 4:3 ratio */}
-        <div className="aspect-[4/3] overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
+      {/* Hero — photo (~65%) is the protagonist; the right rail holds the compact
+          nutrition card and the primary actions, so the key controls sit right
+          next to the image. On tablet/mobile the rail stacks under the photo. */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Image — spans 2/3 (~65%) on desktop */}
+        <div className="aspect-[16/10] overflow-hidden rounded-2xl bg-zinc-100 lg:col-span-2">
           {recipe.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={recipe.imageUrl} alt={recipe.name} className="h-full w-full object-cover" />
@@ -290,45 +291,127 @@ export default function RecipeDetailPage() {
           )}
         </div>
 
-        {/* Nutrition Facts — 2×2 grid: Calories | Protein / Carbs | Fat */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <p className="text-2xl font-bold text-zinc-900">{recipe.calories}</p>
-            <p className="text-golden-xs text-zinc-400">{t.calories}</p>
+        {/* Right rail — nutrition + actions */}
+        <div className="flex flex-col gap-4">
+          {/* Compact nutrition card — big calories headline + macro rows with
+              soft horizontal bars (share relative to the largest macro). */}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <p className="text-golden-xs font-semibold uppercase tracking-widest text-zinc-400">
+              {t.nutritionInfo}
+            </p>
+            <div className="mt-2 flex items-baseline gap-1.5">
+              <span className="text-3xl font-bold text-zinc-900">{recipe.calories}</span>
+              <span className="text-golden-sm font-medium text-zinc-400">{t.calories.toLowerCase()}</span>
+            </div>
+
+            {(() => {
+              const macros = [
+                { label: t.protein, grams: recipe.protein, bar: "bg-blue-500" },
+                { label: t.carbs, grams: recipe.carbs, bar: "bg-amber-500" },
+                { label: t.fat, grams: recipe.fat, bar: "bg-success" },
+              ];
+              const maxGrams = Math.max(recipe.protein, recipe.carbs, recipe.fat, 1);
+              return (
+                <div className="mt-4 flex flex-col gap-3">
+                  {macros.map((m) => (
+                    <div key={m.label}>
+                      <div className="flex items-center justify-between text-golden-sm">
+                        <span className="text-zinc-600">{m.label}</span>
+                        <span className="font-semibold text-zinc-900">{m.grams} g</span>
+                      </div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
+                        <div
+                          className={`h-full rounded-full ${m.bar}`}
+                          style={{ width: `${Math.round((m.grams / maxGrams) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
-          <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <p className="text-2xl font-bold text-blue-600">{recipe.protein}g</p>
-            <p className="text-golden-xs text-zinc-400">{t.protein}</p>
-          </div>
-          <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <p className="text-2xl font-bold text-amber-600">{recipe.carbs}g</p>
-            <p className="text-golden-xs text-zinc-400">{t.carbs}</p>
-          </div>
-          <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <p className="text-2xl font-bold text-success">{recipe.fat}g</p>
-            <p className="text-golden-xs text-zinc-400">{t.fat}</p>
+
+          {/* Primary actions — placed right below the hero, next to the photo */}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <label htmlFor="meal-slot" className="mb-1 block text-golden-xs font-medium text-zinc-600">{t.mealLabel}</label>
+                <select
+                  id="meal-slot"
+                  value={slot}
+                  onChange={(e) => setSlot(e.target.value as MealSlot)}
+                  className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-golden-sm text-zinc-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  {MEAL_SLOTS.map((m) => (
+                    <option key={m} value={m}>{mealTypeLabel(m, nt)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-20">
+                <label htmlFor="servings" className="mb-1 block text-golden-xs font-medium text-zinc-600">{t.servingsLabel}</label>
+                <input
+                  id="servings"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={servings}
+                  onChange={(e) => setServings(Math.max(1, Math.round(Number(e.target.value) || 1)))}
+                  className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-golden-sm text-zinc-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+
+            <p className="mt-2 text-golden-xs text-zinc-400">
+              {Math.round(recipe.calories * servings)} kcal · P {Math.round(recipe.protein * servings)}g · C {Math.round(recipe.carbs * servings)}g · F {Math.round(recipe.fat * servings)}g
+            </p>
+
+            <div className="mt-4 flex flex-col gap-2">
+              {/* Primary CTA — full width, Movive brand */}
+              <button
+                type="button"
+                onClick={handleAddToPlan}
+                disabled={busy !== null}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-golden-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              >
+                {t.addToMealPlan}
+              </button>
+              <button
+                type="button"
+                onClick={handleLogMeal}
+                disabled={busy !== null}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-300 bg-white px-5 py-2.5 text-golden-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+              >
+                {busy === "log" ? t.logging : t.logAsMealToday}
+              </button>
+              <button
+                type="button"
+                onClick={handleAddToShopping}
+                disabled={busy !== null || recipe.ingredients.length === 0}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-5 py-2.5 text-golden-sm font-semibold text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-40"
+              >
+                {busy === "shop" ? t.adding : t.addIngredientsToShopping}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Content grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Content — Ingredients | Instructions, equal height (items-stretch) */}
+      <div className="grid items-stretch gap-6 lg:grid-cols-2">
         {/* Ingredients */}
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-golden-sm font-semibold uppercase tracking-widest text-zinc-400">
             {t.ingredients}
           </h2>
           {recipe.ingredients.length === 0 ? (
             <p className="text-golden-sm text-zinc-400">{t.noIngredients}</p>
           ) : (
-            <ul className="flex flex-col gap-2.5">
+            <ul className="flex flex-col divide-y divide-zinc-100">
               {recipe.ingredients.map((item) => (
-                <li key={item.id} className="flex items-center justify-between text-golden-sm text-zinc-700">
-                  <span className="flex items-center gap-2.5">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300" />
-                    {item.name}
-                  </span>
-                  <span className="shrink-0 text-golden-xs text-zinc-400">
+                <li key={item.id} className="flex items-center justify-between py-2 text-golden-sm text-zinc-700">
+                  <span>{item.name}</span>
+                  <span className="shrink-0 font-medium text-zinc-500">
                     {item.quantity} {item.unit}
                   </span>
                 </li>
@@ -338,17 +421,17 @@ export default function RecipeDetailPage() {
         </div>
 
         {/* Instructions */}
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-golden-sm font-semibold uppercase tracking-widest text-zinc-400">
             {t.instructions}
           </h2>
           {recipe.instructions.length === 0 ? (
             <p className="text-golden-sm text-zinc-400">{t.noInstructions}</p>
           ) : (
-            <ol className="flex flex-col gap-3">
+            <ol className="flex flex-col gap-4">
               {recipe.instructions.map((step, i) => (
-                <li key={i} className="flex gap-3 text-golden-sm text-zinc-700">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-golden-xs font-semibold text-white">
+                <li key={i} className="flex gap-3 text-golden-sm leading-relaxed text-zinc-700">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-light text-golden-xs font-bold text-primary-fg">
                     {i + 1}
                   </span>
                   <span className="pt-0.5">{step}</span>
@@ -357,88 +440,6 @@ export default function RecipeDetailPage() {
             </ol>
           )}
         </div>
-      </div>
-
-      {/* Actions panel — Recipe is the source of truth for meals */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-golden-sm font-semibold uppercase tracking-widest text-zinc-400">
-          {t.useThisRecipe}
-        </h2>
-
-        {/* Slot + servings — used by "Log as Meal" and shopping-list multiplier.
-            (Meal Plan scheduling uses the assignment modal instead.) */}
-        <div className="mb-4 flex flex-wrap items-end gap-4">
-          <div>
-            <label htmlFor="meal-slot" className="mb-1 block text-golden-xs font-medium text-zinc-600">{t.mealLabel}</label>
-            <select
-              id="meal-slot"
-              value={slot}
-              onChange={(e) => setSlot(e.target.value as MealSlot)}
-              className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-golden-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-            >
-              {MEAL_SLOTS.map((m) => (
-                <option key={m} value={m}>{mealTypeLabel(m, nt)}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="servings" className="mb-1 block text-golden-xs font-medium text-zinc-600">{t.servingsLabel}</label>
-            <input
-              id="servings"
-              type="number"
-              min={1}
-              step={1}
-              value={servings}
-              onChange={(e) => setServings(Math.max(1, Math.round(Number(e.target.value) || 1)))}
-              className="h-9 w-24 rounded-lg border border-zinc-200 bg-white px-3 text-golden-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-            />
-          </div>
-          <p className="pb-1.5 text-golden-xs text-zinc-400">
-            {Math.round(recipe.calories * servings)} kcal · P {Math.round(recipe.protein * servings)}g · C {Math.round(recipe.carbs * servings)}g · F {Math.round(recipe.fat * servings)}g
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          {/* Primary CTA */}
-          <button
-            type="button"
-            onClick={handleAddToPlan}
-            disabled={busy !== null}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-golden-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-          >
-            {t.addToMealPlan}
-          </button>
-
-          {/* Log meal — populates macros automatically */}
-          <button
-            type="button"
-            onClick={handleLogMeal}
-            disabled={busy !== null}
-            className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-5 py-2.5 text-golden-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 disabled:opacity-50"
-          >
-            {busy === "log" ? t.logging : t.logAsMealToday}
-          </button>
-
-          {/* Secondary CTA */}
-          <button
-            type="button"
-            onClick={handleAddToShopping}
-            disabled={busy !== null || recipe.ingredients.length === 0}
-            className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-5 py-2.5 text-golden-sm font-semibold text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-40"
-          >
-            {busy === "shop" ? t.adding : t.addIngredientsToShopping}
-          </button>
-        </div>
-
-        {/* Planner vs. Log clarification + navigation */}
-        <p className="mt-4 text-golden-xs leading-relaxed text-zinc-400">
-          <strong className="font-semibold text-zinc-500">Meal Plan</strong> schedules this recipe for a day (it shows up in the{" "}
-          <Link href="/nutrition/meal-planner" className="font-medium text-zinc-600 underline hover:text-zinc-900">Meal Planner</Link>{" "}
-          and{" "}
-          <Link href="/calendar" className="font-medium text-zinc-600 underline hover:text-zinc-900">Calendar</Link>).{" "}
-          <strong className="font-semibold text-zinc-500">Log as Meal</strong> records it as eaten today, counting toward your{" "}
-          <Link href="/nutrition" className="font-medium text-zinc-600 underline hover:text-zinc-900">daily nutrition totals</Link>.
-        </p>
       </div>
 
       <MealPlanModal
