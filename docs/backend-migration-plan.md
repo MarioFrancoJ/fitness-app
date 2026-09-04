@@ -1,4 +1,4 @@
-# FitnessApp — Complete Backend Migration Plan
+# Movive — Complete Backend Migration Plan
 
 **Version:** 1.0.0  
 **Date:** August 25, 2026  
@@ -27,7 +27,7 @@
 
 ### Current State
 
-The FitnessApp is a **120+ page frontend prototype** built with Next.js 16, React 19, and TypeScript. All data persistence relies on browser `localStorage`, with no backend infrastructure, no real authentication, and no database connection.
+The Movive is a **120+ page frontend prototype** built with Next.js 16, React 19, and TypeScript. All data persistence relies on browser `localStorage`, with no backend infrastructure, no real authentication, and no database connection.
 
 ### Target State
 
@@ -125,7 +125,7 @@ Migrate to a production-ready architecture using:
                           └──────────────────────┘
 
 Session Object: { isAuthenticated, loginAt, userId, name, email, role }
-Admin: Hardcoded in lib/auth/seed-admin.ts (admin@fitnessapp.com / Admin123!)
+Admin: Hardcoded in lib/auth/seed-admin.ts (admin@movive.app / Admin123!)
 Roles: USER, ADMIN, SUPER_ADMIN (enforced only client-side)
 ```
 

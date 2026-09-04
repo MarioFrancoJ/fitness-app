@@ -1,4 +1,4 @@
-# FitnessApp — Phase 1 Roadmap (Supabase-Only Architecture)
+# Movive — Phase 1 Roadmap (Supabase-Only Architecture)
 
 **Version:** 2.0.0  
 **Date:** August 25, 2026  
@@ -458,9 +458,9 @@ export const config = {
 
 **Approach:**
 1. Create user via Supabase Dashboard → Authentication → Users → Add User
-2. Email: `admin@fitnessapp.com`, strong password, "Auto-confirm" checked
+2. Email: `admin@movive.app`, strong password, "Auto-confirm" checked
 3. Copy the assigned UUID
-4. Add to `supabase/seed.sql`: `INSERT INTO users (id, email, name, role, ...) VALUES ('<uuid>', 'admin@fitnessapp.com', 'Super Admin', 'SUPER_ADMIN', ...)`
+4. Add to `supabase/seed.sql`: `INSERT INTO users (id, email, name, role, ...) VALUES ('<uuid>', 'admin@movive.app', 'Super Admin', 'SUPER_ADMIN', ...)`
 5. Run seed again (or just execute the single INSERT)
 
 **Alternative (automated via SQL):**

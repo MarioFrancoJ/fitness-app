@@ -1,5 +1,5 @@
 -- ============================================================================
--- FitnessApp — Row Level Security Policies
+-- Movive — Row Level Security Policies
 -- Version: 00002
 -- Date: 2026-08-25
 -- Architecture: Supabase Only

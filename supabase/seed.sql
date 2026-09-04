@@ -1,5 +1,5 @@
 -- ============================================================================
--- FitnessApp — Seed Data
+-- Movive — Seed Data
 -- Date: 2026-08-25
 -- Purpose: Populate reference data and system templates
 -- Idempotent: Safe to run multiple times (ON CONFLICT used throughout)
@@ -656,8 +656,8 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO platform_settings (id, key, value)
 VALUES
-  ('ab000001-0000-0000-0000-000000000001', 'app_name', '"FitnessApp"'),
-  ('ab000001-0000-0000-0000-000000000002', 'support_email', '"soporte@fitnessapp.com"'),
+  ('ab000001-0000-0000-0000-000000000001', 'app_name', '"Movive"'),
+  ('ab000001-0000-0000-0000-000000000002', 'support_email', '"soporte@movive.app"'),
   ('ab000001-0000-0000-0000-000000000003', 'free_plan_ai_limit', '20'),
   ('ab000001-0000-0000-0000-000000000004', 'trial_days', '7'),
   ('ab000001-0000-0000-0000-000000000005', 'maintenance_mode', 'false'),
@@ -675,7 +675,7 @@ ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 UPDATE users
 SET role = 'SUPER_ADMIN', updated_at = NOW()
-WHERE email = 'admin@fitnessapp.com';
+WHERE email = 'admin@movive.app';
 
 -- If no rows affected, the admin hasn't signed up yet — that's OK.
 -- The trigger will create a USER row when they sign up, and this seed

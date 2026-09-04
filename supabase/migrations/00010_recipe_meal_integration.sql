@@ -1,5 +1,5 @@
 -- ============================================================================
--- FitnessApp — Recipe → Meal → Meal Plan → Shopping List integration
+-- Movive — Recipe → Meal → Meal Plan → Shopping List integration
 -- Version: 00010
 -- Purpose: Make a recipe the source of truth for meal creation.
 --   1. meal_logs.recipe_id  → provenance link when a meal is logged from a recipe

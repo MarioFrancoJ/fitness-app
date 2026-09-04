@@ -1,5 +1,5 @@
 -- ============================================================================
--- FitnessApp — Auth Trigger & Profile Management
+-- Movive — Auth Trigger & Profile Management
 -- Version: 00004
 -- Date: 2026-08-25
 -- Decision: D3 (minimal trigger — creates users row only)

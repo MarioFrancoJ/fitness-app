@@ -1,4 +1,4 @@
-# FitnessApp — Phase 1 Implementation Roadmap
+# Movive — Phase 1 Implementation Roadmap
 
 **Phase:** 1 — Foundation (Supabase + Prisma + Auth + Database)  
 **Duration:** 14 working days (estimated)  
@@ -245,7 +245,7 @@ Phase 1 establishes the complete backend foundation. At the end of this phase:
   - Map DEFAULT_RULES array to `RecommendationRule` records
 - [ ] Seed **Platform Settings** (default feature toggles):
   - Key: `feature_toggles`, Value: `{ aiCoach: true, mealPlanner: true, ... }`
-  - Key: `platform_name`, Value: `"FitnessApp"`
+  - Key: `platform_name`, Value: `"Movive"`
 - [ ] Seed **Super Admin User**:
   - Create user record in `users` table (role: SUPER_ADMIN)
   - Note: Supabase Auth user must be created separately (Task 13)
@@ -469,7 +469,7 @@ Phase 1 establishes the complete backend foundation. At the end of this phase:
 
 **Subtasks:**
 - [ ] Create admin user in Supabase Auth via Dashboard or Admin API:
-  - Email: `admin@fitnessapp.com`
+  - Email: `admin@movive.app`
   - Password: Strong password (not the old `Admin123!`)
   - Set email as confirmed
 - [ ] Note the Supabase Auth UUID assigned to this user

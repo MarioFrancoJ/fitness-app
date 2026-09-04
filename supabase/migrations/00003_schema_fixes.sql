@@ -1,5 +1,5 @@
 -- ============================================================================
--- FitnessApp — Schema Fixes (from Architecture Validation Report)
+-- Movive — Schema Fixes (from Architecture Validation Report)
 -- Version: 00003
 -- Date: 2026-08-25
 -- Fixes: C1, H1, H2, H4, H5, H6, H7
