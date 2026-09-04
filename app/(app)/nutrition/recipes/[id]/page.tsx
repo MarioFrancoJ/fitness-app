@@ -278,15 +278,13 @@ export default function RecipeDetailPage() {
           viewport. Photo is a supporting element (~33%); the info column (~67%)
           carries a one-line nutrition summary, compact ingredients + instructions,
           and the actions. On mobile everything stacks (photo first). */}
-      <div className="grid gap-5 lg:grid-cols-7 lg:items-start">
+      <div className="grid gap-5 lg:grid-cols-10 lg:items-start">
         {/* Photo — ~33% (col-span-4). Fills the info column's height on desktop. */}
-        <div className="overflow-hidden rounded-2xl bg-zinc-100 aspect-[4/3] max-h-64 lg:col-span-2 lg:aspect-auto lg:max-h-none lg:h-full lg:self-stretch lg:min-h-[320px]">
+        <div className="overflow-hidden rounded-2xl bg-zinc-100 aspect-[4/3] max-h-64 lg:col-span-3 lg:aspect-auto lg:max-h-none lg:h-full lg:self-stretch lg:min-h-[320px]">
           {recipe.imageUrl ? (
-            // Show the WHOLE dish: object-contain fits the full photo inside the
-            // column (no cropping), centered on the soft background. Keeps the
-            // current column width/height — only the fit mode changes.
+            // object-cover fills the column edge-to-edge (no empty box), centered.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={recipe.imageUrl} alt={recipe.name} className="h-full w-full object-contain p-2" />
+            <img src={recipe.imageUrl} alt={recipe.name} className="h-full w-full object-cover object-center" />
           ) : (
             <div className="flex h-full min-h-[180px] w-full items-center justify-center">
               <div className="flex flex-col items-center gap-2 text-zinc-400">
@@ -302,7 +300,7 @@ export default function RecipeDetailPage() {
         </div>
 
         {/* Info column — ~67% (col-span-8) */}
-        <div className="flex flex-col gap-4 lg:col-span-5">
+        <div className="flex flex-col gap-4 lg:col-span-7">
           {/* Nutrition — single horizontal line: calories | protein | carbs | fat.
               Macro dots use the Movive green family (no generic blue/orange). */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm">
