@@ -148,6 +148,69 @@ export function defaultSlotForRecipe(mealType?: string | null): MealSlot {
   return "Snack";
 }
 
+// Keyword hints for slot inference. Matched (accent-insensitive, lowercased)
+// against the recipe name + ingredient names. Order of checks below decides
+// precedence when a recipe matches more than one group.
+const SLOT_KEYWORDS: Record<Exclude<MealSlot, "Snack">, string[]> = {
+  Breakfast: [
+    "egg", "huevo", "oat", "avena", "oatmeal", "pancake", "panqueque", "toast",
+    "tostada", "pan", "bread", "yogur", "yogurt", "yoghurt", "granola",
+    "cereal", "smoothie", "batido", "waffle", "bagel", "muffin", "fruit", "fruta",
+    "breakfast", "desayuno", "coffee", "cafe", "café",
+  ],
+  Lunch: [
+    "rice", "arroz", "chicken", "pollo", "beef", "carne", "steak", "fish",
+    "pescado", "salmon", "salmón", "tuna", "atun", "atún", "pasta", "noodle",
+    "fideos", "burrito", "taco", "bowl", "sandwich", "sándwich", "wrap",
+    "lunch", "almuerzo", "quinoa", "lentil", "lenteja", "bean", "frijol",
+    "potato", "papa", "patata",
+  ],
+  Dinner: [
+    "dinner", "cena", "soup", "sopa", "stew", "guiso", "roast", "asado",
+    "grilled", "asada", "vegetable", "verdura", "vegetables", "veggie",
+    "salad", "ensalada",
+  ],
+};
+
+/**
+ * Suggest an initial meal slot for a recipe (a recommendation only — the user
+ * can always change it, and nothing is persisted). Precedence:
+ *   1. The recipe's own meal_type when it is a valid slot.
+ *   2. Keyword inference from the recipe name + ingredient names.
+ *   3. Fallback to "Snack".
+ * Uses only data already present on the recipe; adds no fields.
+ */
+export function suggestSlotForRecipe(input: {
+  mealType?: string | null;
+  name?: string | null;
+  ingredients?: { name?: string | null }[] | null;
+}): MealSlot {
+  // 1. Explicit meal_type wins.
+  if (input.mealType && (MEAL_SLOTS as readonly string[]).includes(input.mealType)) {
+    return input.mealType as MealSlot;
+  }
+
+  // Build a normalized haystack from name + ingredient names.
+  const normalize = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const haystack = normalize(
+    [input.name ?? "", ...(input.ingredients ?? []).map((i) => i?.name ?? "")].join(" "),
+  );
+
+  // 2. Keyword inference. Word-boundary match to avoid partial hits.
+  const matches = (kw: string) =>
+    new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i").test(haystack);
+
+  // Check in a sensible precedence order (Breakfast → Lunch → Dinner).
+  const order: Exclude<MealSlot, "Snack">[] = ["Breakfast", "Lunch", "Dinner"];
+  for (const slot of order) {
+    if (SLOT_KEYWORDS[slot].some(matches)) return slot;
+  }
+
+  // 3. Neutral fallback.
+  return "Snack";
+}
+
 // ── 1. Recipe → Meal Plan ─────────────────────────────────────────────────────
 
 /**

@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import {
   addRecipeIngredientsToShoppingList,
   logMealFromRecipe,
-  defaultSlotForRecipe,
+  suggestSlotForRecipe,
   MEAL_SLOTS,
   type MealSlot,
 } from "@/lib/nutrition";
@@ -167,7 +167,13 @@ export default function RecipeDetailPage() {
       };
 
       setRecipe(loaded);
-      setSlot(defaultSlotForRecipe(loaded.mealType));
+      // Recommend an initial meal slot from the recipe's own meal_type, or infer
+      // it from the name + ingredients. Only a default — the user can change it.
+      setSlot(suggestSlotForRecipe({
+        mealType: loaded.mealType,
+        name: loaded.name,
+        ingredients: loaded.ingredients,
+      }));
       setLoading(false);
     }
     loadRecipe();
@@ -268,17 +274,20 @@ export default function RecipeDetailPage() {
         </div>
       </div>
 
-      {/* Hero — photo (~65%) is the protagonist; the right rail holds the compact
-          nutrition card and the primary actions, so the key controls sit right
-          next to the image. On tablet/mobile the rail stacks under the photo. */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Image — spans 2/3 (~65%) on desktop */}
-        <div className="aspect-[16/10] overflow-hidden rounded-2xl bg-zinc-100 lg:col-span-2">
+      {/* Hero + recipe body in a single grid so the whole recipe fits the first
+          viewport on laptops. Left: photo (kept as the main element but no longer
+          monopolising vertical space — it fills the rail's height via object-cover).
+          Right rail: Nutrition → Ingredients → Instructions → Actions. On
+          tablet/mobile everything stacks (photo first, then the rail). */}
+      <div className="grid gap-6 lg:grid-cols-5 lg:items-start">
+        {/* Image — spans 3/5 (~60%). On desktop it stretches to the rail height
+            and crops with object-cover, so it never dictates the page height. */}
+        <div className="overflow-hidden rounded-2xl bg-zinc-100 max-h-[420px] aspect-[16/10] lg:col-span-3 lg:aspect-auto lg:max-h-none lg:h-full lg:self-stretch lg:min-h-[360px]">
           {recipe.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={recipe.imageUrl} alt={recipe.name} className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center">
+            <div className="flex h-full min-h-[220px] w-full items-center justify-center">
               <div className="flex flex-col items-center gap-2 text-zinc-400">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-10 w-10" strokeWidth="1.5" aria-hidden="true">
                   <rect x="3" y="3" width="18" height="18" rx="3" />
@@ -291,49 +300,82 @@ export default function RecipeDetailPage() {
           )}
         </div>
 
-        {/* Right rail — nutrition + actions */}
-        <div className="flex flex-col gap-4">
-          {/* Compact nutrition card — big calories headline + macro rows with
-              soft horizontal bars (share relative to the largest macro). */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <p className="text-golden-xs font-semibold uppercase tracking-widest text-zinc-400">
-              {t.nutritionInfo}
-            </p>
-            <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="text-3xl font-bold text-zinc-900">{recipe.calories}</span>
-              <span className="text-golden-sm font-medium text-zinc-400">{t.calories.toLowerCase()}</span>
+        {/* Right rail — Nutrition, Ingredients, Instructions, Actions */}
+        <div className="flex flex-col gap-4 lg:col-span-2">
+          {/* Compact nutrition summary — calories headline + macro chips in one
+              row, kept low-profile so it reads as a quick summary, not the focus.
+              Macro colors use the Movive green family (not a generic template). */}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="flex items-baseline justify-between">
+              <p className="text-golden-xs font-semibold uppercase tracking-widest text-zinc-400">
+                {t.nutritionInfo}
+              </p>
+              <p className="flex items-baseline gap-1">
+                <span className="text-golden-lg font-bold text-zinc-900">{recipe.calories}</span>
+                <span className="text-golden-xs font-medium text-zinc-400">{t.calories.toLowerCase()}</span>
+              </p>
             </div>
-
-            {(() => {
-              const macros = [
-                { label: t.protein, grams: recipe.protein, bar: "bg-blue-500" },
-                { label: t.carbs, grams: recipe.carbs, bar: "bg-amber-500" },
-                { label: t.fat, grams: recipe.fat, bar: "bg-success" },
-              ];
-              const maxGrams = Math.max(recipe.protein, recipe.carbs, recipe.fat, 1);
-              return (
-                <div className="mt-4 flex flex-col gap-3">
-                  {macros.map((m) => (
-                    <div key={m.label}>
-                      <div className="flex items-center justify-between text-golden-sm">
-                        <span className="text-zinc-600">{m.label}</span>
-                        <span className="font-semibold text-zinc-900">{m.grams} g</span>
-                      </div>
-                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
-                        <div
-                          className={`h-full rounded-full ${m.bar}`}
-                          style={{ width: `${Math.round((m.grams / maxGrams) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {[
+                { label: t.protein, grams: recipe.protein, dot: "bg-movive-600" },
+                { label: t.carbs, grams: recipe.carbs, dot: "bg-movive-800" },
+                { label: t.fat, grams: recipe.fat, dot: "bg-movive-500" },
+              ].map((m) => (
+                <div key={m.label} className="rounded-xl bg-zinc-50 px-2.5 py-2 text-center">
+                  <span className="mx-auto mb-1 flex items-center justify-center gap-1 text-golden-xs text-zinc-500">
+                    <span className={`h-1.5 w-1.5 rounded-full ${m.dot}`} />
+                    {m.label}
+                  </span>
+                  <span className="text-golden-sm font-bold text-zinc-900">{m.grams} g</span>
                 </div>
-              );
-            })()}
+              ))}
+            </div>
           </div>
 
-          {/* Primary actions — placed right below the hero, next to the photo */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+          {/* Ingredients — compact list, scrolls if long so the rail stays short */}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <h2 className="mb-2 text-golden-xs font-semibold uppercase tracking-widest text-zinc-400">
+              {t.ingredients}
+            </h2>
+            {recipe.ingredients.length === 0 ? (
+              <p className="text-golden-sm text-zinc-400">{t.noIngredients}</p>
+            ) : (
+              <ul className="flex max-h-40 flex-col divide-y divide-zinc-100 overflow-y-auto pr-1">
+                {recipe.ingredients.map((item) => (
+                  <li key={item.id} className="flex items-center justify-between py-1.5 text-golden-sm text-zinc-700">
+                    <span>{item.name}</span>
+                    <span className="shrink-0 font-medium text-zinc-500">
+                      {item.quantity} {item.unit}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Instructions — numbered steps, scroll if long */}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <h2 className="mb-2 text-golden-xs font-semibold uppercase tracking-widest text-zinc-400">
+              {t.instructions}
+            </h2>
+            {recipe.instructions.length === 0 ? (
+              <p className="text-golden-sm text-zinc-400">{t.noInstructions}</p>
+            ) : (
+              <ol className="flex max-h-56 flex-col gap-3 overflow-y-auto pr-1">
+                {recipe.instructions.map((step, i) => (
+                  <li key={i} className="flex gap-2.5 text-golden-sm leading-relaxed text-zinc-700">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-light text-[11px] font-bold text-primary-fg">
+                      {i + 1}
+                    </span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+
+          {/* Actions — Meal + Servings + primary/secondary buttons */}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <label htmlFor="meal-slot" className="mb-1 block text-golden-xs font-medium text-zinc-600">{t.mealLabel}</label>
@@ -366,7 +408,7 @@ export default function RecipeDetailPage() {
               {Math.round(recipe.calories * servings)} kcal · P {Math.round(recipe.protein * servings)}g · C {Math.round(recipe.carbs * servings)}g · F {Math.round(recipe.fat * servings)}g
             </p>
 
-            <div className="mt-4 flex flex-col gap-2">
+            <div className="mt-3 flex flex-col gap-2">
               {/* Primary CTA — full width, Movive brand */}
               <button
                 type="button"
@@ -376,69 +418,26 @@ export default function RecipeDetailPage() {
               >
                 {t.addToMealPlan}
               </button>
-              <button
-                type="button"
-                onClick={handleLogMeal}
-                disabled={busy !== null}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-300 bg-white px-5 py-2.5 text-golden-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 disabled:opacity-50"
-              >
-                {busy === "log" ? t.logging : t.logAsMealToday}
-              </button>
-              <button
-                type="button"
-                onClick={handleAddToShopping}
-                disabled={busy !== null || recipe.ingredients.length === 0}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-5 py-2.5 text-golden-sm font-semibold text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-40"
-              >
-                {busy === "shop" ? t.adding : t.addIngredientsToShopping}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleLogMeal}
+                  disabled={busy !== null}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-golden-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+                >
+                  {busy === "log" ? t.logging : t.logAsMealToday}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddToShopping}
+                  disabled={busy !== null || recipe.ingredients.length === 0}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-golden-sm font-semibold text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-40"
+                >
+                  {busy === "shop" ? t.adding : t.addIngredientsToShopping}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Content — Ingredients | Instructions, equal height (items-stretch) */}
-      <div className="grid items-stretch gap-6 lg:grid-cols-2">
-        {/* Ingredients */}
-        <div className="flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-golden-sm font-semibold uppercase tracking-widest text-zinc-400">
-            {t.ingredients}
-          </h2>
-          {recipe.ingredients.length === 0 ? (
-            <p className="text-golden-sm text-zinc-400">{t.noIngredients}</p>
-          ) : (
-            <ul className="flex flex-col divide-y divide-zinc-100">
-              {recipe.ingredients.map((item) => (
-                <li key={item.id} className="flex items-center justify-between py-2 text-golden-sm text-zinc-700">
-                  <span>{item.name}</span>
-                  <span className="shrink-0 font-medium text-zinc-500">
-                    {item.quantity} {item.unit}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Instructions */}
-        <div className="flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-golden-sm font-semibold uppercase tracking-widest text-zinc-400">
-            {t.instructions}
-          </h2>
-          {recipe.instructions.length === 0 ? (
-            <p className="text-golden-sm text-zinc-400">{t.noInstructions}</p>
-          ) : (
-            <ol className="flex flex-col gap-4">
-              {recipe.instructions.map((step, i) => (
-                <li key={i} className="flex gap-3 text-golden-sm leading-relaxed text-zinc-700">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-light text-golden-xs font-bold text-primary-fg">
-                    {i + 1}
-                  </span>
-                  <span className="pt-0.5">{step}</span>
-                </li>
-              ))}
-            </ol>
-          )}
         </div>
       </div>
 
