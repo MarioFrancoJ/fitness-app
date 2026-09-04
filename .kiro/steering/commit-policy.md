@@ -2,6 +2,18 @@
 
 Default policy for all work in this repository. Assume it at the start of every task.
 
+## Branch policy
+
+- **Work directly on `main`** for normal product, UX/UI, styles, components,
+  content, i18n and low-risk refactor changes. Implement → validate →
+  auto-commit on `main`.
+- **Create a new branch ONLY** when the change is **large or risky**, or when it
+  falls into an approval-required category (architecture, database, auth,
+  infrastructure/deploy).
+- Committing to local `main` is automatic. **Pushing `main` to `origin`**
+  (publishing to the production branch) is treated like a merge/publish step and
+  is **not** done automatically — do it only when the user asks.
+
 ## Auto-commit (validate → commit, no approval needed)
 
 For **low-risk** changes, implement → validate → **commit automatically** with a
