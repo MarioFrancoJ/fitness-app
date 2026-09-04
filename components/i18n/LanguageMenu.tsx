@@ -27,6 +27,17 @@ function localeName(locale: string): string {
   return LOCALE_NAMES[locale] ?? locale.toUpperCase();
 }
 
+// Flag SVGs live in /public/icons. Falls back to null for locales without one
+// (the label/code still identifies the language), keeping this scalable.
+const LOCALE_FLAGS: Record<string, string> = {
+  en: "/icons/english.svg",
+  es: "/icons/spanish.svg",
+};
+
+function localeFlag(locale: string): string | null {
+  return LOCALE_FLAGS[locale] ?? null;
+}
+
 interface LanguageMenuProps {
   currentLocale: Locale;
 }
@@ -75,11 +86,17 @@ export default function LanguageMenu({ currentLocale }: LanguageMenuProps) {
         aria-label={`Language: ${localeName(currentLocale)}. Change language`}
         className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 disabled:opacity-50"
       >
-        {/* Globe */}
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4" aria-hidden="true">
-          <circle cx="10" cy="10" r="7.25" />
-          <path d="M2.75 10h14.5M10 2.75c2 2.2 2 12.3 0 14.5M10 2.75c-2 2.2-2 12.3 0 14.5" strokeLinecap="round" />
-        </svg>
+        {/* Flag of the active language (auto-updates when the locale changes) */}
+        {localeFlag(currentLocale) ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={localeFlag(currentLocale) as string} alt="" aria-hidden="true" className="h-4 w-4 rounded-full object-cover" />
+        ) : (
+          // Fallback globe for locales without a flag asset
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4" aria-hidden="true">
+            <circle cx="10" cy="10" r="7.25" />
+            <path d="M2.75 10h14.5M10 2.75c2 2.2 2 12.3 0 14.5M10 2.75c-2 2.2-2 12.3 0 14.5" strokeLinecap="round" />
+          </svg>
+        )}
         <span className="uppercase">{currentLocale}</span>
         <svg viewBox="0 0 20 20" fill="currentColor" className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true">
           <path fillRule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
@@ -107,7 +124,13 @@ export default function LanguageMenu({ currentLocale }: LanguageMenuProps) {
                   active ? "font-semibold text-zinc-900" : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900",
                 ].join(" ")}
               >
-                <span>{localeName(locale)}</span>
+                <span className="flex items-center gap-2">
+                  {localeFlag(locale) && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={localeFlag(locale) as string} alt="" aria-hidden="true" className="h-4 w-4 rounded-full object-cover" />
+                  )}
+                  {localeName(locale)}
+                </span>
                 <span className="text-xs font-medium uppercase text-zinc-400">{locale}</span>
               </button>
             );
