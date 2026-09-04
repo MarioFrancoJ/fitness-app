@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Locale } from "@/lib/i18n/config";
-import LanguageSwitcher from "./LanguageSwitcher";
+import LanguageMenu from "@/components/i18n/LanguageMenu";
 import NotificationPanel from "./NotificationPanel";
 import SearchPanel from "./SearchPanel";
 import { createClient } from "@/lib/supabase/client";
@@ -189,7 +189,7 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
       <div className="flex items-center gap-2 md:gap-3">
         {/* Language switcher - hidden on small mobile */}
         <div className="hidden sm:block">
-          <LanguageSwitcher currentLocale={locale} />
+          <LanguageMenu currentLocale={locale} />
         </div>
 
         {/* Notifications */}

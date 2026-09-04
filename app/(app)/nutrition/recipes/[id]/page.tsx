@@ -266,42 +266,48 @@ export default function RecipeDetailPage() {
         </div>
       </div>
 
-      {/* Image */}
-      <div className="h-56 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
-        {recipe.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={recipe.imageUrl} alt={recipe.name} className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <div className="flex flex-col items-center gap-2 text-zinc-400">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-10 w-10" strokeWidth="1.5" aria-hidden="true">
-                <rect x="3" y="3" width="18" height="18" rx="3" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <path d="m21 15-5-5L5 21" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <span className="text-golden-xs font-medium">{t.recipePhoto}</span>
+      {/* Hero: image + macros side by side (50/50 on desktop).
+          The photo is the primary element; KPIs sit beside it in a 2×2 grid.
+          Responsive: on tablet/mobile the image stacks on top, KPIs (still 2×2)
+          below — so the grid never collapses to a tall single column. */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Image — protagonist, fixed 4:3 ratio */}
+        <div className="aspect-[4/3] overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
+          {recipe.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={recipe.imageUrl} alt={recipe.name} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <div className="flex flex-col items-center gap-2 text-zinc-400">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-10 w-10" strokeWidth="1.5" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="3" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path d="m21 15-5-5L5 21" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="text-golden-xs font-medium">{t.recipePhoto}</span>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      {/* Nutrition Facts */}
-      <div className="grid gap-4 sm:grid-cols-4">
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-2xl font-bold text-zinc-900">{recipe.calories}</p>
-          <p className="text-golden-xs text-zinc-400">{t.calories}</p>
-        </div>
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-2xl font-bold text-blue-600">{recipe.protein}g</p>
-          <p className="text-golden-xs text-zinc-400">{t.protein}</p>
-        </div>
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-2xl font-bold text-amber-600">{recipe.carbs}g</p>
-          <p className="text-golden-xs text-zinc-400">{t.carbs}</p>
-        </div>
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-2xl font-bold text-success">{recipe.fat}g</p>
-          <p className="text-golden-xs text-zinc-400">{t.fat}</p>
+        {/* Nutrition Facts — 2×2 grid: Calories | Protein / Carbs | Fat */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <p className="text-2xl font-bold text-zinc-900">{recipe.calories}</p>
+            <p className="text-golden-xs text-zinc-400">{t.calories}</p>
+          </div>
+          <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <p className="text-2xl font-bold text-blue-600">{recipe.protein}g</p>
+            <p className="text-golden-xs text-zinc-400">{t.protein}</p>
+          </div>
+          <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <p className="text-2xl font-bold text-amber-600">{recipe.carbs}g</p>
+            <p className="text-golden-xs text-zinc-400">{t.carbs}</p>
+          </div>
+          <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <p className="text-2xl font-bold text-success">{recipe.fat}g</p>
+            <p className="text-golden-xs text-zinc-400">{t.fat}</p>
+          </div>
         </div>
       </div>
 

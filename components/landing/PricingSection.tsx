@@ -3,32 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useDictionary } from "@/lib/i18n/DictionaryProvider";
-
-type BillingCycle = "monthly" | "yearly";
+import {
+  PLANS,
+  type BillingCycle,
+  type PlanDictKey,
+  formatPrice,
+  proApproxMonthly,
+  yearlySavingsPct,
+} from "@/lib/plans";
 
 // Default billing cycle. Set to "yearly" to lead with annual billing
 // (favors retention + annual conversion). Switch to "monthly" here to change it.
 const DEFAULT_CYCLE: BillingCycle = "yearly";
-
-type PlanKey = "basic" | "pro";
-
-// Parse a formatted price like "$5.99" into a number (5.99). Returns null for
-// non-numeric prices (e.g. "Free"), so callers can skip savings math.
-function parsePrice(price: string): number | null {
-  const n = Number(price.replace(/[^0-9.]/g, ""));
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
-
-// Real yearly savings %: how much cheaper the annual plan is vs paying monthly
-// for 12 months. Returns null when it can't be computed (free/invalid prices).
-function yearlySavingsPct(monthly: string, yearly: string): number | null {
-  const m = parsePrice(monthly);
-  const y = parsePrice(yearly);
-  if (m === null || y === null) return null;
-  const fullYear = m * 12;
-  if (fullYear <= 0) return null;
-  return Math.round(((fullYear - y) / fullYear) * 100);
-}
 
 export default function PricingSection() {
   const { dict } = useDictionary();
@@ -36,19 +22,12 @@ export default function PricingSection() {
   const [cycle, setCycle] = useState<BillingCycle>(DEFAULT_CYCLE);
   const isYearly = cycle === "yearly";
 
-  // Real yearly savings on the paid plan — drives the "Save up to X%" badge
-  // on the yearly toggle, so the headline claim is always accurate.
-  const maxSavings = (["pro"] as PlanKey[]).reduce((max, key) => {
-    const pct = yearlySavingsPct(p.plans[key].priceMonthly, p.plans[key].priceYearly);
-    return pct !== null && pct > max ? pct : max;
-  }, 0);
+  // Prices/config come from lib/plans.ts (single source of truth); localized
+  // text (name/features/cta/description/period labels) comes from the dictionary.
+  const maxSavings = yearlySavingsPct() ?? 0;
 
-  // Two-plan lineup for individual users: Basic (Free) + Pro (paid, highlighted).
-  const planOrder: { key: PlanKey; highlighted: boolean }[] = [
-    { key: "basic", highlighted: false },
-    // Pro is the highlighted "Most Popular" card — the primary Free → paid jump.
-    { key: "pro", highlighted: true },
-  ];
+  // Plan lineup + highlight flag are defined once in lib/plans.ts.
+  const planOrder = PLANS.map((cfg) => ({ key: cfg.dictKey, highlighted: cfg.highlighted }));
 
   return (
     <section id="pricing" className="py-24">
@@ -110,8 +89,14 @@ export default function PricingSection() {
         <div className="mx-auto grid max-w-3xl gap-6 sm:grid-cols-2">
           {planOrder.map(({ key, highlighted }) => {
             const plan = p.plans[key];
-            const price = isYearly ? plan.priceYearly : plan.priceMonthly;
-            const isFree = key === "basic";
+            const cfg = PLANS.find((c) => c.dictKey === key)!;
+            const isFree = cfg.tier === "free";
+            // Prices from lib/plans.ts (single source of truth), formatted here.
+            const price = isFree
+              ? p.freePrice
+              : isYearly
+              ? formatPrice(cfg.priceYearly ?? 0)
+              : formatPrice(cfg.priceMonthly);
             // Period suffix: free plans show "Free forever"; paid plans show
             // /month or /year depending on the selected billing cycle.
             const period = isFree
@@ -119,8 +104,8 @@ export default function PricingSection() {
               : isYearly
               ? p.perYear
               : p.perMonth;
-            const showApprox = isYearly && !isFree && plan.approxMonthly !== "";
-            const savingsPct = yearlySavingsPct(plan.priceMonthly, plan.priceYearly);
+            const showApprox = isYearly && !isFree;
+            const savingsPct = isFree ? null : yearlySavingsPct();
             // Show the real per-plan savings chip next to the annual price.
             const showSavings = isYearly && !isFree && savingsPct !== null && savingsPct > 0;
 
@@ -172,7 +157,7 @@ export default function PricingSection() {
                     }`}
                   >
                     {showApprox
-                      ? p.approxPerMonth.replace("{price}", plan.approxMonthly)
+                      ? p.approxPerMonth.replace("{price}", formatPrice(Number(proApproxMonthly().toFixed(2))))
                       : ""}
                   </p>
                   <p
