@@ -6,12 +6,22 @@ import { createClient } from "@/lib/supabase/client";
 import PageLoader from "@/components/ui/PageLoader";
 import { useToast } from "@/components/ui/Toast";
 import { useDictionary } from "@/lib/i18n/DictionaryProvider";
+import {
+  type PlanId,
+  limitsForPlanId,
+  isPaidPlan,
+  formatPrice,
+  PRO_PRICE_MONTHLY,
+  PRO_PRICE_YEARLY,
+} from "@/lib/plans";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type SubscriptionDict = ReturnType<typeof useDictionary>["dict"]["subscription"];
 
-type PlanType = "FREE" | "PREMIUM_MONTHLY" | "PREMIUM_YEARLY";
+// Internal (DB) plan id — persisted values, kept for compatibility. UI maps
+// these to the public Free / Pro display via lib/plans.
+type PlanType = PlanId;
 type SubscriptionStatus = "Active" | "Trial" | "Expired" | "Cancelled" | "Pending";
 
 interface Subscription {
@@ -22,29 +32,6 @@ interface Subscription {
   renewalDate: string | null;
   expirationDate: string | null;
 }
-
-interface PlanLimits {
-  maxRecipes: number;
-  maxWorkoutPlans: number;
-  maxProgressPhotos: number;
-  maxHistoryDays: number;
-}
-
-interface PlanDefinition {
-  id: PlanType;
-  name: string;
-  price: number;
-  features: string[];
-  limits: PlanLimits;
-}
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const PLAN_DEFINITIONS: PlanDefinition[] = [
-  { id: "FREE", name: "Free", price: 0, features: ["Profile Management", "Body Measurements", "Weight Tracking", "Basic Nutrition Tracking", "Basic Workout Tracking"], limits: { maxRecipes: 10, maxWorkoutPlans: 3, maxProgressPhotos: 30, maxHistoryDays: 90 } },
-  { id: "PREMIUM_MONTHLY", name: "Premium Monthly", price: 9.99, features: ["Everything in Free", "Unlimited Recipes", "Unlimited Workout Plans", "Unlimited Progress Photos", "Advanced Analytics", "AI Coach", "Data Export"], limits: { maxRecipes: -1, maxWorkoutPlans: -1, maxProgressPhotos: -1, maxHistoryDays: -1 } },
-  { id: "PREMIUM_YEARLY", name: "Premium Yearly", price: 7.99, features: ["Everything in Premium Monthly", "2 months free", "Early access"], limits: { maxRecipes: -1, maxWorkoutPlans: -1, maxProgressPhotos: -1, maxHistoryDays: -1 } },
-];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -197,10 +184,9 @@ export default function SubscriptionPage() {
 
   if (!sub) return null;
 
-  const premium = (sub.plan === "PREMIUM_MONTHLY" || sub.plan === "PREMIUM_YEARLY") && (sub.status === "Active" || sub.status === "Trial");
-  const planDef = PLAN_DEFINITIONS.find((p) => p.id === sub.plan) ?? PLAN_DEFINITIONS[0];
-  const limits = planDef.limits;
-  const badge = sub.plan === "FREE" ? { label: t.badgeFree, color: "bg-zinc-100 text-zinc-600" } : sub.status === "Trial" ? { label: t.badgeTrial, color: "bg-amber-100 text-amber-700" } : { label: t.badgePremium, color: "bg-gradient-to-r from-violet-500 to-purple-600 text-white" };
+  const premium = isPaidPlan(sub.plan) && (sub.status === "Active" || sub.status === "Trial");
+  const limits = limitsForPlanId(sub.plan);
+  const badge = sub.plan === "FREE" ? { label: t.badgeFree, color: "bg-zinc-100 text-zinc-600" } : sub.status === "Trial" ? { label: t.badgeTrial, color: "bg-amber-100 text-amber-700" } : { label: t.badgePremium, color: "bg-primary text-white" };
 
   return (
     <>
@@ -226,8 +212,8 @@ export default function SubscriptionPage() {
           <div className="mt-5 flex flex-wrap gap-2">
             {!premium && (
               <>
-                <button type="button" onClick={() => handleUpgrade("PREMIUM_MONTHLY")} className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover">{t.upgradeMonthly}</button>
-                <button type="button" onClick={() => handleUpgrade("PREMIUM_YEARLY")} className="rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-700">{t.upgradeYearly}</button>
+                <button type="button" onClick={() => handleUpgrade("PREMIUM_MONTHLY")} className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover">{t.upgradeMonthly.replace("{price}", formatPrice(PRO_PRICE_MONTHLY))}</button>
+                <button type="button" onClick={() => handleUpgrade("PREMIUM_YEARLY")} className="rounded-lg border border-primary px-4 py-2 text-xs font-semibold text-primary-fg hover:bg-primary-light">{t.upgradeYearly.replace("{price}", formatPrice(PRO_PRICE_YEARLY))}</button>
                 {sub.status !== "Trial" && <button type="button" onClick={handleStartTrial} className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">{t.startTrial}</button>}
               </>
             )}
@@ -252,10 +238,10 @@ export default function SubscriptionPage() {
         </div>
 
         {!premium && (
-          <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50 p-6">
-            <p className="text-sm font-semibold text-violet-900">{t.unlockHeading}</p>
-            <p className="mt-1 text-xs text-violet-700">{t.unlockDesc}</p>
-            <Link href="/pricing" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-700">{t.viewPlans}</Link>
+          <div className="rounded-xl border border-border-brand bg-background-brand p-6">
+            <p className="text-sm font-semibold text-primary-fg">{t.unlockHeading}</p>
+            <p className="mt-1 text-xs text-success">{t.unlockDesc}</p>
+            <Link href="/pricing" className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover">{t.viewPlans}</Link>
           </div>
         )}
       </div>
