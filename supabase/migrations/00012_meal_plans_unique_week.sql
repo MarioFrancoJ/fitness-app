@@ -1,5 +1,5 @@
 -- ============================================================================
--- FitnessApp — Prevent duplicate weekly meal plans per user
+-- Movive — Prevent duplicate weekly meal plans per user
 -- Version: 00012
 -- Purpose: meal_plans had no uniqueness on the week key, so duplicate rows for
 --          the same (user, week) were possible (e.g. the legacy planner's

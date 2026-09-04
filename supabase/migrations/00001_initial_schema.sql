@@ -1,5 +1,5 @@
 -- ============================================================================
--- FitnessApp — Initial Schema Migration
+-- Movive — Initial Schema Migration
 -- Version: 00001
 -- Date: 2026-08-25
 -- Target: Supabase PostgreSQL 15+

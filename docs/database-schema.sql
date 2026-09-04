@@ -1,5 +1,5 @@
 -- ============================================================================
--- FitnessApp Database Schema v1.0.0-beta
+-- Movive Database Schema v1.0.0-beta
 -- Target: PostgreSQL 15+ (compatible with Supabase, Neon)
 -- ORM: Prisma (migration-ready)
 -- ============================================================================

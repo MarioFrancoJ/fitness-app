@@ -1,5 +1,5 @@
 -- ============================================================================
--- FitnessApp — Water & Supplement Daily Habit Tracking
+-- Movive — Water & Supplement Daily Habit Tracking
 -- Version: 00009
 -- Purpose: Hydration tracking + daily supplement checklist for the Dashboard
 --          "Daily Habits" section. Designed for future Calendar integration.

@@ -1,5 +1,5 @@
 -- ============================================================================
--- FitnessApp — Calendar Events
+-- Movive — Calendar Events
 -- Version: 00005
 -- Date: 2026-08-25
 -- Purpose: Calendar module for scheduling workouts, meals, goals, and custom events

@@ -1,4 +1,4 @@
-# FitnessApp — Supabase Deployment Guide
+# Movive — Supabase Deployment Guide
 
 **Phase:** 1  
 **Task:** P1-06B  
@@ -226,7 +226,7 @@ The admin account must be created in Supabase Auth AFTER the trigger migration (
 1. Go to **Supabase Dashboard** → **Authentication** → **Users**
 2. Click **Add user** → **Create new user**
 3. Fill in:
-   - **Email:** `admin@fitnessapp.com`
+   - **Email:** `admin@movive.app`
    - **Password:** Choose a strong password (NOT `Admin123!`)
    - **Auto Confirm User:** ✅ Checked (bypasses email confirmation)
 4. Click **Create user**
@@ -238,7 +238,7 @@ Run in SQL Editor:
 ```sql
 SELECT id, email, name, role, status, created_at
 FROM users
-WHERE email = 'admin@fitnessapp.com';
+WHERE email = 'admin@movive.app';
 ```
 
 **Expected:** One row with `role = 'USER'` (trigger default).
@@ -266,7 +266,7 @@ The seed file includes the promotion:
 ```sql
 UPDATE users
 SET role = 'SUPER_ADMIN', updated_at = NOW()
-WHERE email = 'admin@fitnessapp.com';
+WHERE email = 'admin@movive.app';
 ```
 
 If seed was already run BEFORE creating the admin, re-run just this statement.
@@ -278,13 +278,13 @@ Run in SQL Editor:
 ```sql
 UPDATE users
 SET role = 'SUPER_ADMIN', updated_at = NOW()
-WHERE email = 'admin@fitnessapp.com';
+WHERE email = 'admin@movive.app';
 ```
 
 ### Verify Promotion
 
 ```sql
-SELECT email, role, status FROM users WHERE email = 'admin@fitnessapp.com';
+SELECT email, role, status FROM users WHERE email = 'admin@movive.app';
 ```
 
 **Expected:** `role = 'SUPER_ADMIN'`
@@ -292,7 +292,7 @@ SELECT email, role, status FROM users WHERE email = 'admin@fitnessapp.com';
 ### Test Admin Login
 
 1. Go to the app login page
-2. Enter `admin@fitnessapp.com` + password
+2. Enter `admin@movive.app` + password
 3. Verify redirect to `/admin` (once auth is implemented)
 4. Verify `is_admin()` returns TRUE:
 
@@ -616,7 +616,7 @@ SELECT
   NOW(),
   NOW()
 FROM auth.users
-WHERE email = 'admin@fitnessapp.com'
+WHERE email = 'admin@movive.app'
 ON CONFLICT (id) DO UPDATE SET role = 'SUPER_ADMIN';
 ```
 
@@ -670,11 +670,11 @@ npx supabase db push
 
 # 5. Create admin user
 # → Dashboard → Authentication → Users → Add User
-# → Email: admin@fitnessapp.com, strong password, auto-confirm ✓
+# → Email: admin@movive.app, strong password, auto-confirm ✓
 
 # 6. Promote admin
 # → SQL Editor:
-# UPDATE users SET role = 'SUPER_ADMIN' WHERE email = 'admin@fitnessapp.com';
+# UPDATE users SET role = 'SUPER_ADMIN' WHERE email = 'admin@movive.app';
 
 # 7. Validate
 # → Run the full validation query from Section 7.10

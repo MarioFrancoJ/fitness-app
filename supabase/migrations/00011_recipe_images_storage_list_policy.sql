@@ -1,5 +1,5 @@
 -- ============================================================================
--- FitnessApp — Allow listing objects in the public `recipe-images` bucket
+-- Movive — Allow listing objects in the public `recipe-images` bucket
 -- Version: 00011
 -- Purpose: The bucket is public for DOWNLOAD (public URLs work), but LISTing
 --          objects (SELECT on storage.objects) requires an explicit RLS policy.

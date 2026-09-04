@@ -1,4 +1,4 @@
-# FitnessApp — Architecture Decision Log
+# Movive — Architecture Decision Log
 
 **Date:** August 25, 2026  
 **Status:** Locked (ready for implementation)  

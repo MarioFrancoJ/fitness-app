@@ -15,13 +15,59 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Official Movive production domain. Single source of truth for absolute URLs
+// (metadataBase resolves canonical/OG/sitemap/robots against this). Can be
+// overridden per-environment via NEXT_PUBLIC_APP_URL (e.g. Vercel previews).
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://movive-hazel-six.vercel.app";
+const SITE_NAME = "Movive";
+const SITE_TITLE = "Movive — Transform Your Fitness Journey";
+const SITE_DESCRIPTION =
+  "Personalized workouts, nutrition plans and progress tracking in one modern platform.";
+
 export const metadata: Metadata = {
-  title: "Movive — Transform Your Fitness Journey",
-  description:
-    "Personalized workouts, nutrition plans and progress tracking in one modern platform.",
-  // Movive app icon (isotipo — the icon-only mark, used for favicon/app-icon refs).
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: "%s — Movive",
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  alternates: {
+    canonical: "/",
+  },
+  // Browser + PWA icons. The isotipo (icon-only mark) is used for the favicon,
+  // Apple touch icon and manifest icons; the .ico is kept as a legacy fallback.
   icons: {
-    icon: "/movive/isotipo-movive.svg",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/movive/isotipo-movive.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/movive/isotipo-movive.svg",
+    apple: "/movive/isotipo-movive.png",
+  },
+  manifest: "/manifest.webmanifest",
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    locale: "en_US",
+    alternateLocale: ["es_ES"],
+    images: [
+      {
+        url: "/movive/isologo-movive.png",
+        width: 1002,
+        height: 147,
+        alt: "Movive",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ["/movive/isologo-movive.png"],
   },
 };
 

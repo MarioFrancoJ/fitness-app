@@ -1,4 +1,4 @@
-# FitnessApp v1.0.0-beta — Launch Readiness Report
+# Movive v1.0.0-beta — Launch Readiness Report
 
 ## Release Candidate
 

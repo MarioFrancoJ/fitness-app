@@ -165,7 +165,7 @@ export async function exportAndDownload(options: ExportOptions) {
   const timestamp = new Date().toISOString().slice(0, 10);
   const ext = options.format;
   const mime = options.format === "json" ? "application/json" : "text/csv";
-  downloadFile(content, `fitnessapp-export-${timestamp}.${ext}`, mime);
+  downloadFile(content, `movive-export-${timestamp}.${ext}`, mime);
 }
 
 // ── Backup Functions (metadata-only in localStorage, payload streamed directly) ─
@@ -209,7 +209,7 @@ export async function createBackup(categories: ExportCategory[] = ALL_CATEGORIES
 
   // Trigger immediate download from memory (no localStorage caching)
   const timestamp = new Date().toISOString().slice(0, 10);
-  downloadFile(content, `fitnessapp-backup-${timestamp}.json`, "application/json");
+  downloadFile(content, `movive-backup-${timestamp}.json`, "application/json");
 
   return metadata;
 }
@@ -227,7 +227,7 @@ export async function downloadBackup(id: string) {
   // Re-export from Supabase using the original categories
   const content = await exportData({ categories: backup.categoriesIncluded, format: "json" });
   const timestamp = backup.createdAt.slice(0, 10);
-  downloadFile(content, `fitnessapp-backup-${timestamp}.json`, "application/json");
+  downloadFile(content, `movive-backup-${timestamp}.json`, "application/json");
 }
 
 export function deleteBackup(id: string) {

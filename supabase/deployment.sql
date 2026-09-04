@@ -1,5 +1,5 @@
 -- ============================================================================
--- FitnessApp — FULL DEPLOYMENT SCRIPT
+-- Movive — FULL DEPLOYMENT SCRIPT
 -- ============================================================================
 -- Execute in: Supabase Dashboard → SQL Editor → New Query → Paste → Run
 --
@@ -21,7 +21,7 @@
 -- ════════════════════════════════════════════════════════════════════════════════
 
 -- ============================================================================
--- FitnessApp — Initial Schema Migration
+-- Movive — Initial Schema Migration
 -- Version: 00001
 -- Date: 2026-08-25
 -- Target: Supabase PostgreSQL 15+
@@ -694,7 +694,7 @@ COMMENT ON TABLE ai_chat_messages IS 'Persistent AI coach conversation history p
 -- ════════════════════════════════════════════════════════════════════════════════
 
 -- ============================================================================
--- FitnessApp — Row Level Security Policies
+-- Movive — Row Level Security Policies
 -- Version: 00002
 -- Date: 2026-08-25
 -- Architecture: Supabase Only
@@ -1475,7 +1475,7 @@ CREATE POLICY "daily_checkins_select_admin"
 -- ════════════════════════════════════════════════════════════════════════════════
 
 -- ============================================================================
--- FitnessApp — Schema Fixes (from Architecture Validation Report)
+-- Movive — Schema Fixes (from Architecture Validation Report)
 -- Version: 00003
 -- Date: 2026-08-25
 -- Fixes: C1, H1, H2, H4, H5, H6, H7
@@ -1594,7 +1594,7 @@ DROP INDEX IF EXISTS idx_platform_settings_key;
 -- ════════════════════════════════════════════════════════════════════════════════
 
 -- ============================================================================
--- FitnessApp — Auth Trigger & Profile Management
+-- Movive — Auth Trigger & Profile Management
 -- Version: 00004
 -- Date: 2026-08-25
 -- Decision: D3 (minimal trigger — creates users row only)
@@ -1879,7 +1879,7 @@ COMMENT ON FUNCTION public.repair_user_profile() IS
 -- ════════════════════════════════════════════════════════════════════════════════
 
 -- ============================================================================
--- FitnessApp — Seed Data
+-- Movive — Seed Data
 -- Date: 2026-08-25
 -- Purpose: Populate reference data and system templates
 -- Idempotent: Safe to run multiple times (ON CONFLICT used throughout)
@@ -2536,8 +2536,8 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO platform_settings (id, key, value)
 VALUES
-  ('ab000001-0000-0000-0000-000000000001', 'app_name', '"FitnessApp"'),
-  ('ab000001-0000-0000-0000-000000000002', 'support_email', '"soporte@fitnessapp.com"'),
+  ('ab000001-0000-0000-0000-000000000001', 'app_name', '"Movive"'),
+  ('ab000001-0000-0000-0000-000000000002', 'support_email', '"soporte@movive.app"'),
   ('ab000001-0000-0000-0000-000000000003', 'free_plan_ai_limit', '20'),
   ('ab000001-0000-0000-0000-000000000004', 'trial_days', '7'),
   ('ab000001-0000-0000-0000-000000000005', 'maintenance_mode', 'false'),
@@ -2555,7 +2555,7 @@ ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 UPDATE users
 SET role = 'SUPER_ADMIN', updated_at = NOW()
-WHERE email = 'admin@fitnessapp.com';
+WHERE email = 'admin@movive.app';
 
 -- If no rows affected, the admin hasn't signed up yet — that's OK.
 -- The trigger will create a USER row when they sign up, and this seed
@@ -2570,6 +2570,6 @@ COMMIT;
 
 -- ════════════════════════════════════════════════════════════════════════════════
 -- DEPLOYMENT COMPLETE
--- Next: Create admin@fitnessapp.com in Auth Dashboard, then run:
---   UPDATE users SET role = 'SUPER_ADMIN' WHERE email = 'admin@fitnessapp.com';
+-- Next: Create admin@movive.app in Auth Dashboard, then run:
+--   UPDATE users SET role = 'SUPER_ADMIN' WHERE email = 'admin@movive.app';
 -- ════════════════════════════════════════════════════════════════════════════════
