@@ -116,12 +116,30 @@
     "headline": "Built for serious results",
     "subtitle": "Every feature is designed around one goal — helping you reach your fitness goals faster.",
     "items": {
-      "workoutPrograms": { "title": "Workout Programs", "description": "Structured, progressive multi-week training plans. Adapt intensity, volume, and rest to your schedule." },
-      "nutritionPlans": { "title": "Nutrition Plans", "description": "Macro-balanced meal plans aligned with your goal — cut, bulk, or maintain. Automatically adjusts as your weight changes." },
-      "progressTracking": { "title": "Progress Tracking", "description": "Log body measurements, upload progress photos, and visualise trends across weeks and months with clear charts." },
-      "aiCoach": { "title": "AI Coach", "description": "Chat with an AI fitness assistant that knows your program, your recent metrics, and your goals to give contextual advice." },
-      "mealPlanning": { "title": "Meal Planning", "description": "Build weekly meal plans from a library of 500,000+ foods. Auto-generate shopping lists for any date range." },
-      "analytics": { "title": "Analytics", "description": "Track your progress, adherence, and personal trends. See your volume, streaks, and body-composition metrics to stay consistent — all in one view." }
+      "workoutPrograms": {
+        "title": "Workout Programs",
+        "description": "Structured, progressive multi-week training plans. Adapt intensity, volume, and rest to your schedule."
+      },
+      "nutritionPlans": {
+        "title": "Nutrition Plans",
+        "description": "Macro-balanced meal plans aligned with your goal — cut, bulk, or maintain. Automatically adjusts as your weight changes."
+      },
+      "progressTracking": {
+        "title": "Progress Tracking",
+        "description": "Log body measurements, upload progress photos, and visualise trends across weeks and months with clear charts."
+      },
+      "aiCoach": {
+        "title": "AI Coach",
+        "description": "Chat with an AI fitness assistant that knows your program, your recent metrics, and your goals to give contextual advice."
+      },
+      "mealPlanning": {
+        "title": "Meal Planning",
+        "description": "Build weekly meal plans from a library of 500,000+ foods. Auto-generate shopping lists for any date range."
+      },
+      "analytics": {
+        "title": "Analytics",
+        "description": "Track your progress, adherence, and personal trends. See your volume, streaks, and body-composition metrics to stay consistent — all in one view."
+      }
     }
   },
   "pricing": {
@@ -148,8 +166,20 @@
     "toastUpgraded": "Upgraded to Premium!",
     "toastUpdateFailed": "Failed to update plan. Please try again.",
     "plans": {
-      "basic": { "name": "Basic", "price": "$0", "period": "forever", "description": "Get started for free.", "cta": "Start Free" },
-      "pro": { "name": "Pro", "price": "$9.99", "period": "/mo", "description": "For serious athletes.", "cta": "Upgrade to Premium" }
+      "basic": {
+        "name": "Basic",
+        "price": "$0",
+        "period": "forever",
+        "description": "Get started for free.",
+        "cta": "Start Free"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$9.99",
+        "period": "/mo",
+        "description": "For serious athletes.",
+        "cta": "Upgrade to Premium"
+      }
     },
     "landing": {
       "eyebrow": "Pricing",
@@ -1616,5 +1646,96 @@
     "boundaryTitle": "Something went wrong",
     "boundaryDescription": "An unexpected error occurred. Please try refreshing the page.",
     "refreshPage": "Refresh Page"
+  },
+  "legal": {
+    "backToHome": "Back to home",
+    "lastUpdated": "Last updated",
+    "updatedDate": "September 2026",
+    "privacy": {
+      "title": "Privacy Policy",
+      "intro": "At FitnessApp, your health data is personal. This policy explains what we collect, why we collect it, and how we keep it protected while you track your workouts, nutrition and progress.",
+      "sections": [
+        {
+          "heading": "Information we collect",
+          "body": "We collect the account details you provide (name, email) and the fitness data you log: workouts, meals and recipes, weight and body measurements, progress photos, water and supplement intake, and meal plans. We also collect basic technical data such as device type and app usage needed to run the service."
+        },
+        {
+          "heading": "How we use your data",
+          "body": "Your data is used to power the features you use — calculating calories and macros, showing your progress over time, generating meal plans and shopping lists, and personalizing recommendations. We never sell your personal or health data to third parties."
+        },
+        {
+          "heading": "Data storage and security",
+          "body": "Your information is stored on secured infrastructure with encryption in transit. Access is protected by row-level security so you can only read and write your own records. Progress photos and other uploads are kept in a private storage bucket tied to your account."
+        },
+        {
+          "heading": "Data sharing",
+          "body": "We share data only with the service providers required to operate FitnessApp (for example, hosting and database services), and only to the extent needed. We may disclose information if required by law."
+        },
+        {
+          "heading": "Your rights",
+          "body": "You can access, export or delete your data at any time from your account settings. Deleting your account permanently removes your logged workouts, nutrition entries, measurements and photos."
+        },
+        {
+          "heading": "Contact",
+          "body": "If you have questions about this policy or your data, reach out through the in-app feedback option and we'll respond as soon as possible."
+        }
+      ]
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "intro": "These terms govern your use of FitnessApp. By creating an account or using the app, you agree to them. Please read them carefully.",
+      "sections": [
+        {
+          "heading": "Using the service",
+          "body": "You must be at least 16 years old to use FitnessApp. You are responsible for keeping your account credentials secure and for all activity that happens under your account."
+        },
+        {
+          "heading": "Not medical advice",
+          "body": "FitnessApp is a fitness and nutrition tracking tool, not a medical service. Calorie targets, macros, workouts and recommendations are for general informational purposes only and are not a substitute for professional medical, nutritional or training advice. Consult a qualified professional before starting any new diet or exercise program."
+        },
+        {
+          "heading": "Your content",
+          "body": "You keep ownership of the data you create — your workouts, recipes, meal plans, measurements and photos. You grant us the limited permission needed to store and display that content back to you within the app."
+        },
+        {
+          "heading": "Subscriptions",
+          "body": "Some features may require a paid plan. Pricing and billing terms are shown before you subscribe. You can manage or cancel your subscription from your account at any time."
+        },
+        {
+          "heading": "Acceptable use",
+          "body": "Do not misuse the service, attempt to access other users' data, disrupt the platform, or upload unlawful or harmful content. We may suspend accounts that violate these terms."
+        },
+        {
+          "heading": "Changes and termination",
+          "body": "We may update these terms or the service over time. Continued use after changes means you accept the updated terms. You may stop using FitnessApp and delete your account at any time."
+        }
+      ]
+    },
+    "cookies": {
+      "title": "Cookie Policy",
+      "intro": "This policy explains how FitnessApp uses cookies and similar technologies to keep you signed in and remember your preferences.",
+      "sections": [
+        {
+          "heading": "What are cookies",
+          "body": "Cookies are small text files stored on your device. We use them, along with similar local-storage technologies, to make the app work and to remember your choices."
+        },
+        {
+          "heading": "Essential cookies",
+          "body": "These are required for the app to function — for example, keeping you securely signed in and maintaining your session. The app cannot work properly without them."
+        },
+        {
+          "heading": "Preference cookies",
+          "body": "We remember settings such as your chosen language (English or Spanish) and interface preferences so the app looks the way you expect on your next visit."
+        },
+        {
+          "heading": "Analytics",
+          "body": "We may use privacy-respecting, aggregated usage measurements to understand which features are used and improve the product. These do not identify you personally."
+        },
+        {
+          "heading": "Managing cookies",
+          "body": "You can clear or block cookies through your browser settings. Note that disabling essential cookies will sign you out and prevent core features from working."
+        }
+      ]
+    }
   }
 }

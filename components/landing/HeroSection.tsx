@@ -45,7 +45,7 @@ export default function HeroSection() {
   ];
 
   return (
-    <section className="pb-24 pt-36">
+    <section id="hero" className="pb-24 pt-36">
       <div className="mx-auto max-w-6xl px-6">
         <div className="grid items-center gap-16 lg:grid-cols-2">
           {/* Left — copy */}
