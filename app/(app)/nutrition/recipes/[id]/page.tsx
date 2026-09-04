@@ -303,36 +303,38 @@ export default function RecipeDetailPage() {
         <div className="flex flex-col gap-4">
           {/* Nutrition — single horizontal line: calories | protein | carbs | fat.
               Macro dots use the Movive green family (no generic blue/orange). */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm">
+            {/* Calories lead the hierarchy: larger + heavier. Macros stay inline. */}
             <span className="flex items-baseline gap-1">
-              <span className="text-golden-lg font-bold text-zinc-900">{recipe.calories}</span>
-              <span className="text-golden-xs font-medium text-zinc-400">{t.calories.toLowerCase()}</span>
+              <span className="text-golden-xl font-bold leading-none text-zinc-900">{recipe.calories}</span>
+              <span className="text-golden-xs font-semibold uppercase tracking-wide text-zinc-500">{t.macroKcal}</span>
             </span>
-            {[
-              { label: t.protein, grams: recipe.protein, dot: "bg-movive-600" },
-              { label: t.carbs, grams: recipe.carbs, dot: "bg-movive-800" },
-              { label: t.fat, grams: recipe.fat, dot: "bg-movive-500" },
-            ].map((m) => (
-              <span key={m.label} className="flex items-center gap-1.5 text-golden-sm">
-                <span className="hidden text-zinc-300 sm:inline">|</span>
-                <span className={`h-2 w-2 rounded-full ${m.dot}`} />
-                <span className="font-semibold text-zinc-900">{m.grams} g</span>
-                <span className="text-zinc-500">{m.label.toLowerCase()}</span>
-              </span>
-            ))}
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-golden-sm">
+              {[
+                { label: t.protein, grams: recipe.protein, dot: "bg-movive-600" },
+                { label: t.carbs, grams: recipe.carbs, dot: "bg-movive-800" },
+                { label: t.fat, grams: recipe.fat, dot: "bg-movive-500" },
+              ].map((m) => (
+                <span key={m.label} className="flex items-center gap-1.5">
+                  <span className={`h-2 w-2 rounded-full ${m.dot}`} />
+                  <span className="font-semibold text-zinc-900">{m.grams} g</span>
+                  <span className="text-zinc-500">{m.label.toLowerCase()}</span>
+                </span>
+              ))}
+            </span>
           </div>
 
           {/* Ingredients — dense list with dotted leaders (name … amount) */}
-          <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm">
-            <h2 className="mb-1.5 text-golden-xs font-semibold uppercase tracking-widest text-zinc-400">
+          <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 shadow-sm">
+            <h2 className="mb-1 text-golden-xs font-semibold uppercase tracking-widest text-zinc-400">
               {t.ingredients}
             </h2>
             {recipe.ingredients.length === 0 ? (
               <p className="text-golden-sm text-zinc-400">{t.noIngredients}</p>
             ) : (
-              <ul className="flex max-h-40 flex-col gap-0.5 overflow-y-auto pr-1">
+              <ul className="flex max-h-40 flex-col overflow-y-auto pr-1">
                 {recipe.ingredients.map((item) => (
-                  <li key={item.id} className="flex items-baseline gap-2 py-0.5 text-golden-sm text-zinc-700">
+                  <li key={item.id} className="flex items-baseline gap-2 py-[3px] text-golden-sm text-zinc-700">
                     <span>{item.name}</span>
                     <span className="min-w-0 flex-1 translate-y-[-0.2em] border-b border-dotted border-zinc-200" aria-hidden="true" />
                     <span className="shrink-0 font-medium text-zinc-500">{item.quantity} {item.unit}</span>
@@ -343,14 +345,14 @@ export default function RecipeDetailPage() {
           </div>
 
           {/* Instructions — compact numbered steps */}
-          <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm">
-            <h2 className="mb-1.5 text-golden-xs font-semibold uppercase tracking-widest text-zinc-400">
+          <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 shadow-sm">
+            <h2 className="mb-1 text-golden-xs font-semibold uppercase tracking-widest text-zinc-400">
               {t.instructions}
             </h2>
             {recipe.instructions.length === 0 ? (
               <p className="text-golden-sm text-zinc-400">{t.noInstructions}</p>
             ) : (
-              <ol className="flex max-h-44 flex-col gap-1.5 overflow-y-auto pr-1">
+              <ol className="flex max-h-44 flex-col gap-1 overflow-y-auto pr-1">
                 {recipe.instructions.map((step, i) => (
                   <li key={i} className="flex gap-2 text-golden-sm text-zinc-700">
                     <span className="shrink-0 font-bold text-primary-fg">{i + 1}.</span>
@@ -406,32 +408,42 @@ export default function RecipeDetailPage() {
               <span className="font-semibold text-movive-800">{Math.round(recipe.fat * servings)} {t.macroFat}</span>
             </p>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {/* Primary CTA — Movive brand */}
+            {/* Three-tier action hierarchy:
+                1) Primary  — solid brand, full width (most prominent).
+                2) Secondary — outlined, medium contrast.
+                3) Tertiary — ghost/text, lowest weight.
+                Hover states are discreet (primary → darker brand, others → soft
+                grey). */}
+            <div className="mt-4 flex flex-col gap-2">
+              {/* Primary CTA — Movive brand, full width */}
               <button
                 type="button"
                 onClick={handleAddToPlan}
                 disabled={busy !== null}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-golden-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-golden-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
                 <span aria-hidden="true">+</span> {t.addToMealPlan}
               </button>
-              <button
-                type="button"
-                onClick={handleLogMeal}
-                disabled={busy !== null}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-golden-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 disabled:opacity-50"
-              >
-                {busy === "log" ? t.logging : t.logAsMealToday}
-              </button>
-              <button
-                type="button"
-                onClick={handleAddToShopping}
-                disabled={busy !== null || recipe.ingredients.length === 0}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-golden-sm font-semibold text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-40"
-              >
-                {busy === "shop" ? t.adding : t.addIngredientsToShopping}
-              </button>
+              <div className="flex gap-2">
+                {/* Secondary — outlined */}
+                <button
+                  type="button"
+                  onClick={handleLogMeal}
+                  disabled={busy !== null}
+                  className="inline-flex flex-1 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 py-2 text-golden-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+                >
+                  {busy === "log" ? t.logging : t.logAsMealToday}
+                </button>
+                {/* Tertiary — ghost/text, lowest weight */}
+                <button
+                  type="button"
+                  onClick={handleAddToShopping}
+                  disabled={busy !== null || recipe.ingredients.length === 0}
+                  className="inline-flex flex-1 items-center justify-center rounded-lg px-3 py-2 text-golden-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+                >
+                  {busy === "shop" ? t.adding : t.addIngredientsToShopping}
+                </button>
+              </div>
             </div>
           </div>
         </div>

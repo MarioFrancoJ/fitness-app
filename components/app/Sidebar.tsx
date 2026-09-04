@@ -219,8 +219,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               <Logo variant="isotipo" className="h-6" alt="" />
             </Link>
           ) : (
-            <Link href="/dashboard" onClick={handleNavClick} className="flex transition-opacity hover:opacity-80" aria-label="Movive">
-              {/* Expanded: full isologo lockup */}
+            <Link href="/dashboard" onClick={handleNavClick} className="flex transition-opacity hover:opacity-80 md:mx-auto" aria-label="Movive">
+              {/* Expanded: full isologo lockup — centered on desktop (the close
+                  button that shares this row is hidden on md+). */}
               <Logo variant="isologo" className="h-6" />
             </Link>
           )}
