@@ -282,10 +282,11 @@ export default function RecipeDetailPage() {
         {/* Photo — ~33% (col-span-4). Fills the info column's height on desktop. */}
         <div className="overflow-hidden rounded-2xl bg-zinc-100 aspect-[4/3] max-h-64 lg:col-span-4 lg:aspect-auto lg:max-h-none lg:h-full lg:self-stretch lg:min-h-[320px]">
           {recipe.imageUrl ? (
-            // Framing: object-cover + object-top anchors the dish so more of the
-            // bowl composition stays visible (less zoomed-in), no layout change.
+            // Framing: object-cover + object-position center 15% — anchors the
+            // dish slightly below the very top so more of the bowl stays visible
+            // while keeping a natural composition. Framing only, no layout change.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={recipe.imageUrl} alt={recipe.name} className="h-full w-full object-cover object-top" />
+            <img src={recipe.imageUrl} alt={recipe.name} className="h-full w-full object-cover object-[center_15%]" />
           ) : (
             <div className="flex h-full min-h-[180px] w-full items-center justify-center">
               <div className="flex flex-col items-center gap-2 text-zinc-400">
