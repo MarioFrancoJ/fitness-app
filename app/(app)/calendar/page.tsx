@@ -471,7 +471,7 @@ export default function CalendarPage() {
         <button
           type="button"
           onClick={openCreateModal}
-          className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
         >
           {t.newEvent}
         </button>
@@ -577,7 +577,7 @@ export default function CalendarPage() {
                   className={[
                     "flex h-20 flex-col items-start rounded-lg border p-1.5 text-left transition-colors",
                     isSelected
-                      ? "border-zinc-900 bg-zinc-50"
+                      ? "border-primary bg-zinc-50"
                       : isToday
                       ? "border-blue-200 bg-blue-50/50"
                       : "border-transparent hover:border-zinc-200 hover:bg-zinc-50",
@@ -586,7 +586,7 @@ export default function CalendarPage() {
                   <span
                     className={[
                       "mb-0.5 flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold",
-                      isToday ? "bg-zinc-900 text-white" : "text-zinc-700",
+                      isToday ? "bg-primary text-white" : "text-zinc-700",
                     ].join(" ")}
                   >
                     {day.getDate()}
@@ -697,9 +697,9 @@ export default function CalendarPage() {
 
                   {/* Weight */}
                   {activityForSelectedDate.weight !== null && (
-                    <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2">
+                    <div className="flex items-center gap-2 rounded-lg bg-success-light px-3 py-2">
                       <span className="text-sm">⚖️</span>
-                      <p className="text-xs font-medium text-emerald-900">
+                      <p className="text-xs font-medium text-success">
                         {activityForSelectedDate.weight} kg
                       </p>
                     </div>

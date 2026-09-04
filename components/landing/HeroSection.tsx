@@ -16,7 +16,7 @@ const dashboardCards = [
     subtitle: "1,840 / 2,200 kcal",
     detail: "Protein 142g · Carbs 198g · Fat 61g",
     badge: "On Track",
-    badgeColor: "bg-emerald-50 text-emerald-600",
+    badgeColor: "bg-success-light text-success",
   },
   {
     title: "Weekly Streak",
@@ -50,14 +50,14 @@ export default function HeroSection() {
         <div className="grid items-center gap-16 lg:grid-cols-2">
           {/* Left — copy */}
           <div className="flex flex-col gap-8">
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border-brand bg-background-brand px-3 py-1 text-xs font-medium text-primary-fg">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent" />
               {hero.publicBeta}
             </div>
 
             <h1 className="text-5xl font-bold leading-tight tracking-tight text-zinc-900">
               {hero.headlinePrefix}{" "}
-              <span className="text-zinc-400">{hero.headlineHighlight}</span>
+              <span className="text-primary-fg">{hero.headlineHighlight}</span>
             </h1>
 
             <p className="max-w-md text-lg leading-relaxed text-zinc-500">
@@ -67,7 +67,7 @@ export default function HeroSection() {
             <div className="flex flex-wrap gap-3">
               <Link
                 href="/register"
-                className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700"
+                className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
               >
                 {hero.ctaStartFree}
               </Link>
@@ -97,7 +97,7 @@ export default function HeroSection() {
               <span className="text-sm font-medium text-zinc-700">
                 Good morning, Alex 👋
               </span>
-              <span className="rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-white">
+              <span className="rounded-full bg-primary px-3 py-1 text-xs font-medium text-white">
                 Pro Plan
               </span>
             </div>
@@ -136,7 +136,7 @@ export default function HeroSection() {
                 {[60, 80, 45, 90, 70, 95, 40].map((h, i) => (
                   <div
                     key={i}
-                    className="flex-1 rounded-sm bg-zinc-900"
+                    className="flex-1 rounded-sm bg-primary"
                     style={{ height: `${h * 0.4}px` }}
                   />
                 ))}

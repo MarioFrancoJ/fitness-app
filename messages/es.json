@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "FitnessApp",
+    "appName": "Movive",
     "login": "Iniciar sesión",
     "logout": "Cerrar sesión",
     "getStarted": "Empezar",
@@ -250,7 +250,7 @@
   },
   "footer": {
     "tagline": "La plataforma moderna para personas que se toman en serio sus objetivos fitness.",
-    "copyright": "© {year} FitnessApp. Todos los derechos reservados.",
+    "copyright": "© {year} Movive. Todos los derechos reservados.",
     "builtWith": "Hecho con Next.js y Tailwind CSS.",
     "columns": {
       "product": "Producto",
@@ -1508,7 +1508,7 @@
     },
     "beta": {
       "badge": "BETA",
-      "title": "Únete a la beta de FitnessApp",
+      "title": "Únete a la beta de Movive",
       "subtitle": "Sé de los primeros en probar la plataforma fitness completa. Acceso anticipado gratuito para probadores beta.",
       "waitlistCount": "{n} personas en la lista de espera",
       "submittedTitle": "¡Estás en la lista!",
@@ -1653,7 +1653,7 @@
     "updatedDate": "Septiembre de 2026",
     "privacy": {
       "title": "Política de Privacidad",
-      "intro": "En FitnessApp, tus datos de salud son personales. Esta política explica qué recopilamos, por qué lo hacemos y cómo lo protegemos mientras registras tus entrenamientos, nutrición y progreso.",
+      "intro": "En Movive, tus datos de salud son personales. Esta política explica qué recopilamos, por qué lo hacemos y cómo lo protegemos mientras registras tus entrenamientos, nutrición y progreso.",
       "sections": [
         {
           "heading": "Información que recopilamos",
@@ -1669,7 +1669,7 @@
         },
         {
           "heading": "Compartir datos",
-          "body": "Compartimos datos únicamente con los proveedores necesarios para operar FitnessApp (por ejemplo, servicios de hosting y base de datos), y solo en la medida necesaria. Podemos divulgar información si la ley lo exige."
+          "body": "Compartimos datos únicamente con los proveedores necesarios para operar Movive (por ejemplo, servicios de hosting y base de datos), y solo en la medida necesaria. Podemos divulgar información si la ley lo exige."
         },
         {
           "heading": "Tus derechos",
@@ -1683,15 +1683,15 @@
     },
     "terms": {
       "title": "Términos del Servicio",
-      "intro": "Estos términos rigen tu uso de FitnessApp. Al crear una cuenta o usar la app, los aceptas. Léelos con atención.",
+      "intro": "Estos términos rigen tu uso de Movive. Al crear una cuenta o usar la app, los aceptas. Léelos con atención.",
       "sections": [
         {
           "heading": "Uso del servicio",
-          "body": "Debes tener al menos 16 años para usar FitnessApp. Eres responsable de mantener seguras tus credenciales y de toda la actividad realizada en tu cuenta."
+          "body": "Debes tener al menos 16 años para usar Movive. Eres responsable de mantener seguras tus credenciales y de toda la actividad realizada en tu cuenta."
         },
         {
           "heading": "No es asesoría médica",
-          "body": "FitnessApp es una herramienta de seguimiento de fitness y nutrición, no un servicio médico. Los objetivos de calorías, macros, entrenamientos y recomendaciones tienen fines informativos generales y no sustituyen la asesoría médica, nutricional o de entrenamiento profesional. Consulta a un profesional calificado antes de comenzar cualquier dieta o programa de ejercicio."
+          "body": "Movive es una herramienta de seguimiento de fitness y nutrición, no un servicio médico. Los objetivos de calorías, macros, entrenamientos y recomendaciones tienen fines informativos generales y no sustituyen la asesoría médica, nutricional o de entrenamiento profesional. Consulta a un profesional calificado antes de comenzar cualquier dieta o programa de ejercicio."
         },
         {
           "heading": "Tu contenido",
@@ -1707,13 +1707,13 @@
         },
         {
           "heading": "Cambios y finalización",
-          "body": "Podemos actualizar estos términos o el servicio con el tiempo. Continuar usándolo tras los cambios implica que aceptas los términos actualizados. Puedes dejar de usar FitnessApp y eliminar tu cuenta cuando quieras."
+          "body": "Podemos actualizar estos términos o el servicio con el tiempo. Continuar usándolo tras los cambios implica que aceptas los términos actualizados. Puedes dejar de usar Movive y eliminar tu cuenta cuando quieras."
         }
       ]
     },
     "cookies": {
       "title": "Política de Cookies",
-      "intro": "Esta política explica cómo FitnessApp usa cookies y tecnologías similares para mantener tu sesión y recordar tus preferencias.",
+      "intro": "Esta política explica cómo Movive usa cookies y tecnologías similares para mantener tu sesión y recordar tus preferencias.",
       "sections": [
         {
           "heading": "Qué son las cookies",

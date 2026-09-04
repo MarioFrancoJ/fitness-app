@@ -142,7 +142,7 @@ export default function AISettingsPage() {
           ].map((f) => (
             <div key={f.label} className="flex items-center justify-between rounded-lg bg-zinc-50 p-3">
               <span className="text-sm text-zinc-700">{f.label}</span>
-              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${f.enabled ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-500"}`}>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${f.enabled ? "bg-success-light text-success" : "bg-zinc-100 text-zinc-500"}`}>
                 {f.enabled ? dict.common.enabled : dict.common.disabled}
               </span>
             </div>
@@ -167,7 +167,7 @@ export default function AISettingsPage() {
             <p className="text-xs text-zinc-400">{t.statToday}</p>
           </div>
           <div className="rounded-lg bg-zinc-50 p-3 text-center">
-            <p className="text-lg font-bold text-emerald-600">${usage.estimatedMonthlyCost.toFixed(4)}</p>
+            <p className="text-lg font-bold text-success">${usage.estimatedMonthlyCost.toFixed(4)}</p>
             <p className="text-xs text-zinc-400">{t.statEstCost}</p>
           </div>
         </div>

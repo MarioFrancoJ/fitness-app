@@ -1,5 +1,5 @@
 /**
- * FitnessApp — Supabase Database Types
+ * Movive — Supabase Database Types
  *
  * Generated from: supabase/migrations/00001_initial_schema.sql
  * Architecture: Supabase Only (no Prisma)

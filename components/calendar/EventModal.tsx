@@ -341,7 +341,7 @@ export default function EventModal({ isOpen, onClose, onSave, onDelete, event, m
               <button
                 type="submit"
                 disabled={saving || !form.title.trim()}
-                className="rounded-lg bg-zinc-900 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving ? "Saving..." : mode === "create" ? "Create Event" : "Save Changes"}
               </button>

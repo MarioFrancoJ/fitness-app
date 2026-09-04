@@ -277,7 +277,7 @@ export default function ShoppingListPage() {
       </div>
 
       {generated && (
-        <p className="text-sm font-medium text-emerald-600">
+        <p className="text-sm font-medium text-success">
           {t.generatedSuccess}
         </p>
       )}
@@ -317,7 +317,7 @@ export default function ShoppingListPage() {
           </div>
           <button
             type="submit"
-            className="inline-flex items-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+            className="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             {dict.common.add}
           </button>
@@ -349,7 +349,7 @@ export default function ShoppingListPage() {
                     onClick={() => handleToggle(item.id)}
                     aria-label={item.checked ? `Uncheck ${item.name}` : `Check ${item.name}`}
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
-                      item.checked ? "border-emerald-500 bg-emerald-500" : "border-zinc-300 hover:border-zinc-400"
+                      item.checked ? "border-border-brand bg-success" : "border-zinc-300 hover:border-zinc-400"
                     }`}
                   >
                     {item.checked && (

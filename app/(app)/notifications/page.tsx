@@ -216,7 +216,7 @@ export default function NotificationsPage() {
         <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-0.5 w-fit">
           {([["all", t.tabAll], ["unread", t.tabUnread], ["archived", t.tabArchived]] as [FilterTab, string][]).map(([key, label]) => (
             <button key={key} type="button" onClick={() => setFilter(key)}
-              className={["rounded-md px-4 py-1.5 text-xs font-semibold transition-colors", filter === key ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}>
+              className={["rounded-md px-4 py-1.5 text-xs font-semibold transition-colors", filter === key ? "bg-primary text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}>
               {label}{key === "unread" && unreadCount > 0 ? ` (${unreadCount})` : ""}
             </button>
           ))}

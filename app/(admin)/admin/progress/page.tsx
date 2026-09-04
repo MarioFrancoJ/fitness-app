@@ -22,7 +22,7 @@ interface SubscriptionRow {
 
 function statusBadge(s: SubscriptionStatus): string {
   switch (s) {
-    case "Active": return "bg-emerald-50 text-emerald-700";
+    case "Active": return "bg-success-light text-success";
     case "Trial": return "bg-amber-50 text-amber-700";
     case "Expired": return "bg-red-50 text-red-700";
     case "Cancelled": return "bg-zinc-100 text-zinc-600";
@@ -99,7 +99,7 @@ export default function AdminSubscriptionsPage() {
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-violet-600">{totalPremium}</p><p className="text-xs text-zinc-400">Premium Users</p></div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-zinc-900">{totalFree}</p><p className="text-xs text-zinc-400">Free Users</p></div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-amber-600">{totalTrials}</p><p className="text-xs text-zinc-400">Active Trials</p></div>
-          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-emerald-600">${revenue.toFixed(0)}</p><p className="text-xs text-zinc-400">Est. MRR</p></div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-success">${revenue.toFixed(0)}</p><p className="text-xs text-zinc-400">Est. MRR</p></div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

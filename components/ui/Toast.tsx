@@ -72,7 +72,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 // ── Toast Card ────────────────────────────────────────────────────────────────
 
 const VARIANT_STYLES: Record<ToastVariant, { border: string; bg: string; icon: string; iconColor: string }> = {
-  success: { border: "border-emerald-200", bg: "bg-white", icon: "✓", iconColor: "bg-emerald-100 text-emerald-600" },
+  success: { border: "border-border-brand", bg: "bg-white", icon: "✓", iconColor: "bg-success-light text-success" },
   error: { border: "border-red-200", bg: "bg-white", icon: "✕", iconColor: "bg-red-100 text-red-600" },
   warning: { border: "border-amber-200", bg: "bg-white", icon: "!", iconColor: "bg-amber-100 text-amber-600" },
   info: { border: "border-blue-200", bg: "bg-white", icon: "i", iconColor: "bg-blue-100 text-blue-600" },

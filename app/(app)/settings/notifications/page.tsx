@@ -45,7 +45,7 @@ function Toggle({ enabled, onToggle, label, description }: { enabled: boolean; o
       </div>
       <button type="button" onClick={onToggle} aria-label={`Toggle ${label}`}
         className={["relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
-          enabled ? "bg-zinc-900" : "bg-zinc-200",
+          enabled ? "bg-primary" : "bg-zinc-200",
         ].join(" ")}>
         <span className={["inline-block h-5 w-5 rounded-full bg-white shadow transition-transform",
           enabled ? "translate-x-5" : "translate-x-0",
@@ -192,7 +192,7 @@ export default function NotificationPreferencesPage() {
             {FREQUENCIES.map((f) => (
               <button key={f} type="button" onClick={() => setFrequency(f)}
                 className={["rounded-lg px-4 py-2 text-xs font-semibold transition-colors",
-                  prefs.reminderFrequency === f ? "bg-zinc-900 text-white" : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50",
+                  prefs.reminderFrequency === f ? "bg-primary text-white" : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50",
                 ].join(" ")}>
                 {frequencyLabel(f, t)}
               </button>
@@ -210,7 +210,7 @@ export default function NotificationPreferencesPage() {
               <div key={ch.label} className="flex items-center justify-between rounded-lg bg-zinc-50 p-3">
                 <span className="text-sm text-zinc-700">{ch.label}</span>
                 {ch.enabled ? (
-                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{t.channelActive}</span>
+                  <span className="rounded-full bg-success-light px-2 py-0.5 text-xs font-medium text-success">{t.channelActive}</span>
                 ) : (
                   <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-400">{t.channelComingSoon}</span>
                 )}
@@ -220,7 +220,7 @@ export default function NotificationPreferencesPage() {
         </div>
 
         <button type="button" onClick={handleSave} disabled={saving}
-          className="w-fit rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 disabled:opacity-50">
+          className="w-fit rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
           {saving ? dict.common.saving : t.savePreferences}
         </button>
       </div>

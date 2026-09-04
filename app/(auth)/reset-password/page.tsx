@@ -98,7 +98,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <button type="submit" disabled={loading}
-          className="mt-1 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50">
+          className="mt-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50">
           {loading ? t.updating : t.submitButton}
         </button>
       </form>

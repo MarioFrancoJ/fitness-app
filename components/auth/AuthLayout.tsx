@@ -1,3 +1,5 @@
+import Logo from "@/components/ui/Logo";
+
 // Dashboard preview cards shown on the dark left panel
 const previewCards = [
   {
@@ -12,7 +14,7 @@ const previewCards = [
     value: "1,840 / 2,200 kcal",
     sub: "Protein 142g · Carbs 198g",
     badge: "On Track",
-    badgeColor: "bg-emerald-500/20 text-emerald-300",
+    badgeColor: "bg-movive-500/20 text-movive-400",
   },
   {
     label: "Weekly Streak",
@@ -32,7 +34,7 @@ interface AuthLayoutProps {
 export default function AuthLayout({
   children,
   headline = "Welcome Back",
-  description = "Join thousands of athletes and coaches already transforming their fitness with FitnessApp.",
+  description = "Join thousands of athletes and coaches already transforming their fitness with Movive.",
 }: AuthLayoutProps) {
   return (
     <div className="flex min-h-screen">
@@ -41,8 +43,11 @@ export default function AuthLayout({
         {/* Top: logo + badge */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
+            {/* Isotipo (icon) reads on the dark panel; white wordmark beside it
+                since the isologo's wordmark ink is too dark for a dark bg. */}
+            <Logo variant="isotipo" className="h-7" alt="" />
             <span className="text-xl font-bold tracking-tight text-white">
-              FitnessApp
+              Movive
             </span>
             <span className="rounded-full border border-zinc-700 px-2.5 py-0.5 text-xs font-medium text-zinc-400">
               Fitness SaaS
@@ -86,7 +91,7 @@ export default function AuthLayout({
 
         {/* Bottom: subtle footer */}
         <p className="text-xs text-zinc-600">
-          © {new Date().getFullYear()} FitnessApp. All rights reserved.
+          © {new Date().getFullYear()} Movive. All rights reserved.
         </p>
       </div>
 

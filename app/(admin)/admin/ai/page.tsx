@@ -45,7 +45,7 @@ function priorityBadge(p: string): string {
     case "Critical": return "bg-red-100 text-red-700";
     case "High": return "bg-orange-100 text-orange-700";
     case "Medium": return "bg-amber-100 text-amber-700";
-    default: return "bg-emerald-100 text-emerald-700";
+    default: return "bg-success-light text-success";
   }
 }
 
@@ -216,7 +216,7 @@ export default function AdminAIPage() {
             {([["aiCoach", "AI Coach"], ["aiMealPlanner", "AI Meal Planner"], ["aiWorkoutGenerator", "AI Workout Generator"], ["aiInsights", "AI Insights"]] as [keyof AIFeatureFlags, string][]).map(([key, label]) => (
               <div key={key} className="flex items-center justify-between rounded-lg bg-zinc-50 p-3">
                 <span className="text-sm text-zinc-700">{label}</span>
-                <button type="button" onClick={() => saveFlags({ ...aiFlags, [key]: !aiFlags[key] })} className={["relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors", aiFlags[key] ? "bg-zinc-900" : "bg-zinc-200"].join(" ")}><span className={["inline-block h-4 w-4 rounded-full bg-white shadow transition-transform", aiFlags[key] ? "translate-x-4" : "translate-x-0"].join(" ")} /></button>
+                <button type="button" onClick={() => saveFlags({ ...aiFlags, [key]: !aiFlags[key] })} className={["relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors", aiFlags[key] ? "bg-primary" : "bg-zinc-200"].join(" ")}><span className={["inline-block h-4 w-4 rounded-full bg-white shadow transition-transform", aiFlags[key] ? "translate-x-4" : "translate-x-0"].join(" ")} /></button>
               </div>
             ))}
           </div>
@@ -227,7 +227,7 @@ export default function AdminAIPage() {
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"><p className="text-lg font-bold text-zinc-900">{usageStats.monthlyRequests}</p><p className="text-xs text-zinc-400">Monthly Requests</p></div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"><p className="text-lg font-bold text-zinc-900">{usageStats.monthlyTokens.toLocaleString()}</p><p className="text-xs text-zinc-400">Monthly Tokens</p></div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"><p className="text-lg font-bold text-zinc-900">{usageStats.dailyRequests}</p><p className="text-xs text-zinc-400">Today</p></div>
-          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"><p className="text-lg font-bold text-emerald-600">${usageStats.estimatedCost.toFixed(4)}</p><p className="text-xs text-zinc-400">Est. Cost</p></div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"><p className="text-lg font-bold text-success">${usageStats.estimatedCost.toFixed(4)}</p><p className="text-xs text-zinc-400">Est. Cost</p></div>
         </div>
 
         {/* Rules */}
@@ -265,7 +265,7 @@ export default function AdminAIPage() {
                 <tbody className="divide-y divide-zinc-100">
                   {filtered.map((rule) => (
                     <tr key={rule.id} className="hover:bg-zinc-50">
-                      <td className="px-5 py-3"><button type="button" onClick={() => handleToggle(rule.id)} className={["relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors", rule.enabled ? "bg-zinc-900" : "bg-zinc-200"].join(" ")}><span className={["inline-block h-4 w-4 rounded-full bg-white shadow transition-transform", rule.enabled ? "translate-x-4" : "translate-x-0"].join(" ")} /></button></td>
+                      <td className="px-5 py-3"><button type="button" onClick={() => handleToggle(rule.id)} className={["relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors", rule.enabled ? "bg-primary" : "bg-zinc-200"].join(" ")}><span className={["inline-block h-4 w-4 rounded-full bg-white shadow transition-transform", rule.enabled ? "translate-x-4" : "translate-x-0"].join(" ")} /></button></td>
                       <td className="px-5 py-3"><p className="font-medium text-zinc-900">{rule.name}</p><p className="text-xs text-zinc-400">{rule.description}</p></td>
                       <td className="px-5 py-3 text-zinc-600 text-xs">{rule.category}</td>
                       <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${priorityBadge(rule.priority)}`}>{rule.priority}</span></td>

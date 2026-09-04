@@ -49,7 +49,7 @@ const MEAL_TYPES: MealType[] = ["Breakfast", "Lunch", "Dinner", "Snack"];
 
 function goalColor(goal: RecipeGoal): string {
   switch (goal) {
-    case "Fat Loss":    return "bg-emerald-50 text-emerald-700";
+    case "Fat Loss":    return "bg-success-light text-success";
     case "Muscle Gain": return "bg-blue-50 text-blue-700";
     case "Maintenance": return "bg-amber-50 text-amber-700";
   }
@@ -175,7 +175,7 @@ function RecipeCard({ recipe, onAddToPlan, t, nt }: { recipe: Recipe; onAddToPla
           <button
             type="button"
             onClick={handleAddToPlan}
-            className="flex-1 rounded-golden-md bg-zinc-900 px-golden-2 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+            className="flex-1 rounded-golden-md bg-primary px-golden-2 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-primary-hover"
           >
             {t.addMealPlan}
           </button>
@@ -356,7 +356,7 @@ export default function RecipesPage() {
                   "rounded-lg border px-3 py-1.5 text-golden-xs font-semibold transition-colors",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
                   goalFilter === g
-                    ? "border-zinc-900 bg-zinc-900 text-white"
+                    ? "border-primary bg-primary text-white"
                     : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400",
                 ].join(" ")}
               >

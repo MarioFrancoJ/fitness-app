@@ -48,7 +48,7 @@ export default function AdminDashboardPage() {
 
   const statCards = [
     { label: "Total Users", value: stats.totalUsers, color: "text-blue-600", href: "/admin/users" },
-    { label: "Active Users", value: stats.activeUsers, color: "text-emerald-600", href: "/admin/users" },
+    { label: "Active Users", value: stats.activeUsers, color: "text-success", href: "/admin/users" },
     { label: "New This Month", value: stats.newUsersThisMonth, color: "text-violet-600", href: "/admin/users" },
     { label: "Workouts Logged", value: stats.totalWorkouts, color: "text-amber-600", href: "/admin/workout-plans" },
     { label: "Meals Logged", value: stats.totalMeals, color: "text-rose-600", href: "/admin/recipes" },

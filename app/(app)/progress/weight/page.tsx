@@ -189,7 +189,7 @@ export default function WeightPage() {
           <p
             className={`text-2xl font-bold ${
               difference !== null && difference < 0
-                ? "text-emerald-600"
+                ? "text-success"
                 : difference !== null && difference > 0
                 ? "text-red-600"
                 : "text-zinc-900"
@@ -283,7 +283,7 @@ export default function WeightPage() {
                           <span
                             className={`text-xs font-medium ${
                               change < 0
-                                ? "text-emerald-600"
+                                ? "text-success"
                                 : change > 0
                                 ? "text-red-600"
                                 : "text-zinc-400"

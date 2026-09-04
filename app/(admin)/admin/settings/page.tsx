@@ -22,7 +22,7 @@ interface PlatformSettings {
 }
 
 const DEFAULT_SETTINGS: PlatformSettings = {
-  platformName: "FitnessApp",
+  platformName: "Movive",
   logoUrl: null,
   featureToggles: { aiCoach: true, mealPlanner: true, shoppingLists: true, progressPhotos: true, analytics: true, recommendations: true },
 };
@@ -111,7 +111,7 @@ export default function AdminSettingsPage() {
               {featureList.map((feature) => (
                 <div key={feature.key} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 p-4">
                   <div><p className="text-sm font-medium text-zinc-900">{feature.label}</p><p className="text-xs text-zinc-400">{feature.description}</p></div>
-                  <button type="button" onClick={() => toggleFeature(feature.key)} aria-label={`Toggle ${feature.label}`} className={["relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors", settings.featureToggles[feature.key] ? "bg-zinc-900" : "bg-zinc-200"].join(" ")}><span className={["inline-block h-5 w-5 rounded-full bg-white shadow transition-transform", settings.featureToggles[feature.key] ? "translate-x-5" : "translate-x-0"].join(" ")} /></button>
+                  <button type="button" onClick={() => toggleFeature(feature.key)} aria-label={`Toggle ${feature.label}`} className={["relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors", settings.featureToggles[feature.key] ? "bg-primary" : "bg-zinc-200"].join(" ")}><span className={["inline-block h-5 w-5 rounded-full bg-white shadow transition-transform", settings.featureToggles[feature.key] ? "translate-x-5" : "translate-x-0"].join(" ")} /></button>
                 </div>
               ))}
             </div>
@@ -132,7 +132,7 @@ export default function AdminSettingsPage() {
                         <td key={role} className="px-4 py-2 text-center">
                           <div className="flex justify-center gap-1">
                             {perm.roles[role].map((v, i) => (
-                              <span key={i} className={`text-xs font-semibold ${v ? (i === 0 ? "text-emerald-600" : i === 1 ? "text-blue-600" : "text-red-500") : "text-zinc-300"}`}>{v ? "✓" : "—"}</span>
+                              <span key={i} className={`text-xs font-semibold ${v ? (i === 0 ? "text-success" : i === 1 ? "text-blue-600" : "text-red-500") : "text-zinc-300"}`}>{v ? "✓" : "—"}</span>
                             ))}
                           </div>
                         </td>

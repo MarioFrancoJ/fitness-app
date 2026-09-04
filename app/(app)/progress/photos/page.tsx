@@ -103,7 +103,7 @@ export default function ProgressPhotosPage() {
         <div><h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1><p className="mt-1 text-sm text-zinc-500">{t.subtitle}</p></div>
         <div className="flex gap-2">
           <Link href="/progress/photos/compare" className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">{t.compare}</Link>
-          <Link href="/progress/photos/upload" className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700">{t.uploadPhoto}</Link>
+          <Link href="/progress/photos/upload" className="inline-flex items-center gap-1 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover">{t.uploadPhoto}</Link>
         </div>
       </div>
 
@@ -112,7 +112,7 @@ export default function ProgressPhotosPage() {
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100"><svg viewBox="0 0 20 20" fill="currentColor" className="h-7 w-7 text-zinc-400" aria-hidden="true"><path fillRule="evenodd" d="M1 5.25A2.25 2.25 0 0 1 3.25 3h13.5A2.25 2.25 0 0 1 19 5.25v9.5A2.25 2.25 0 0 1 16.75 17H3.25A2.25 2.25 0 0 1 1 14.75v-9.5Zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 0 0 .75-.75v-2.69l-2.22-2.219a.75.75 0 0 0-1.06 0l-1.91 1.909-4.97-4.969a.75.75 0 0 0-1.06 0L2.5 11.06Zm12.22-4.81a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" clipRule="evenodd" /></svg></div>
           <p className="mb-1 text-base font-semibold text-zinc-900">{t.emptyTitle}</p>
           <p className="mb-6 text-sm text-zinc-500">{t.emptyDescription}</p>
-          <Link href="/progress/photos/upload" className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700">{t.emptyAction}</Link>
+          <Link href="/progress/photos/upload" className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover">{t.emptyAction}</Link>
         </div>
       ) : (
         <>
@@ -120,15 +120,15 @@ export default function ProgressPhotosPage() {
             <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-zinc-900">{stats.totalPhotos}</p><p className="text-xs text-zinc-400">{t.totalPhotos}</p></div>
             <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-blue-600">{stats.totalDays}</p><p className="text-xs text-zinc-400">{t.daysTracking}</p></div>
             <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-zinc-900">{stats.latestWeight ? `${stats.latestWeight} kg` : "—"}</p><p className="text-xs text-zinc-400">{t.latestWeight}</p></div>
-            <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className={`text-xl font-bold ${stats.weightDiff !== null && stats.weightDiff < 0 ? "text-emerald-600" : stats.weightDiff !== null && stats.weightDiff > 0 ? "text-red-500" : "text-zinc-900"}`}>{stats.weightDiff !== null ? `${stats.weightDiff > 0 ? "+" : ""}${stats.weightDiff.toFixed(1)} kg` : "—"}</p><p className="text-xs text-zinc-400">{t.weightChange}</p></div>
+            <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className={`text-xl font-bold ${stats.weightDiff !== null && stats.weightDiff < 0 ? "text-success" : stats.weightDiff !== null && stats.weightDiff > 0 ? "text-red-500" : "text-zinc-900"}`}>{stats.weightDiff !== null ? `${stats.weightDiff > 0 ? "+" : ""}${stats.weightDiff.toFixed(1)} kg` : "—"}</p><p className="text-xs text-zinc-400">{t.weightChange}</p></div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-0.5">
-              {(["All", ...PHOTO_TYPES] as const).map((type) => (<button key={type} type="button" onClick={() => setTypeFilter(type)} className={["rounded-md px-3 py-1.5 text-xs font-semibold transition-colors", typeFilter === type ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}>{photoTypeLabel(type, t)}</button>))}
+              {(["All", ...PHOTO_TYPES] as const).map((type) => (<button key={type} type="button" onClick={() => setTypeFilter(type)} className={["rounded-md px-3 py-1.5 text-xs font-semibold transition-colors", typeFilter === type ? "bg-primary text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}>{photoTypeLabel(type, t)}</button>))}
             </div>
             <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-0.5">
-              {(["grid", "timeline"] as const).map((v) => (<button key={v} type="button" onClick={() => setView(v)} className={["rounded-md px-3 py-1.5 text-xs font-semibold capitalize transition-colors", view === v ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}>{viewModeLabel(v, t)}</button>))}
+              {(["grid", "timeline"] as const).map((v) => (<button key={v} type="button" onClick={() => setView(v)} className={["rounded-md px-3 py-1.5 text-xs font-semibold capitalize transition-colors", view === v ? "bg-primary text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}>{viewModeLabel(v, t)}</button>))}
             </div>
           </div>
 
@@ -163,9 +163,9 @@ export default function ProgressPhotosPage() {
             <p className="mb-4 text-sm font-semibold text-zinc-900">{t.achievementsTitle}</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {achievements.map((a) => (
-                <div key={a.id} className={["flex items-center gap-3 rounded-lg border p-3", a.unlocked ? "border-emerald-200 bg-emerald-50" : "border-zinc-100 bg-zinc-50 opacity-60"].join(" ")}>
+                <div key={a.id} className={["flex items-center gap-3 rounded-lg border p-3", a.unlocked ? "border-border-brand bg-success-light" : "border-zinc-100 bg-zinc-50 opacity-60"].join(" ")}>
                   <span className="text-xl">{a.icon}</span>
-                  <div><p className={`text-xs font-semibold ${a.unlocked ? "text-emerald-900" : "text-zinc-500"}`}>{a.title}</p><p className="text-xs text-zinc-400">{a.description}</p></div>
+                  <div><p className={`text-xs font-semibold ${a.unlocked ? "text-success" : "text-zinc-500"}`}>{a.title}</p><p className="text-xs text-zinc-400">{a.description}</p></div>
                 </div>
               ))}
             </div>

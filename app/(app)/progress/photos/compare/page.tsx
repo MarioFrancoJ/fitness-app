@@ -99,12 +99,12 @@ export default function ComparePhotosPage() {
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white py-20">
           <p className="mb-1 text-base font-semibold text-zinc-900">{t.emptyTitle}</p>
           <p className="mb-6 text-sm text-zinc-500">{t.emptyDescription}</p>
-          <Link href="/progress/photos/upload" className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700">{t.emptyAction}</Link>
+          <Link href="/progress/photos/upload" className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover">{t.emptyAction}</Link>
         </div>
       ) : (
         <>
           <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-0.5 w-fit">
-            {PHOTO_TYPES.map((pt) => (<button key={pt} type="button" onClick={() => setCompareType(pt)} className={["rounded-md px-4 py-1.5 text-xs font-semibold transition-colors", compareType === pt ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}>{photoTypeLabel(pt, dict.progress.photos)}</button>))}
+            {PHOTO_TYPES.map((pt) => (<button key={pt} type="button" onClick={() => setCompareType(pt)} className={["rounded-md px-4 py-1.5 text-xs font-semibold transition-colors", compareType === pt ? "bg-primary text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}>{photoTypeLabel(pt, dict.progress.photos)}</button>))}
           </div>
 
           {typePhotos.length < 2 ? (
@@ -132,7 +132,7 @@ export default function ComparePhotosPage() {
                   <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xs text-zinc-400">{t.beforeDate}</p><p className="text-sm font-bold text-zinc-900">{beforePhoto?.upload_date ?? "—"}</p></div>
                   <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xs text-zinc-400">{t.afterDate}</p><p className="text-sm font-bold text-zinc-900">{afterPhoto?.upload_date ?? "—"}</p></div>
                   <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xs text-zinc-400">{t.daysBetween}</p><p className="text-sm font-bold text-blue-600">{daysBetween ?? "—"}</p></div>
-                  <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xs text-zinc-400">{t.weightChange}</p><p className={`text-sm font-bold ${weightChange !== null && weightChange < 0 ? "text-emerald-600" : weightChange !== null && weightChange > 0 ? "text-red-500" : "text-zinc-900"}`}>{weightChange !== null ? `${weightChange > 0 ? "+" : ""}${weightChange.toFixed(1)} kg` : "—"}</p></div>
+                  <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xs text-zinc-400">{t.weightChange}</p><p className={`text-sm font-bold ${weightChange !== null && weightChange < 0 ? "text-success" : weightChange !== null && weightChange > 0 ? "text-red-500" : "text-zinc-900"}`}>{weightChange !== null ? `${weightChange > 0 ? "+" : ""}${weightChange.toFixed(1)} kg` : "—"}</p></div>
                 </div>
               )}
             </>

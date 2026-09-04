@@ -167,8 +167,8 @@ export default function DataManagementPage() {
             </label>
 
             {validation && (
-              <div className={`mb-4 rounded-lg p-3 ${validation.valid ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200"}`}>
-                <p className={`text-xs font-semibold ${validation.valid ? "text-emerald-700" : "text-red-700"}`}>
+              <div className={`mb-4 rounded-lg p-3 ${validation.valid ? "bg-success-light border border-border-brand" : "bg-red-50 border border-red-200"}`}>
+                <p className={`text-xs font-semibold ${validation.valid ? "text-success" : "text-red-700"}`}>
                   {validation.valid ? t.validFile : t.invalidFile}
                 </p>
                 {validation.errors.map((e, i) => <p key={i} className="text-xs text-red-600 mt-1">{e}</p>)}
@@ -179,15 +179,15 @@ export default function DataManagementPage() {
               <>
                 <div className="mb-4 flex gap-2">
                   <button type="button" onClick={() => setImportMode("merge")}
-                    className={["rounded-lg px-3 py-1.5 text-xs font-semibold", importMode === "merge" ? "bg-zinc-900 text-white" : "border border-zinc-200 text-zinc-600"].join(" ")}>
+                    className={["rounded-lg px-3 py-1.5 text-xs font-semibold", importMode === "merge" ? "bg-primary text-white" : "border border-zinc-200 text-zinc-600"].join(" ")}>
                     {t.importModeMerge}
                   </button>
                   <button type="button" onClick={() => setImportMode("replace")}
-                    className={["rounded-lg px-3 py-1.5 text-xs font-semibold", importMode === "replace" ? "bg-zinc-900 text-white" : "border border-zinc-200 text-zinc-600"].join(" ")}>
+                    className={["rounded-lg px-3 py-1.5 text-xs font-semibold", importMode === "replace" ? "bg-primary text-white" : "border border-zinc-200 text-zinc-600"].join(" ")}>
                     {t.importModeReplace}
                   </button>
                 </div>
-                <button type="button" onClick={handleImport} className="w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700">
+                <button type="button" onClick={handleImport} className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary-hover">
                   {t.importButton}
                 </button>
               </>

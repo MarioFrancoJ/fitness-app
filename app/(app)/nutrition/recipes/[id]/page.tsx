@@ -73,7 +73,7 @@ interface Recipe {
 
 function goalColor(goal: string) {
   switch (goal) {
-    case "Fat Loss":    return "bg-emerald-50 text-emerald-700";
+    case "Fat Loss":    return "bg-success-light text-success";
     case "Muscle Gain": return "bg-blue-50 text-blue-700";
     case "Maintenance": return "bg-amber-50 text-amber-700";
     default:            return "bg-zinc-100 text-zinc-700";
@@ -224,7 +224,7 @@ export default function RecipeDetailPage() {
         <p className="mb-6 text-golden-sm text-zinc-500">{t.notFoundDescription}</p>
         <Link
           href="/nutrition/recipes"
-          className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 px-4 py-2 text-golden-sm font-semibold text-white hover:bg-zinc-700"
+          className="inline-flex items-center gap-1 rounded-lg bg-primary px-4 py-2 text-golden-sm font-semibold text-white hover:bg-primary-hover"
         >
           {t.backToRecipes}
         </Link>
@@ -300,7 +300,7 @@ export default function RecipeDetailPage() {
           <p className="text-golden-xs text-zinc-400">{t.carbs}</p>
         </div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-2xl font-bold text-emerald-600">{recipe.fat}g</p>
+          <p className="text-2xl font-bold text-success">{recipe.fat}g</p>
           <p className="text-golden-xs text-zinc-400">{t.fat}</p>
         </div>
       </div>
@@ -342,7 +342,7 @@ export default function RecipeDetailPage() {
             <ol className="flex flex-col gap-3">
               {recipe.instructions.map((step, i) => (
                 <li key={i} className="flex gap-3 text-golden-sm text-zinc-700">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-golden-xs font-semibold text-white">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-golden-xs font-semibold text-white">
                     {i + 1}
                   </span>
                   <span className="pt-0.5">{step}</span>
@@ -398,7 +398,7 @@ export default function RecipeDetailPage() {
             type="button"
             onClick={handleAddToPlan}
             disabled={busy !== null}
-            className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-golden-sm font-semibold text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-golden-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             {t.addToMealPlan}
           </button>

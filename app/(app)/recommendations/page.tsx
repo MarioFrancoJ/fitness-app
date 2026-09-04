@@ -34,7 +34,7 @@ function priorityColor(p: RecommendationPriority): string {
     case "Critical": return "border-l-red-600 bg-red-50";
     case "High":     return "border-l-orange-500 bg-orange-50";
     case "Medium":   return "border-l-amber-400 bg-amber-50";
-    case "Low":      return "border-l-emerald-400 bg-emerald-50";
+    case "Low":      return "border-l-border-brand bg-success-light";
   }
 }
 
@@ -43,7 +43,7 @@ function priorityBadge(p: RecommendationPriority): string {
     case "Critical": return "bg-red-100 text-red-700";
     case "High":     return "bg-orange-100 text-orange-700";
     case "Medium":   return "bg-amber-100 text-amber-700";
-    case "Low":      return "bg-emerald-100 text-emerald-700";
+    case "Low":      return "bg-success-light text-success";
   }
 }
 
@@ -144,7 +144,7 @@ export default function RecommendationsPage() {
             <p className="text-xs text-zinc-400">{t.statCritical}</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xl font-bold text-emerald-600">{completed.length}</p>
+            <p className="text-xl font-bold text-success">{completed.length}</p>
             <p className="text-xs text-zinc-400">{t.statCompleted}</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
@@ -157,7 +157,7 @@ export default function RecommendationsPage() {
         <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-0.5 w-fit">
           {([["active", t.tabActive], ["completed", t.tabCompleted], ["dismissed", t.tabDismissed]] as [FilterTab, string][]).map(([key, label]) => (
             <button key={key} type="button" onClick={() => setFilter(key)}
-              className={["rounded-md px-4 py-1.5 text-xs font-semibold transition-colors", filter === key ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}>
+              className={["rounded-md px-4 py-1.5 text-xs font-semibold transition-colors", filter === key ? "bg-primary text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}>
               {label}
             </button>
           ))}
@@ -195,7 +195,7 @@ export default function RecommendationsPage() {
                   {filter === "active" && (
                     <div className="flex shrink-0 gap-1">
                       <button type="button" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(rec.id, "Completed"); }}
-                        className="rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-200">
+                        className="rounded-md bg-success-light px-2.5 py-1 text-xs font-semibold text-success hover:bg-success-light">
                         {t.actionComplete}
                       </button>
                       <button type="button" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(rec.id, "Dismissed"); }}

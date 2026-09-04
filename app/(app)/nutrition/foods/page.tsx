@@ -115,11 +115,11 @@ export default function FoodsPage() {
               <div className="mb-4 grid grid-cols-3 gap-2 border-t border-zinc-100 pt-3">
                 <div className="text-center"><p className="text-sm font-bold text-blue-600">{food.protein}g</p><p className="text-xs text-zinc-400">Protein</p></div>
                 <div className="text-center"><p className="text-sm font-bold text-amber-600">{food.carbs}g</p><p className="text-xs text-zinc-400">Carbs</p></div>
-                <div className="text-center"><p className="text-sm font-bold text-emerald-600">{food.fat}g</p><p className="text-xs text-zinc-400">Fat</p></div>
+                <div className="text-center"><p className="text-sm font-bold text-success">{food.fat}g</p><p className="text-xs text-zinc-400">Fat</p></div>
               </div>
               <button type="button" onClick={() => handleAdd(food)}
                 className={["mt-auto w-full rounded-lg border px-3 py-2 text-xs font-semibold transition-colors", "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
-                  addedId === food.id ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50",
+                  addedId === food.id ? "border-border-brand bg-success-light text-success" : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50",
                 ].join(" ")}>
                 {addedId === food.id ? "✓ Added to Daily Log" : "+ Add to Daily Log"}
               </button>

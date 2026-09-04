@@ -99,7 +99,7 @@ export default function PricingSection() {
               ].join(" ")}
             >
               {p.yearly}
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">
+              <span className="rounded-full bg-success-light px-2 py-0.5 text-xs font-bold text-success">
                 {p.saveUpTo.replace("{percent}", String(maxSavings))}
               </span>
             </button>
@@ -129,14 +129,14 @@ export default function PricingSection() {
                 key={key}
                 className={`relative flex flex-col rounded-xl border p-8 shadow-sm transition-colors ${
                   highlighted
-                    ? "border-zinc-900 bg-zinc-900 text-white lg:-mt-2 lg:mb-2"
+                    ? "border-primary bg-primary text-white lg:-mt-2 lg:mb-2"
                     : "border-zinc-200 bg-white text-zinc-900"
                 }`}
               >
                 {/* Top badge: "Most Popular" only on the highlighted (Pro) card. */}
                 {highlighted && (
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="whitespace-nowrap rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white shadow">
+                    <span className="whitespace-nowrap rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white shadow">
                       {p.mostPopular}
                     </span>
                   </div>
@@ -160,7 +160,7 @@ export default function PricingSection() {
                       </span>
                     )}
                     {showSavings && (
-                      <span className="mb-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">
+                      <span className="mb-1 rounded-full bg-success-light px-2 py-0.5 text-xs font-bold text-success">
                         {p.save.replace("{percent}", String(savingsPct))}
                       </span>
                     )}
@@ -190,7 +190,7 @@ export default function PricingSection() {
                     <li key={feature} className="flex items-start gap-2.5">
                       <span
                         className={`mt-0.5 text-sm ${
-                          highlighted ? "text-emerald-400" : "text-emerald-600"
+                          highlighted ? "text-movive-400" : "text-success"
                         }`}
                       >
                         ✓

@@ -304,7 +304,7 @@ export default function WorkoutBuilderPage() {
             <div key={ex.tempId} className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
                     {exIndex + 1}
                   </span>
                   <h3 className="text-sm font-semibold text-zinc-900">{ex.name}</h3>
@@ -367,7 +367,7 @@ export default function WorkoutBuilderPage() {
             {saving ? dict.common.saving : wb.saveWorkout}
           </Button>
           {saved && (
-            <span className="text-sm font-medium text-emerald-600">{wb.savedNotice}</span>
+            <span className="text-sm font-medium text-success">{wb.savedNotice}</span>
           )}
         </div>
       )}

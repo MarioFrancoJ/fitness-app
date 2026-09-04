@@ -204,7 +204,7 @@ function EmptyState({ t }: { t: ProgressDict }) {
       <p className="mb-6 text-sm text-zinc-500">{t.emptyDescription}</p>
       <Link
         href="/profile"
-        className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+        className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
         {t.emptyAction}
       </Link>
@@ -388,7 +388,7 @@ export default function ProgressPage() {
                 className={[
                   "text-xl font-bold",
                   totalChange !== null && totalChange < 0
-                    ? "text-emerald-600"
+                    ? "text-success"
                     : totalChange !== null && totalChange > 0
                     ? "text-red-500"
                     : "text-zinc-900",
@@ -413,7 +413,7 @@ export default function ProgressPage() {
               </div>
               <div className="rounded-lg bg-zinc-50 p-4">
                 <p className="text-xs text-zinc-400">{t.lostGained}</p>
-                <p className={["text-lg font-bold", totalChange !== null && totalChange < 0 ? "text-emerald-600" : totalChange !== null && totalChange > 0 ? "text-red-500" : "text-zinc-900"].join(" ")}>
+                <p className={["text-lg font-bold", totalChange !== null && totalChange < 0 ? "text-success" : totalChange !== null && totalChange > 0 ? "text-red-500" : "text-zinc-900"].join(" ")}>
                   {totalChange !== null ? `${totalChange > 0 ? "+" : ""}${totalChange.toFixed(1)} kg` : "—"}
                 </p>
               </div>
@@ -457,7 +457,7 @@ export default function ProgressPage() {
                           <td className="px-4 py-2.5 text-zinc-600">{prev !== null ? `${prev} cm` : "—"}</td>
                           <td className="px-4 py-2.5">
                             {diff !== null ? (
-                              <span className={["inline-flex rounded-md px-2 py-0.5 text-xs font-semibold", diff < 0 ? "bg-emerald-50 text-emerald-700" : diff > 0 ? "bg-red-50 text-red-600" : "bg-zinc-100 text-zinc-600"].join(" ")}>
+                              <span className={["inline-flex rounded-md px-2 py-0.5 text-xs font-semibold", diff < 0 ? "bg-success-light text-success" : diff > 0 ? "bg-red-50 text-red-600" : "bg-zinc-100 text-zinc-600"].join(" ")}>
                                 {diff > 0 ? "+" : ""}{diff.toFixed(1)} cm
                               </span>
                             ) : (
@@ -506,7 +506,7 @@ export default function ProgressPage() {
                   key={tab}
                   type="button"
                   onClick={() => setPhotoTab(tab)}
-                  className={["rounded-md px-4 py-1.5 text-xs font-semibold capitalize transition-colors", "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300", photoTab === tab ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}
+                  className={["rounded-md px-4 py-1.5 text-xs font-semibold capitalize transition-colors", "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300", photoTab === tab ? "bg-primary text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}
                 >
                   {tab}
                 </button>
@@ -548,15 +548,15 @@ export default function ProgressPage() {
               {achievements.map((a) => (
                 <div
                   key={a.id}
-                  className={["flex items-center gap-3 rounded-lg border p-4 transition-colors", a.unlocked ? "border-emerald-200 bg-emerald-50" : "border-zinc-100 bg-zinc-50 opacity-60"].join(" ")}
+                  className={["flex items-center gap-3 rounded-lg border p-4 transition-colors", a.unlocked ? "border-border-brand bg-success-light" : "border-zinc-100 bg-zinc-50 opacity-60"].join(" ")}
                 >
                   <span className="text-2xl" role="img" aria-hidden="true">{a.icon}</span>
                   <div>
-                    <p className={`text-sm font-semibold ${a.unlocked ? "text-emerald-900" : "text-zinc-500"}`}>{a.title}</p>
+                    <p className={`text-sm font-semibold ${a.unlocked ? "text-success" : "text-zinc-500"}`}>{a.title}</p>
                     <p className="text-xs text-zinc-400">{a.description}</p>
                   </div>
                   {a.unlocked && (
-                    <svg viewBox="0 0 20 20" fill="currentColor" className="ml-auto h-5 w-5 shrink-0 text-emerald-500" aria-hidden="true">
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="ml-auto h-5 w-5 shrink-0 text-success" aria-hidden="true">
                       <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
                     </svg>
                   )}

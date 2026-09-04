@@ -12,6 +12,61 @@
   --font-mono: var(--font-geist-mono);
 
   /* ═══════════════════════════════════════════════════════════════════════════
+     MOVIVE BRAND PALETTE
+     Single source of truth for the Movive visual identity. These generate the
+     Tailwind color utilities (bg-*, text-*, border-*, ring-*, etc.).
+
+     Raw palette (movive-900 → movive-300, plus neutrals). Never hardcode these
+     hex values in components — reference the semantic tokens below instead.
+
+     ── Accessibility (contrast vs. #FFFFFF, WCAG 2.1) ────────────────────────
+       movive-900 #043326 → 13.94:1  (AAA — brand text / hover)
+       movive-800 #075c45 →  8.00:1  (AAA — PRIMARY: white text is AA/AAA safe)
+       movive-700 #036d4d →  6.37:1  (AA  — success / readable green text)
+       movive-600 #0f986b →  3.67:1  (large text / UI graphics ONLY — the
+                                       official "main brand color"; NOT for
+                                       small text on white)
+       movive-500 #6bd186 →  1.89:1  (decorative fills only — never text)
+       movive-400 #a3e2c4            (borders / soft accents)
+       movive-300 #e8f8eb            (tinted backgrounds)
+     Rule of thumb: readable green text on white uses movive-900 or movive-700,
+     never movive-500/400/300.
+  ═══════════════════════════════════════════════════════════════════════════ */
+  --color-movive-900: #043326;
+  --color-movive-800: #075c45;
+  --color-movive-700: #036d4d;
+  --color-movive-600: #0f986b; /* MAIN BRAND COLOR */
+  --color-movive-500: #6bd186;
+  --color-movive-400: #a3e2c4;
+  --color-movive-300: #e8f8eb;
+
+  /* ── Semantic brand tokens ────────────────────────────────────────────────
+     Components consume these, not the raw ramp. Swapping the brand later only
+     touches the mappings here.
+       primary            → main interactive brand color (buttons, active nav,
+                            highlighted surfaces). White text on it is AA-safe.
+       primary-hover      → hover/active state for primary surfaces
+       primary-active     → pressed state
+       primary-light      → tinted brand background (chips, soft fills)
+       primary-fg         → readable brand-colored text/icons on white
+       success            → positive/on-track states (readable green)
+       success-light      → success chip backgrounds
+       border-brand       → brand-tinted borders/dividers
+       background-brand   → brand-tinted section/page backgrounds
+       accent             → vivid brand green for graphics/large fills only
+  ──────────────────────────────────────────────────────────────────────── */
+  --color-primary: var(--color-movive-800);
+  --color-primary-hover: var(--color-movive-900);
+  --color-primary-active: var(--color-movive-900);
+  --color-primary-light: var(--color-movive-300);
+  --color-primary-fg: var(--color-movive-900);
+  --color-success: var(--color-movive-700);
+  --color-success-light: var(--color-movive-300);
+  --color-border-brand: var(--color-movive-400);
+  --color-background-brand: var(--color-movive-300);
+  --color-accent: var(--color-movive-600);
+
+  /* ═══════════════════════════════════════════════════════════════════════════
      TYPOGRAPHY SCALE (normalized)
      Allowed rendered sizes: 12 · 14 · 16 · 20 · 24 · 32 px
      - 12px: auxiliary labels, eyebrows, non-critical help

@@ -16,9 +16,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FitnessApp — Transform Your Fitness Journey",
+  title: "Movive — Transform Your Fitness Journey",
   description:
     "Personalized workouts, nutrition plans and progress tracking in one modern platform.",
+  // Movive app icon (isotipo — the icon-only mark, used for favicon/app-icon refs).
+  icons: {
+    icon: "/movive/isotipo-movive.svg",
+  },
 };
 
 export default async function RootLayout({

@@ -189,7 +189,7 @@ export default function PricingPage() {
                 <ul className="mt-5 flex flex-1 flex-col gap-2">
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-xs text-zinc-600">
-                      <span className="mt-0.5 text-emerald-500">&#10003;</span>
+                      <span className="mt-0.5 text-success">&#10003;</span>
                       {f}
                     </li>
                   ))}
@@ -205,7 +205,7 @@ export default function PricingPage() {
                       className={[
                         "block w-full rounded-lg py-2.5 text-center text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                         isPremium
-                          ? "bg-zinc-900 text-white hover:bg-zinc-700 focus-visible:ring-zinc-900"
+                          ? "bg-primary text-white hover:bg-primary-hover focus-visible:ring-primary"
                           : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 focus-visible:ring-zinc-300",
                       ].join(" ")}>
                       {isPremium ? "Upgrade to Premium" : "Start Free"}
@@ -236,14 +236,14 @@ export default function PricingPage() {
                       <td className="px-5 py-3 text-zinc-700">{f.name}</td>
                       <td className="px-5 py-3 text-center">
                         {typeof f.free === "boolean" ? (
-                          f.free ? <span className="text-emerald-600 font-semibold">&#10003;</span> : <span className="text-zinc-300">—</span>
+                          f.free ? <span className="text-success font-semibold">&#10003;</span> : <span className="text-zinc-300">—</span>
                         ) : (
                           <span className="text-xs text-zinc-500">{f.free}</span>
                         )}
                       </td>
                       <td className="px-5 py-3 text-center">
                         {typeof f.premium === "boolean" ? (
-                          f.premium ? <span className="text-emerald-600 font-semibold">&#10003;</span> : <span className="text-zinc-300">—</span>
+                          f.premium ? <span className="text-success font-semibold">&#10003;</span> : <span className="text-zinc-300">—</span>
                         ) : (
                           <span className="text-xs font-medium text-violet-600">{f.premium}</span>
                         )}

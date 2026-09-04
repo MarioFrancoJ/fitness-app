@@ -20,7 +20,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
         Something went wrong on our end. Our team has been notified. Please try again.
       </p>
       <button type="button" onClick={reset}
-        className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700">
+        className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover">
         Try Again
       </button>
       {error.digest && <p className="mt-4 text-xs text-zinc-400">Error ID: {error.digest}</p>}

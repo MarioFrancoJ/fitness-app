@@ -307,7 +307,7 @@ export default function MealPlanModal({
             type="button"
             onClick={handleSave}
             disabled={saving || rows.length === 0}
-            className="rounded-golden-md bg-zinc-900 px-golden-4 py-golden-2 text-golden-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:opacity-50"
+            className="rounded-golden-md bg-primary px-golden-4 py-golden-2 text-golden-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
           >
             {saving ? "Saving…" : `Save ${rows.length} assignment${rows.length === 1 ? "" : "s"}`}
           </button>
@@ -373,7 +373,7 @@ function RepeatDays({
         type="button"
         onClick={() => onApply(Array.from(selected))}
         disabled={selected.size === 0}
-        className="mt-golden-2 w-full rounded-golden-md bg-zinc-800 py-golden-1 text-golden-xs font-semibold text-white transition-colors hover:bg-zinc-700 disabled:opacity-50"
+        className="mt-golden-2 w-full rounded-golden-md bg-primary py-golden-1 text-golden-xs font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
       >
         Apply to {selected.size} day{selected.size === 1 ? "" : "s"}
       </button>

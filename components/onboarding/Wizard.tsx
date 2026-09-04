@@ -160,7 +160,7 @@ function Step2({
                 "flex items-center gap-3 rounded-xl border px-5 py-4 text-left transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
                 selected
-                  ? "border-zinc-900 bg-zinc-900 text-white"
+                  ? "border-primary bg-primary text-white"
                   : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50",
               ].join(" ")}
             >
@@ -274,7 +274,7 @@ function Step3({
                   "flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
                   profile.gender === g
-                    ? "border-zinc-900 bg-zinc-900 text-white"
+                    ? "border-primary bg-primary text-white"
                     : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400 hover:text-zinc-900",
                 ].join(" ")}
               >
@@ -359,7 +359,7 @@ function Step4({
                 "flex items-center gap-4 rounded-xl border px-5 py-4 text-left transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
                 selected
-                  ? "border-zinc-900 bg-zinc-900 text-white"
+                  ? "border-primary bg-primary text-white"
                   : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50",
               ].join(" ")}
             >

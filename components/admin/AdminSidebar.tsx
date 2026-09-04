@@ -91,7 +91,7 @@ export default function AdminSidebar() {
             className={[
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
               isActive(item.href)
-                ? "bg-zinc-900 text-white"
+                ? "bg-primary text-white"
                 : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900",
             ].join(" ")}
             aria-current={isActive(item.href) ? "page" : undefined}
@@ -109,7 +109,7 @@ export default function AdminSidebar() {
           className={[
             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
             isActive("/admin/settings")
-              ? "bg-zinc-900 text-white"
+              ? "bg-primary text-white"
               : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900",
           ].join(" ")}
           aria-current={isActive("/admin/settings") ? "page" : undefined}

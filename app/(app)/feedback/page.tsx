@@ -77,15 +77,15 @@ export default function FeedbackPage() {
       </div>
 
       {submitted ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 py-16">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-7 w-7 text-emerald-600" aria-hidden="true">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-border-brand bg-success-light py-16">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success-light">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-7 w-7 text-success" aria-hidden="true">
               <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
             </svg>
           </div>
-          <p className="mb-1 text-base font-semibold text-emerald-900">{t.submittedThankYou}</p>
-          <p className="mb-6 text-sm text-emerald-700">{t.submittedDesc}</p>
-          <button type="button" onClick={handleReset} className="rounded-lg border border-emerald-300 px-5 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100">
+          <p className="mb-1 text-base font-semibold text-success">{t.submittedThankYou}</p>
+          <p className="mb-6 text-sm text-success">{t.submittedDesc}</p>
+          <button type="button" onClick={handleReset} className="rounded-lg border border-border-brand px-5 py-2 text-sm font-semibold text-success hover:bg-success-light">
             {t.submitAnother}
           </button>
         </div>
@@ -97,7 +97,7 @@ export default function FeedbackPage() {
               <div className="flex gap-2">
                 {TYPES.map((ft) => (
                   <button key={ft} type="button" onClick={() => setType(ft)}
-                    className={["rounded-lg px-4 py-2 text-xs font-semibold transition-colors", type === ft ? "bg-zinc-900 text-white" : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"].join(" ")}>
+                    className={["rounded-lg px-4 py-2 text-xs font-semibold transition-colors", type === ft ? "bg-primary text-white" : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"].join(" ")}>
                     {typeLabel(ft, t)}
                   </button>
                 ))}
@@ -127,7 +127,7 @@ export default function FeedbackPage() {
               </div>
             )}
 
-            <button type="submit" disabled={saving} className="mt-2 h-11 w-full rounded-lg bg-zinc-900 text-sm font-semibold text-white hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2">
+            <button type="submit" disabled={saving} className="mt-2 h-11 w-full rounded-lg bg-primary text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
               {saving ? t.submitting : t.submitButton}
             </button>
           </div>

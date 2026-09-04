@@ -81,7 +81,7 @@ export default function BetaPage() {
       </div>
       <div className="w-full max-w-lg">
         <div className="mb-8 text-center">
-          <span className="mb-3 inline-block rounded-full bg-zinc-900 px-4 py-1 text-xs font-bold text-white">{t.badge}</span>
+          <span className="mb-3 inline-block rounded-full bg-primary px-4 py-1 text-xs font-bold text-white">{t.badge}</span>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
           <p className="mt-2 text-sm text-zinc-500">{t.subtitle}</p>
         </div>
@@ -93,17 +93,17 @@ export default function BetaPage() {
         </div>
 
         {submitted ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center">
+          <div className="rounded-2xl border border-border-brand bg-success-light p-8 text-center">
             <div className="mb-4 flex justify-center">
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
-                <svg viewBox="0 0 20 20" fill="currentColor" className="h-7 w-7 text-emerald-600" aria-hidden="true">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success-light">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-7 w-7 text-success" aria-hidden="true">
                   <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
                 </svg>
               </span>
             </div>
-            <h2 className="text-lg font-bold text-emerald-900">{t.submittedTitle}</h2>
-            <p className="mt-2 text-sm text-emerald-700">{t.submittedDesc}</p>
-            <Link href="/" className="mt-6 inline-block rounded-lg border border-emerald-300 px-5 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100">{t.backToHome}</Link>
+            <h2 className="text-lg font-bold text-success">{t.submittedTitle}</h2>
+            <p className="mt-2 text-sm text-success">{t.submittedDesc}</p>
+            <Link href="/" className="mt-6 inline-block rounded-lg border border-border-brand px-5 py-2 text-sm font-semibold text-success hover:bg-success-light">{t.backToHome}</Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
@@ -112,7 +112,7 @@ export default function BetaPage() {
               <div className="flex flex-col gap-1.5"><label htmlFor="beta-email" className="text-sm font-medium text-zinc-700">{t.fieldEmail}</label><input id="beta-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder={t.fieldEmailPlaceholder} className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" /></div>
               <div className="flex flex-col gap-1.5"><label htmlFor="beta-goal" className="text-sm font-medium text-zinc-700">{t.fieldFitnessGoal}</label><select id="beta-goal" value={goal} onChange={(e) => setGoal(e.target.value)} className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">{GOALS.map((g) => <option key={g} value={g}>{goalLabel(g, t)}</option>)}</select></div>
               <div className="flex flex-col gap-1.5"><label htmlFor="beta-level" className="text-sm font-medium text-zinc-700">{t.fieldExperienceLevel}</label><select id="beta-level" value={level} onChange={(e) => setLevel(e.target.value)} className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200">{LEVELS.map((l) => <option key={l} value={l}>{levelLabel(l, t)}</option>)}</select></div>
-              <button type="submit" disabled={saving} className="mt-2 h-11 w-full rounded-lg bg-zinc-900 text-sm font-semibold text-white hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2">
+              <button type="submit" disabled={saving} className="mt-2 h-11 w-full rounded-lg bg-primary text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                 {saving ? t.registering : t.submitButton}
               </button>
             </div>

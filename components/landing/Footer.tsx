@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useDictionary } from "@/lib/i18n/DictionaryProvider";
+import Logo from "@/components/ui/Logo";
 
 export default function Footer() {
   const { dict } = useDictionary();
@@ -38,11 +39,9 @@ export default function Footer() {
     <footer className="border-t border-zinc-100 bg-white py-16">
       <div className="mx-auto max-w-6xl px-6">
         <div className="grid gap-12 md:grid-cols-4">
-          {/* Brand */}
+          {/* Brand — full Movive lockup (isologo) */}
           <div className="flex flex-col gap-4">
-            <span className="text-lg font-semibold tracking-tight text-zinc-900">
-              {dict.common.appName}
-            </span>
+            <Logo variant="isologo" className="h-7" alt={dict.common.appName} />
             <p className="text-sm leading-relaxed text-zinc-400">
               {f.tagline}
             </p>
@@ -60,14 +59,14 @@ export default function Footer() {
                     {link.href.startsWith("/") ? (
                       <Link
                         href={link.href}
-                        className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
+                        className="text-sm text-zinc-500 transition-colors hover:text-primary-fg"
                       >
                         {link.label}
                       </Link>
                     ) : (
                       <a
                         href={link.href}
-                        className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
+                        className="text-sm text-zinc-500 transition-colors hover:text-primary-fg"
                       >
                         {link.label}
                       </a>

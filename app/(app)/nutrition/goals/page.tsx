@@ -172,7 +172,7 @@ export default function NutritionGoalsPage() {
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
             "disabled:pointer-events-none disabled:opacity-50",
             mode === "auto"
-              ? "border-zinc-900 bg-zinc-900 text-white"
+              ? "border-primary bg-primary text-white"
               : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400",
           ].join(" ")}
         >
@@ -185,7 +185,7 @@ export default function NutritionGoalsPage() {
             "rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
             mode === "manual"
-              ? "border-zinc-900 bg-zinc-900 text-white"
+              ? "border-primary bg-primary text-white"
               : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400",
           ].join(" ")}
         >
@@ -214,7 +214,7 @@ export default function NutritionGoalsPage() {
           <p className="text-xs text-zinc-400">Carbs</p>
         </div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-2xl font-bold text-emerald-600">{goals.fat}g</p>
+          <p className="text-2xl font-bold text-success">{goals.fat}g</p>
           <p className="text-xs text-zinc-400">Fat</p>
         </div>
       </div>
@@ -274,7 +274,7 @@ export default function NutritionGoalsPage() {
 
       {/* Save confirmation */}
       {saved && (
-        <p className="text-sm font-medium text-emerald-600">
+        <p className="text-sm font-medium text-success">
           ✓ Nutrition goals saved successfully.
         </p>
       )}

@@ -8,7 +8,7 @@ import PageLoader from "@/components/ui/PageLoader";
 
 function difficultyColor(d: string) {
   switch (d) {
-    case "Beginner":     return "bg-emerald-50 text-emerald-700";
+    case "Beginner":     return "bg-success-light text-success";
     case "Intermediate": return "bg-amber-50 text-amber-700";
     case "Advanced":     return "bg-red-50 text-red-700";
     default:             return "bg-zinc-100 text-zinc-700";
@@ -84,7 +84,7 @@ export default function AdminExerciseDetailPage() {
             <ol className="flex flex-col gap-2">
               {exercise.instructions.map((step, i) => (
                 <li key={i} className="flex gap-2 text-sm text-zinc-700">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-bold text-white">{i + 1}</span>
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">{i + 1}</span>
                   <span>{step}</span>
                 </li>
               ))}
@@ -97,7 +97,7 @@ export default function AdminExerciseDetailPage() {
             <ul className="flex flex-col gap-2">
               {exercise.tips.map((tip, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-zinc-700">
-                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-movive-400" />
                   {tip}
                 </li>
               ))}

@@ -91,9 +91,9 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   }, [onClose]);
 
   return (
-    <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg">
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100">
-        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true">
+    <div role="status" aria-live="polite" className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-border-brand bg-white px-5 py-3.5 shadow-lg">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-success-light">
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 text-success" aria-hidden="true">
           <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
         </svg>
       </span>
@@ -145,7 +145,7 @@ function EmptyState({ onAdd, t }: { onAdd: () => void; t: ReturnType<typeof useD
       <button
         type="button"
         onClick={onAdd}
-        className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+        className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
         {t.emptyAction}
       </button>
@@ -404,7 +404,7 @@ export default function NutritionPage() {
           <button
             type="button"
             onClick={openAddForm}
-            className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             {t.addMeal}
           </button>
@@ -430,7 +430,7 @@ export default function NutritionPage() {
                   <p className="text-xs text-zinc-400">{t.consumed}</p>
                 </div>
                 <div className="rounded-lg bg-zinc-50 p-3 text-center">
-                  <p className="text-lg font-bold text-emerald-600">{Math.max(0, targets.calories - todaySummary.totalCalories)}</p>
+                  <p className="text-lg font-bold text-success">{Math.max(0, targets.calories - todaySummary.totalCalories)}</p>
                   <p className="text-xs text-zinc-400">{t.remaining}</p>
                 </div>
                 <div className="rounded-lg bg-blue-50 p-3 text-center">
@@ -441,8 +441,8 @@ export default function NutritionPage() {
                   <p className="text-lg font-bold text-amber-600">{todaySummary.totalCarbs}g</p>
                   <p className="text-xs text-zinc-400">{t.carbs}</p>
                 </div>
-                <div className="rounded-lg bg-emerald-50 p-3 text-center">
-                  <p className="text-lg font-bold text-emerald-600">{todaySummary.totalFat}g</p>
+                <div className="rounded-lg bg-success-light p-3 text-center">
+                  <p className="text-lg font-bold text-success">{todaySummary.totalFat}g</p>
                   <p className="text-xs text-zinc-400">{t.fat}</p>
                 </div>
               </div>
@@ -563,7 +563,7 @@ export default function NutritionPage() {
                       className={[
                         "rounded-md px-3 py-1 text-xs font-semibold transition-colors",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
-                        historyFilter === key ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900",
+                        historyFilter === key ? "bg-primary text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900",
                       ].join(" ")}
                     >
                       {label}
@@ -588,8 +588,8 @@ export default function NutritionPage() {
                   <p className="text-lg font-bold text-amber-600">{historyStats.avgCarbs}g</p>
                   <p className="text-xs text-zinc-400">{t.avgCarbs}</p>
                 </div>
-                <div className="rounded-lg bg-emerald-50 p-3 text-center">
-                  <p className="text-lg font-bold text-emerald-600">{historyStats.avgFat}g</p>
+                <div className="rounded-lg bg-success-light p-3 text-center">
+                  <p className="text-lg font-bold text-success">{historyStats.avgFat}g</p>
                   <p className="text-xs text-zinc-400">{t.avgFat}</p>
                 </div>
               </div>
@@ -737,7 +737,7 @@ export default function NutritionPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
+                  className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 >
                   {editingId ? t.form.updateMeal : t.form.addMeal}
                 </button>

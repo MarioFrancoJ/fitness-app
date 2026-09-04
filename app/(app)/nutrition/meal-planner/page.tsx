@@ -167,7 +167,7 @@ function formatWeekRange(weekStart: string): string {
 const MEAL_META: Record<string, { accent: string; tint: string }> = {
   "Breakfast": { accent: "text-amber-600", tint: "bg-amber-50" },
   "Snack AM": { accent: "text-orange-600", tint: "bg-orange-50" },
-  "Lunch": { accent: "text-emerald-600", tint: "bg-emerald-50" },
+  "Lunch": { accent: "text-success", tint: "bg-success-light" },
   "Dinner": { accent: "text-indigo-600", tint: "bg-indigo-50" },
   "Snack PM": { accent: "text-rose-600", tint: "bg-rose-50" },
 };
@@ -645,7 +645,7 @@ export default function MealPlannerPage() {
             <button
               type="button"
               onClick={handleSavePlan}
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
+              className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               {isSaved ? t.updatePlan : t.savePlan}
             </button>
@@ -677,7 +677,7 @@ export default function MealPlannerPage() {
               <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600">{t.saved}</span>
             )}
             {isCurrentWeek ? (
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-600">{t.currentWeek}</span>
+              <span className="rounded-full bg-success-light px-2 py-0.5 text-xs font-medium text-success">{t.currentWeek}</span>
             ) : (
               <button
                 type="button"
@@ -716,7 +716,7 @@ export default function MealPlannerPage() {
             <p className="mt-0.5 text-xs font-medium text-zinc-400">{t.weeklyCarbs}</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-2xl font-bold text-emerald-600">{weekTotals.fat}g</p>
+            <p className="text-2xl font-bold text-success">{weekTotals.fat}g</p>
             <p className="mt-0.5 text-xs font-medium text-zinc-400">{t.weeklyFat}</p>
           </div>
         </div>
@@ -734,7 +734,7 @@ export default function MealPlannerPage() {
                 "shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
                 selectedDay === day
-                  ? "bg-zinc-900 text-white shadow-sm"
+                  ? "bg-primary text-white shadow-sm"
                   : "text-zinc-500 hover:text-zinc-900",
               ].join(" ")}
             >
@@ -785,7 +785,7 @@ export default function MealPlannerPage() {
             <p className="text-xs text-zinc-400">{nt.carbs}</p>
           </div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-lg font-bold text-emerald-600">{totals.fat}g</p>
+            <p className="text-lg font-bold text-success">{totals.fat}g</p>
             <p className="text-xs text-zinc-400">{nt.fat}</p>
           </div>
         </div>
@@ -930,7 +930,7 @@ export default function MealPlannerPage() {
                         className={[
                           "group relative cursor-grab overflow-hidden rounded-xl border bg-white shadow-sm transition-all active:cursor-grabbing",
                           isDragging ? "opacity-40" : "hover:shadow-md",
-                          isDropTarget ? "border-zinc-900 ring-2 ring-zinc-900/20" : "border-zinc-200",
+                          isDropTarget ? "border-primary ring-2 ring-primary/20" : "border-zinc-200",
                         ].join(" ")}
                       >
                         <div className="relative h-16 w-full">
@@ -960,7 +960,7 @@ export default function MealPlannerPage() {
                         aria-label={`Add recipe for ${day} ${meal}`}
                         className={[
                           "flex min-h-[92px] w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-xs font-medium transition-colors",
-                          isDropTarget ? "border-zinc-900 bg-zinc-50 text-zinc-700" : "border-zinc-200 text-zinc-400 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-600",
+                          isDropTarget ? "border-primary bg-zinc-50 text-zinc-700" : "border-zinc-200 text-zinc-400 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-600",
                         ].join(" ")}
                       >
                         <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true"><path d="M10 5a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 10 5Z" /></svg>
@@ -989,7 +989,7 @@ export default function MealPlannerPage() {
                         <div className="mt-1 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-[11px] font-medium">
                           <span className="text-blue-600">{dt.protein}g Prot.</span>
                           <span className="text-amber-600">{dt.carbs}g Carb.</span>
-                          <span className="text-emerald-600">{dt.fat}g Fat</span>
+                          <span className="text-success">{dt.fat}g Fat</span>
                         </div>
                       </div>
                     );
@@ -1117,7 +1117,7 @@ function DayMenu({
         {t.copyDay}
       </button>
       <button type="button" role="menuitem" onClick={onPaste} disabled={!canPaste} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-40">
-        <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-emerald-500" aria-hidden="true"><path d="M8 2a2 2 0 0 0-1.94 1.5H5.5A1.5 1.5 0 0 0 4 5v11a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 16 16V5a1.5 1.5 0 0 0-1.5-1.5h-.56A2 2 0 0 0 12 2H8Zm0 1.5h4a.5.5 0 0 1 .5.5v.5h-5V4a.5.5 0 0 1 .5-.5Z" /></svg>
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-success" aria-hidden="true"><path d="M8 2a2 2 0 0 0-1.94 1.5H5.5A1.5 1.5 0 0 0 4 5v11a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 16 16V5a1.5 1.5 0 0 0-1.5-1.5h-.56A2 2 0 0 0 12 2H8Zm0 1.5h4a.5.5 0 0 1 .5.5v.5h-5V4a.5.5 0 0 1 .5-.5Z" /></svg>
         {t.pasteDay}
       </button>
       <div className="my-1 h-px bg-zinc-100" />
@@ -1229,7 +1229,7 @@ function RecipePicker({
                   aria-pressed={goalFilter === g}
                   className={[
                     "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-                    goalFilter === g ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400",
+                    goalFilter === g ? "border-primary bg-primary text-white" : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400",
                   ].join(" ")}
                 >
                   {goalDisplay(g)}

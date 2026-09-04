@@ -33,7 +33,7 @@ interface DailyCheckIn {
 
 function categoryColor(c: RecommendationCategory): string {
   switch (c) {
-    case "Nutrition":   return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    case "Nutrition":   return "bg-success-light text-success border-border-brand";
     case "Training":    return "bg-blue-50 text-blue-700 border-blue-200";
     case "Recovery":    return "bg-purple-50 text-purple-700 border-purple-200";
     case "Motivation":  return "bg-amber-50 text-amber-700 border-amber-200";
@@ -55,7 +55,7 @@ function priorityBorder(p: "high" | "medium" | "low"): string {
   switch (p) {
     case "high":   return "border-l-4 border-l-red-400";
     case "medium": return "border-l-4 border-l-amber-400";
-    case "low":    return "border-l-4 border-l-emerald-400";
+    case "low":    return "border-l-4 border-l-border-brand";
   }
 }
 
@@ -219,7 +219,7 @@ export default function AiCoachPage() {
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
             <p className="mt-1 text-sm text-zinc-500">{t.subtitle}</p>
           </div>
-          <Link href="/ai-coach/chat" className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900">
+          <Link href="/ai-coach/chat" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
             {t.chatWithCoach}
           </Link>
         </div>
@@ -248,7 +248,7 @@ export default function AiCoachPage() {
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm font-semibold text-zinc-900">{t.dailyCheckInHeading}</p>
-            {checkInSaved && <span className="text-xs font-medium text-emerald-600">{t.savedToday}</span>}
+            {checkInSaved && <span className="text-xs font-medium text-success">{t.savedToday}</span>}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -260,7 +260,7 @@ export default function AiCoachPage() {
 
           {!checkInSaved && (
             <button type="button" onClick={handleCheckInSave}
-              className="mt-4 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900">
+              className="mt-4 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
               {t.saveCheckIn}
             </button>
           )}
