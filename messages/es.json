@@ -116,12 +116,30 @@
     "headline": "Diseñado para resultados serios",
     "subtitle": "Cada función está pensada con un solo objetivo: ayudarte a alcanzar tus objetivos fitness más rápido.",
     "items": {
-      "workoutPrograms": { "title": "Programas de entrenamiento", "description": "Planes de entrenamiento estructurados y progresivos de varias semanas. Adapta la intensidad, el volumen y el descanso a tu horario." },
-      "nutritionPlans": { "title": "Planes de nutrición", "description": "Planes de comidas equilibrados en macros alineados con tu objetivo: definir, aumentar o mantener. Se ajustan automáticamente a medida que cambia tu peso." },
-      "progressTracking": { "title": "Seguimiento del progreso", "description": "Registra medidas corporales, sube fotos de progreso y visualiza tendencias a lo largo de semanas y meses con gráficos claros." },
-      "aiCoach": { "title": "Entrenador IA", "description": "Chatea con un asistente fitness de IA que conoce tu programa, tus métricas recientes y tus objetivos para darte consejos según tu contexto." },
-      "mealPlanning": { "title": "Planificación de comidas", "description": "Crea planes de comidas semanales a partir de una biblioteca de más de 500.000 alimentos. Genera listas de compras automáticas para cualquier rango de fechas." },
-      "analytics": { "title": "Analíticas", "description": "Sigue tu progreso, tu adherencia y tus tendencias personales. Consulta tu volumen, tus rachas y tus métricas de composición corporal para mantener la consistencia, todo en una sola vista." }
+      "workoutPrograms": {
+        "title": "Programas de entrenamiento",
+        "description": "Planes de entrenamiento estructurados y progresivos de varias semanas. Adapta la intensidad, el volumen y el descanso a tu horario."
+      },
+      "nutritionPlans": {
+        "title": "Planes de nutrición",
+        "description": "Planes de comidas equilibrados en macros alineados con tu objetivo: definir, aumentar o mantener. Se ajustan automáticamente a medida que cambia tu peso."
+      },
+      "progressTracking": {
+        "title": "Seguimiento del progreso",
+        "description": "Registra medidas corporales, sube fotos de progreso y visualiza tendencias a lo largo de semanas y meses con gráficos claros."
+      },
+      "aiCoach": {
+        "title": "Entrenador IA",
+        "description": "Chatea con un asistente fitness de IA que conoce tu programa, tus métricas recientes y tus objetivos para darte consejos según tu contexto."
+      },
+      "mealPlanning": {
+        "title": "Planificación de comidas",
+        "description": "Crea planes de comidas semanales a partir de una biblioteca de más de 500.000 alimentos. Genera listas de compras automáticas para cualquier rango de fechas."
+      },
+      "analytics": {
+        "title": "Analíticas",
+        "description": "Sigue tu progreso, tu adherencia y tus tendencias personales. Consulta tu volumen, tus rachas y tus métricas de composición corporal para mantener la consistencia, todo en una sola vista."
+      }
     }
   },
   "pricing": {
@@ -148,8 +166,20 @@
     "toastUpgraded": "¡Mejorado a Premium!",
     "toastUpdateFailed": "No se pudo actualizar el plan. Inténtalo de nuevo.",
     "plans": {
-      "basic": { "name": "Básico", "price": "$0", "period": "para siempre", "description": "Empieza gratis.", "cta": "Empieza gratis" },
-      "pro": { "name": "Pro", "price": "$9.99", "period": "/mes", "description": "Para atletas serios.", "cta": "Mejorar a Premium" }
+      "basic": {
+        "name": "Básico",
+        "price": "$0",
+        "period": "para siempre",
+        "description": "Empieza gratis.",
+        "cta": "Empieza gratis"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$9.99",
+        "period": "/mes",
+        "description": "Para atletas serios.",
+        "cta": "Mejorar a Premium"
+      }
     },
     "landing": {
       "eyebrow": "Precios",
@@ -1616,5 +1646,96 @@
     "boundaryTitle": "Algo salió mal",
     "boundaryDescription": "Ocurrió un error inesperado. Intenta actualizar la página.",
     "refreshPage": "Actualizar página"
+  },
+  "legal": {
+    "backToHome": "Volver al inicio",
+    "lastUpdated": "Última actualización",
+    "updatedDate": "Septiembre de 2026",
+    "privacy": {
+      "title": "Política de Privacidad",
+      "intro": "En FitnessApp, tus datos de salud son personales. Esta política explica qué recopilamos, por qué lo hacemos y cómo lo protegemos mientras registras tus entrenamientos, nutrición y progreso.",
+      "sections": [
+        {
+          "heading": "Información que recopilamos",
+          "body": "Recopilamos los datos de cuenta que nos proporcionas (nombre, correo) y los datos de fitness que registras: entrenamientos, comidas y recetas, peso y medidas corporales, fotos de progreso, consumo de agua y suplementos, y planes de comida. También recopilamos datos técnicos básicos como el tipo de dispositivo y el uso de la app necesarios para operar el servicio."
+        },
+        {
+          "heading": "Cómo usamos tus datos",
+          "body": "Usamos tus datos para las funciones que utilizas: calcular calorías y macros, mostrar tu progreso en el tiempo, generar planes de comida y listas de compras, y personalizar recomendaciones. Nunca vendemos tus datos personales o de salud a terceros."
+        },
+        {
+          "heading": "Almacenamiento y seguridad",
+          "body": "Tu información se almacena en infraestructura segura con cifrado en tránsito. El acceso está protegido con seguridad a nivel de fila, de modo que solo puedes leer y escribir tus propios registros. Las fotos de progreso y otras cargas se guardan en un almacenamiento privado vinculado a tu cuenta."
+        },
+        {
+          "heading": "Compartir datos",
+          "body": "Compartimos datos únicamente con los proveedores necesarios para operar FitnessApp (por ejemplo, servicios de hosting y base de datos), y solo en la medida necesaria. Podemos divulgar información si la ley lo exige."
+        },
+        {
+          "heading": "Tus derechos",
+          "body": "Puedes acceder, exportar o eliminar tus datos en cualquier momento desde la configuración de tu cuenta. Eliminar tu cuenta borra de forma permanente tus entrenamientos, registros de nutrición, medidas y fotos."
+        },
+        {
+          "heading": "Contacto",
+          "body": "Si tienes preguntas sobre esta política o tus datos, escríbenos mediante la opción de feedback dentro de la app y responderemos lo antes posible."
+        }
+      ]
+    },
+    "terms": {
+      "title": "Términos del Servicio",
+      "intro": "Estos términos rigen tu uso de FitnessApp. Al crear una cuenta o usar la app, los aceptas. Léelos con atención.",
+      "sections": [
+        {
+          "heading": "Uso del servicio",
+          "body": "Debes tener al menos 16 años para usar FitnessApp. Eres responsable de mantener seguras tus credenciales y de toda la actividad realizada en tu cuenta."
+        },
+        {
+          "heading": "No es asesoría médica",
+          "body": "FitnessApp es una herramienta de seguimiento de fitness y nutrición, no un servicio médico. Los objetivos de calorías, macros, entrenamientos y recomendaciones tienen fines informativos generales y no sustituyen la asesoría médica, nutricional o de entrenamiento profesional. Consulta a un profesional calificado antes de comenzar cualquier dieta o programa de ejercicio."
+        },
+        {
+          "heading": "Tu contenido",
+          "body": "Conservas la propiedad de los datos que creas: tus entrenamientos, recetas, planes de comida, medidas y fotos. Nos otorgas el permiso limitado necesario para almacenar y mostrarte ese contenido dentro de la app."
+        },
+        {
+          "heading": "Suscripciones",
+          "body": "Algunas funciones pueden requerir un plan de pago. Los precios y condiciones de facturación se muestran antes de suscribirte. Puedes gestionar o cancelar tu suscripción desde tu cuenta en cualquier momento."
+        },
+        {
+          "heading": "Uso aceptable",
+          "body": "No hagas mal uso del servicio, no intentes acceder a datos de otros usuarios, no interrumpas la plataforma ni subas contenido ilegal o dañino. Podemos suspender cuentas que incumplan estos términos."
+        },
+        {
+          "heading": "Cambios y finalización",
+          "body": "Podemos actualizar estos términos o el servicio con el tiempo. Continuar usándolo tras los cambios implica que aceptas los términos actualizados. Puedes dejar de usar FitnessApp y eliminar tu cuenta cuando quieras."
+        }
+      ]
+    },
+    "cookies": {
+      "title": "Política de Cookies",
+      "intro": "Esta política explica cómo FitnessApp usa cookies y tecnologías similares para mantener tu sesión y recordar tus preferencias.",
+      "sections": [
+        {
+          "heading": "Qué son las cookies",
+          "body": "Las cookies son pequeños archivos de texto que se guardan en tu dispositivo. Las usamos, junto con tecnologías de almacenamiento local similares, para que la app funcione y para recordar tus elecciones."
+        },
+        {
+          "heading": "Cookies esenciales",
+          "body": "Son necesarias para que la app funcione, por ejemplo para mantener tu sesión iniciada de forma segura. La app no puede funcionar correctamente sin ellas."
+        },
+        {
+          "heading": "Cookies de preferencias",
+          "body": "Recordamos ajustes como el idioma elegido (inglés o español) y las preferencias de interfaz para que la app se vea como esperas en tu próxima visita."
+        },
+        {
+          "heading": "Analítica",
+          "body": "Podemos usar mediciones de uso agregadas y respetuosas con la privacidad para entender qué funciones se usan y mejorar el producto. No te identifican personalmente."
+        },
+        {
+          "heading": "Gestionar cookies",
+          "body": "Puedes borrar o bloquear cookies desde la configuración de tu navegador. Ten en cuenta que desactivar las cookies esenciales cerrará tu sesión e impedirá el funcionamiento de las funciones básicas."
+        }
+      ]
+    }
   }
 }

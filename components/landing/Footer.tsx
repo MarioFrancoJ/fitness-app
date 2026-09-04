@@ -1,11 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 export default function Footer() {
   const { dict } = useDictionary();
   const f = dict.footer;
 
+  // Every link resolves to a real destination (hash section or an existing
+  // route). Removed dead entries: News/Changelog, Blog, Careers, Contact.
   const footerLinks = [
     {
       heading: f.columns.product,
@@ -13,16 +16,12 @@ export default function Footer() {
         { label: f.links.features, href: "#features" },
         { label: f.links.pricing, href: "#pricing" },
         { label: f.links.faq, href: "#faq" },
-        { label: f.links.changelog, href: "#" },
       ],
     },
     {
       heading: f.columns.company,
       links: [
-        { label: f.links.about, href: "#" },
-        { label: f.links.blog, href: "#" },
-        { label: f.links.careers, href: "#" },
-        { label: f.links.contact, href: "#" },
+        { label: f.links.about, href: "#hero" },
       ],
     },
     {
@@ -30,7 +29,7 @@ export default function Footer() {
       links: [
         { label: f.links.privacyPolicy, href: "/privacy" },
         { label: f.links.termsOfService, href: "/terms" },
-        { label: f.links.cookiePolicy, href: "#" },
+        { label: f.links.cookiePolicy, href: "/cookies" },
       ],
     },
   ];
@@ -58,12 +57,21 @@ export default function Footer() {
               <ul className="flex flex-col gap-2.5">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
-                    >
-                      {link.label}
-                    </a>
+                    {link.href.startsWith("/") ? (
+                      <Link
+                        href={link.href}
+                        className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
+                      >
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <a
+                        href={link.href}
+                        className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
+                      >
+                        {link.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
