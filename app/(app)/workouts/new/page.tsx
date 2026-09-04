@@ -308,7 +308,7 @@ export default function NewWorkoutPage() {
                 ))}
               </select>
               <button type="button" onClick={handleAddDay}
-                className="rounded-lg bg-zinc-900 px-3 py-1 text-xs font-semibold text-white hover:bg-zinc-700">
+                className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white hover:bg-primary-hover">
                 {nt.addDay}
               </button>
             </div>
@@ -369,7 +369,7 @@ export default function NewWorkoutPage() {
                         <input type="text" value={addNotes} onChange={(e) => setAddNotes(e.target.value)} placeholder={dict.common.optional}
                           className="h-8 w-full rounded border border-zinc-200 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-200" />
                       </div>
-                      <button type="button" onClick={() => handleAddExercise(dayIdx)} className="h-8 rounded bg-zinc-900 px-3 text-xs font-semibold text-white hover:bg-zinc-700">{dict.common.add}</button>
+                      <button type="button" onClick={() => handleAddExercise(dayIdx)} className="h-8 rounded bg-primary px-3 text-xs font-semibold text-white hover:bg-primary-hover">{dict.common.add}</button>
                       <button type="button" onClick={() => setAddingDayIdx(null)} className="h-8 text-xs text-zinc-400 hover:text-zinc-700">{dict.common.cancel}</button>
                     </div>
                   ) : (
@@ -386,7 +386,7 @@ export default function NewWorkoutPage() {
         {/* Submit */}
         <div className="flex gap-3">
           <button type="submit" disabled={saving}
-            className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 disabled:opacity-50">
+            className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
             {saving ? nt.creating : nt.createWorkout}
           </button>
           <button type="button" onClick={() => router.push("/workouts")} className="text-sm font-medium text-zinc-500 hover:text-zinc-900">

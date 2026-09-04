@@ -32,7 +32,7 @@ const DIFFICULTIES: Difficulty[] = ["Beginner", "Intermediate", "Advanced"];
 
 function difficultyColor(d: Difficulty): string {
   switch (d) {
-    case "Beginner":     return "bg-emerald-50 text-emerald-700";
+    case "Beginner":     return "bg-success-light text-success";
     case "Intermediate": return "bg-amber-50 text-amber-700";
     case "Advanced":     return "bg-red-50 text-red-700";
   }

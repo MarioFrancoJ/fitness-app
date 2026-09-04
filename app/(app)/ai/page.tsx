@@ -118,7 +118,7 @@ export default function AIDashboardPage() {
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.dashboardTitle}</h1>
           <p className="mt-1 text-sm text-zinc-500">{t.dashboardSubtitle}</p>
         </div>
-        <Link href="/ai/chat" className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700">
+        <Link href="/ai/chat" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover">
           {t.openChat}
         </Link>
       </div>
@@ -130,8 +130,8 @@ export default function AIDashboardPage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">{t.activeProvider}</p>
             <p className="mt-1 text-sm font-bold text-zinc-900">{activeProvider}</p>
           </div>
-          <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          <span className="flex items-center gap-1.5 rounded-full bg-success-light px-3 py-1 text-xs font-medium text-success">
+            <span className="h-2 w-2 rounded-full bg-success" />
             {t.statusOnline}
           </span>
         </div>
@@ -152,7 +152,7 @@ export default function AIDashboardPage() {
           <p className="text-xs text-zinc-400">{t.statTokens}</p>
         </div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <p className="text-xl font-bold text-emerald-600">${usage.estimatedMonthlyCost.toFixed(4)}</p>
+          <p className="text-xl font-bold text-success">${usage.estimatedMonthlyCost.toFixed(4)}</p>
           <p className="text-xs text-zinc-400">{t.statEstCost}</p>
         </div>
       </div>
@@ -169,7 +169,7 @@ export default function AIDashboardPage() {
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-zinc-900">{feature.label}</p>
                   {feature.enabled ? (
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{t.badgeActive}</span>
+                    <span className="rounded-full bg-success-light px-2 py-0.5 text-xs font-medium text-success">{t.badgeActive}</span>
                   ) : (
                     <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">{t.badgeComingSoon}</span>
                   )}

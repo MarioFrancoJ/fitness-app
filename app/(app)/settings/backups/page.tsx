@@ -88,7 +88,7 @@ export default function BackupsPage() {
               {t.restoreButton}
             </button>
             <button type="button" onClick={handleCreate}
-              className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700">
+              className="inline-flex items-center gap-1 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover">
               {t.createBackup}
             </button>
           </div>
@@ -99,7 +99,7 @@ export default function BackupsPage() {
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white py-16">
             <p className="mb-1 text-sm font-semibold text-zinc-900">{t.emptyTitle}</p>
             <p className="mb-4 text-xs text-zinc-400">{t.emptyDesc}</p>
-            <button type="button" onClick={handleCreate} className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700">
+            <button type="button" onClick={handleCreate} className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover">
               {t.createFirstBackup}
             </button>
           </div>
@@ -156,8 +156,8 @@ export default function BackupsPage() {
             {/* Validation results */}
             {validation && (
               <div className="mb-4">
-                <div className={`rounded-lg p-3 ${validation.valid ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200"}`}>
-                  <p className={`text-xs font-semibold ${validation.valid ? "text-emerald-700" : "text-red-700"}`}>
+                <div className={`rounded-lg p-3 ${validation.valid ? "bg-success-light border border-border-brand" : "bg-red-50 border border-red-200"}`}>
+                  <p className={`text-xs font-semibold ${validation.valid ? "text-success" : "text-red-700"}`}>
                     {validation.valid ? t.validBackup : t.invalidBackup}
                   </p>
                   {validation.errors.map((e, i) => <p key={i} className="text-xs text-red-600 mt-1">{e}</p>)}
@@ -176,18 +176,18 @@ export default function BackupsPage() {
                   <p className="mb-2 text-xs font-medium text-zinc-600">{t.restoreModeHeading}</p>
                   <div className="flex gap-2">
                     <button type="button" onClick={() => setRestoreMode("merge")}
-                      className={["rounded-lg px-4 py-2 text-xs font-semibold", restoreMode === "merge" ? "bg-zinc-900 text-white" : "border border-zinc-200 text-zinc-600"].join(" ")}>
+                      className={["rounded-lg px-4 py-2 text-xs font-semibold", restoreMode === "merge" ? "bg-primary text-white" : "border border-zinc-200 text-zinc-600"].join(" ")}>
                       {t.restoreModeMerge}
                     </button>
                     <button type="button" onClick={() => setRestoreMode("replace")}
-                      className={["rounded-lg px-4 py-2 text-xs font-semibold", restoreMode === "replace" ? "bg-zinc-900 text-white" : "border border-zinc-200 text-zinc-600"].join(" ")}>
+                      className={["rounded-lg px-4 py-2 text-xs font-semibold", restoreMode === "replace" ? "bg-primary text-white" : "border border-zinc-200 text-zinc-600"].join(" ")}>
                       {t.restoreModeReplace}
                     </button>
                   </div>
                 </div>
 
                 <button type="button" onClick={handleRestore}
-                  className="w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700">
+                  className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary-hover">
                   {t.restoreDataButton}
                 </button>
               </>

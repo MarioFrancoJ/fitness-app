@@ -22,8 +22,8 @@ function FAQItem({ question, answer }: FAQItem) {
       >
         <span className="text-base font-medium text-zinc-900">{question}</span>
         <span
-          className={`ml-4 shrink-0 text-zinc-400 transition-transform ${
-            open ? "rotate-45" : ""
+          className={`ml-4 shrink-0 text-lg leading-none transition-transform ${
+            open ? "rotate-45 text-primary-fg" : "text-zinc-400"
           }`}
         >
           +

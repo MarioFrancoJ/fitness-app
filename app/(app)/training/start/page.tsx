@@ -524,7 +524,7 @@ export default function TrainingStartPage() {
               {t.emptyDescription}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <Link href="/workouts/new" className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700">
+              <Link href="/workouts/new" className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover">
                 {t.createWorkout}
               </Link>
               <Link href="/training/templates" className="rounded-lg border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50">
@@ -570,7 +570,7 @@ export default function TrainingStartPage() {
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={handleCancel} className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">{dict.common.cancel}</button>
-          <button type="button" onClick={handleFinish} disabled={saving} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
+          <button type="button" onClick={handleFinish} disabled={saving} className="rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-50">
             {saving ? t.saving : t.finish}
           </button>
         </div>
@@ -583,7 +583,7 @@ export default function TrainingStartPage() {
           <span>{totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0}%</span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
-          <div className="h-full rounded-full bg-zinc-900 transition-all" style={{ width: `${totalSets > 0 ? (completedSets / totalSets) * 100 : 0}%` }} />
+          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${totalSets > 0 ? (completedSets / totalSets) * 100 : 0}%` }} />
         </div>
       </div>
 
@@ -609,7 +609,7 @@ export default function TrainingStartPage() {
             <button key={i} type="button" onClick={() => setCurrentExIdx(i)}
               className={[
                 "shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
-                currentExIdx === i ? "bg-zinc-900 text-white" : done ? "bg-emerald-100 text-emerald-700" : "text-zinc-500 hover:text-zinc-900",
+                currentExIdx === i ? "bg-primary text-white" : done ? "bg-success-light text-success" : "text-zinc-500 hover:text-zinc-900",
               ].join(" ")}>
               {i + 1}
             </button>
@@ -672,7 +672,7 @@ function SetRow({ set, exIdx, setIdx, onComplete, onUndo, t }: {
   const [weight, setWeight] = useState(set.completedWeight || set.targetWeight);
 
   return (
-    <tr className={`border-b border-zinc-50 ${set.completed ? "bg-emerald-50/50" : ""}`}>
+    <tr className={`border-b border-zinc-50 ${set.completed ? "bg-success-light/50" : ""}`}>
       <td className="py-2 text-zinc-600">{set.setNumber}</td>
       <td className="py-2 text-zinc-400">{t.targetReps.replace("{n}", String(set.targetReps))}</td>
       <td className="py-2">
@@ -687,7 +687,7 @@ function SetRow({ set, exIdx, setIdx, onComplete, onUndo, t }: {
       </td>
       <td className="py-2">
         {set.completed ? (
-          <button type="button" onClick={() => onUndo(exIdx, setIdx)} className="rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-200">
+          <button type="button" onClick={() => onUndo(exIdx, setIdx)} className="rounded-md bg-success-light px-2 py-1 text-xs font-semibold text-success hover:bg-success-light">
             {t.setDone}
           </button>
         ) : (

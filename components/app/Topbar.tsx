@@ -230,7 +230,7 @@ export default function Topbar({ locale, onMenuToggle }: TopbarProps) {
           href="/profile"
           aria-label={t.openProfile}
           title={t.profile}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         >
           {userInitial}
         </Link>

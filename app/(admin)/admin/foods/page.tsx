@@ -30,7 +30,7 @@ function priorityBadge(p: string): string {
     case "Critical": return "bg-red-100 text-red-700";
     case "High": return "bg-orange-100 text-orange-700";
     case "Medium": return "bg-amber-100 text-amber-700";
-    default: return "bg-emerald-100 text-emerald-700";
+    default: return "bg-success-light text-success";
   }
 }
 
@@ -117,7 +117,7 @@ export default function AdminNotificationsPage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-zinc-900">{totalSent}</p><p className="text-xs text-zinc-400">Total Sent</p></div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-blue-600">{unreadCount}</p><p className="text-xs text-zinc-400">Unread</p></div>
-          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-emerald-600">{readRate}%</p><p className="text-xs text-zinc-400">Read Rate</p></div>
+          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-success">{readRate}%</p><p className="text-xs text-zinc-400">Read Rate</p></div>
           <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-zinc-500">{notifications.filter((n) => n.status === "Archived").length}</p><p className="text-xs text-zinc-400">Archived</p></div>
         </div>
 

@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import NavIcon from "@/components/ui/NavIcon";
+import Logo from "@/components/ui/Logo";
 import { useDictionary } from "@/lib/i18n/DictionaryProvider";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -213,12 +214,14 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b border-zinc-100 px-4">
           {collapsed ? (
-            <Link href="/dashboard" onClick={handleNavClick} className="mx-auto text-base font-bold text-zinc-900 transition-opacity hover:opacity-80" title="Dashboard">
-              F
+            <Link href="/dashboard" onClick={handleNavClick} className="mx-auto flex transition-opacity hover:opacity-80" title="Movive" aria-label="Movive">
+              {/* Collapsed: icon-only isotipo */}
+              <Logo variant="isotipo" className="h-6" alt="" />
             </Link>
           ) : (
-            <Link href="/dashboard" onClick={handleNavClick} className="text-base font-bold tracking-tight text-zinc-900 transition-opacity hover:opacity-80">
-              FitnessApp
+            <Link href="/dashboard" onClick={handleNavClick} className="flex transition-opacity hover:opacity-80" aria-label="Movive">
+              {/* Expanded: full isologo lockup */}
+              <Logo variant="isologo" className="h-6" />
             </Link>
           )}
           <button type="button" onClick={onClose} className="rounded-md p-1 text-zinc-400 hover:text-zinc-700 md:hidden" aria-label={nav.closeMenu}>
@@ -236,7 +239,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             className={[
               "flex items-center rounded-lg transition-colors",
               collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5 text-sm font-medium",
-              pathname === "/dashboard" ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
+              pathname === "/dashboard" ? "bg-primary text-white" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
             ].join(" ")}
             aria-current={pathname === "/dashboard" ? "page" : undefined}
           >
@@ -257,7 +260,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 "flex items-center rounded-lg transition-colors",
                 collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5 text-sm font-medium",
                 calendarActive
-                  ? "bg-zinc-900 text-white"
+                  ? "bg-primary text-white"
                   : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
               ].join(" ")}
               aria-current={calendarActive ? "page" : undefined}
@@ -337,7 +340,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                               role="menuitem"
                               className={[
                                 "flex items-center gap-2.5 px-3 py-2 text-sm font-medium transition-colors",
-                                active ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900",
+                                active ? "bg-primary text-white" : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900",
                               ].join(" ")}
                             >
                               {item.icon}
@@ -378,7 +381,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                             onClick={handleNavClick}
                             className={[
                               "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
-                              active ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900",
+                              active ? "bg-primary text-white" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900",
                             ].join(" ")}
                             aria-current={active ? "page" : undefined}
                           >

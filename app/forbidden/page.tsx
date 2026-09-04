@@ -23,7 +23,7 @@ export default async function ForbiddenPage() {
         {t.forbiddenDescription}
       </p>
       <div className="flex gap-3">
-        <Link href="/dashboard" className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700">
+        <Link href="/dashboard" className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover">
           {t.goToDashboard}
         </Link>
         <Link href="/" className="rounded-lg border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50">

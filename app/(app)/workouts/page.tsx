@@ -31,7 +31,7 @@ interface WorkoutItem {
 
 function difficultyColor(d: WorkoutDifficulty | null): string {
   switch (d) {
-    case "Beginner":     return "bg-emerald-50 text-emerald-700";
+    case "Beginner":     return "bg-success-light text-success";
     case "Intermediate": return "bg-amber-50 text-amber-700";
     case "Advanced":     return "bg-red-50 text-red-700";
     default:             return "bg-zinc-100 text-zinc-600";
@@ -266,7 +266,7 @@ export default function WorkoutsPage() {
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t.title}</h1>
           <p className="mt-1 text-sm text-zinc-500">{t.subtitle}</p>
         </div>
-        <Link href="/workouts/new" className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900">
+        <Link href="/workouts/new" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
           {t.newWorkout}
         </Link>
       </div>

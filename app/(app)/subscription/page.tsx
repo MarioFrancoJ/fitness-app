@@ -70,7 +70,7 @@ function UsageBar({ label, current, max }: { label: string; current: number; max
         </span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
-        <div className={`h-full rounded-full transition-all ${isNear ? "bg-red-400" : "bg-zinc-800"}`}
+        <div className={`h-full rounded-full transition-all ${isNear ? "bg-red-400" : "bg-primary"}`}
           style={{ width: unlimited ? "0%" : `${pct}%` }} />
       </div>
     </div>
@@ -218,7 +218,7 @@ export default function SubscriptionPage() {
           <p className="mb-4 text-sm font-semibold text-zinc-900">{t.currentPlanHeading}</p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-lg bg-zinc-50 p-4"><p className="text-xs text-zinc-400">{t.fieldPlan}</p><p className="text-sm font-bold text-zinc-900">{planName(sub.plan, t)}</p></div>
-            <div className="rounded-lg bg-zinc-50 p-4"><p className="text-xs text-zinc-400">{t.fieldStatus}</p><p className={`text-sm font-bold ${sub.status === "Active" ? "text-emerald-600" : sub.status === "Trial" ? "text-amber-600" : "text-red-500"}`}>{sub.status}</p></div>
+            <div className="rounded-lg bg-zinc-50 p-4"><p className="text-xs text-zinc-400">{t.fieldStatus}</p><p className={`text-sm font-bold ${sub.status === "Active" ? "text-success" : sub.status === "Trial" ? "text-amber-600" : "text-red-500"}`}>{sub.status}</p></div>
             <div className="rounded-lg bg-zinc-50 p-4"><p className="text-xs text-zinc-400">{t.fieldStartDate}</p><p className="text-sm font-bold text-zinc-900">{sub.startDate}</p></div>
             <div className="rounded-lg bg-zinc-50 p-4"><p className="text-xs text-zinc-400">{sub.expirationDate ? t.fieldExpires : t.fieldRenewal}</p><p className="text-sm font-bold text-zinc-900">{sub.expirationDate || sub.renewalDate || "—"}</p></div>
           </div>
@@ -226,7 +226,7 @@ export default function SubscriptionPage() {
           <div className="mt-5 flex flex-wrap gap-2">
             {!premium && (
               <>
-                <button type="button" onClick={() => handleUpgrade("PREMIUM_MONTHLY")} className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700">{t.upgradeMonthly}</button>
+                <button type="button" onClick={() => handleUpgrade("PREMIUM_MONTHLY")} className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover">{t.upgradeMonthly}</button>
                 <button type="button" onClick={() => handleUpgrade("PREMIUM_YEARLY")} className="rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-700">{t.upgradeYearly}</button>
                 {sub.status !== "Trial" && <button type="button" onClick={handleStartTrial} className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">{t.startTrial}</button>}
               </>

@@ -142,7 +142,7 @@ export default function SessionDetailPage() {
         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
           <span>{session.date}</span>
           <span>{t.minutes.replace("{n}", String(session.durationMinutes))}</span>
-          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${session.status === "Completed" ? "bg-emerald-50 text-emerald-700" : session.status === "Cancelled" ? "bg-red-50 text-red-700" : session.status === "Abandoned" ? "bg-zinc-100 text-zinc-600" : "bg-amber-50 text-amber-700"}`}>
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${session.status === "Completed" ? "bg-success-light text-success" : session.status === "Cancelled" ? "bg-red-50 text-red-700" : session.status === "Abandoned" ? "bg-zinc-100 text-zinc-600" : "bg-amber-50 text-amber-700"}`}>
             {statusLabel(session.status, dict.training.status)}
           </span>
         </div>
@@ -163,7 +163,7 @@ export default function SessionDetailPage() {
           <p className="text-xs text-zinc-400">{t.volumeKg}</p>
         </div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <p className="text-xl font-bold text-emerald-600">{session.durationMinutes}</p>
+          <p className="text-xl font-bold text-success">{session.durationMinutes}</p>
           <p className="text-xs text-zinc-400">Minutes</p>
         </div>
       </div>
@@ -192,7 +192,7 @@ export default function SessionDetailPage() {
                       <td className="py-2 text-zinc-700">{set.completed && set.completedWeight > 0 ? `${set.completedWeight} kg` : "—"}</td>
                       <td className="py-2">
                         {set.completed ? (
-                          <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{t.done}</span>
+                          <span className="inline-block rounded-full bg-success-light px-2 py-0.5 text-xs font-medium text-success">{t.done}</span>
                         ) : (
                           <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">{t.skipped}</span>
                         )}

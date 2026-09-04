@@ -17,7 +17,7 @@ interface SearchResult {
 const CATEGORY_META: Record<string, { label: string; icon: string; color: string }> = {
   workout: { label: "Workouts", icon: "💪", color: "bg-blue-50 text-blue-700" },
   exercise: { label: "Exercises", icon: "🏋️", color: "bg-amber-50 text-amber-700" },
-  recipe: { label: "Recipes", icon: "🥗", color: "bg-emerald-50 text-emerald-700" },
+  recipe: { label: "Recipes", icon: "🥗", color: "bg-success-light text-success" },
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────

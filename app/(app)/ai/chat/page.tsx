@@ -166,7 +166,7 @@ export default function AIChatPage() {
           {messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={["max-w-[80%] rounded-2xl px-4 py-3",
-                msg.role === "user" ? "bg-zinc-900 text-white" : "border border-zinc-200 bg-white text-zinc-800 shadow-sm",
+                msg.role === "user" ? "bg-primary text-white" : "border border-zinc-200 bg-white text-zinc-800 shadow-sm",
               ].join(" ")}>
                 {msg.role === "coach" && (
                   <div className="mb-1 flex items-center gap-1.5">
@@ -200,7 +200,7 @@ export default function AIChatPage() {
             placeholder={t.inputPlaceholder} aria-label="Message" disabled={loading}
             className="h-10 flex-1 rounded-lg border border-zinc-200 bg-white px-4 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50" />
           <button type="button" onClick={handleSend} disabled={!input.trim() || loading}
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-700 disabled:opacity-50">
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50">
             {t.sendButton}
           </button>
         </div>

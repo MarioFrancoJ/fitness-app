@@ -274,10 +274,10 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-emerald-200 bg-white px-5 py-3.5 shadow-lg"
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-border-brand bg-white px-5 py-3.5 shadow-lg"
     >
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100">
-        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-success-light">
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 text-success" aria-hidden="true">
           <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
         </svg>
       </span>
@@ -559,7 +559,7 @@ export default function ProfilePage() {
                 className={[
                   "text-xl font-bold",
                   weightChange !== null && weightChange < 0
-                    ? "text-emerald-600"
+                    ? "text-success"
                     : weightChange !== null && weightChange > 0
                     ? "text-red-500"
                     : "text-zinc-900",

@@ -424,7 +424,7 @@ export default function DashboardContent() {
             {focus?.hasWorkout && (
               <Link
                 href="/training/start"
-                className="inline-flex items-center gap-golden-1 rounded-golden-md bg-zinc-900 px-golden-3 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-zinc-700"
+                className="inline-flex items-center gap-golden-1 rounded-golden-md bg-primary px-golden-3 py-golden-1 text-golden-sm font-semibold text-white transition-colors hover:bg-primary-hover"
               >
                 {t.startWorkout}
               </Link>
@@ -489,7 +489,7 @@ export default function DashboardContent() {
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
                   <div
-                    className="h-full rounded-full bg-zinc-900 transition-all duration-500"
+                    className="h-full rounded-full bg-primary transition-all duration-500"
                     style={{ width: `${Math.min(((weekly?.workoutsCompleted ?? 0) / (weekly?.workoutsGoal ?? 4)) * 100, 100)}%` }}
                   />
                 </div>
@@ -542,9 +542,9 @@ export default function DashboardContent() {
                     className={[
                       "flex h-8 w-8 items-center justify-center rounded-full text-golden-xs font-bold transition-all",
                       completed
-                        ? "bg-zinc-900 text-white"
+                        ? "bg-primary text-white"
                         : isToday
-                        ? "ring-2 ring-zinc-900 text-zinc-900"
+                        ? "ring-2 ring-primary text-primary-fg"
                         : "bg-zinc-100 text-zinc-400",
                     ].join(" ")}
                   >
@@ -562,7 +562,7 @@ export default function DashboardContent() {
               current={weekly?.workoutsCompleted ?? 0}
               target={weekly?.workoutsGoal ?? 4}
               suffix={t.progressWorkoutsSuffix}
-              color="bg-zinc-900"
+              color="bg-primary"
             />
             <ProgressRow
               label={t.progressCalories}
@@ -579,7 +579,7 @@ export default function DashboardContent() {
                   className={[
                     "text-golden-base font-bold",
                     weekly.weightChange < 0
-                      ? "text-emerald-600"
+                      ? "text-success"
                       : weekly.weightChange > 0
                       ? "text-red-500"
                       : "text-zinc-700",
@@ -700,7 +700,7 @@ export default function DashboardContent() {
                         ? "bg-blue-50 text-blue-600"
                         : item.type === "meal"
                         ? "bg-amber-50 text-amber-600"
-                        : "bg-emerald-50 text-emerald-600",
+                        : "bg-success-light text-success",
                     ].join(" ")}
                   >
                     {item.type === "workout"
@@ -897,7 +897,7 @@ function DailyHabits({
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${waterReached ? "bg-emerald-500" : "bg-blue-500"}`}
+              className={`h-full rounded-full transition-all duration-500 ${waterReached ? "bg-success" : "bg-blue-500"}`}
               style={{ width: `${waterPct}%` }}
             />
           </div>
@@ -948,7 +948,7 @@ function DailyHabits({
           </div>
           <div className="mt-golden-2 flex min-h-[1.25rem] items-center justify-between gap-golden-2">
             {waterReached ? (
-              <p className="text-golden-xs font-medium text-emerald-600">{t.goalReached}</p>
+              <p className="text-golden-xs font-medium text-success">{t.goalReached}</p>
             ) : (
               <span />
             )}
@@ -972,7 +972,7 @@ function DailyHabits({
             <span className="inline-flex items-center gap-golden-1 text-golden-sm font-semibold text-zinc-700">
               💊 {t.supplements}
             </span>
-            <span className={`text-golden-sm font-semibold ${suppsComplete ? "text-emerald-600" : "text-zinc-900"}`}>
+            <span className={`text-golden-sm font-semibold ${suppsComplete ? "text-success" : "text-zinc-900"}`}>
               {t.supplementsTaken
                 .replace("{done}", String(suppsDone))
                 .replace("{total}", String(DEFAULT_SUPPLEMENTS.length))}
@@ -991,7 +991,7 @@ function DailyHabits({
                   className={[
                     "inline-flex items-center gap-golden-1 rounded-golden-md border px-golden-3 py-golden-1 text-golden-sm font-medium transition-colors disabled:opacity-50",
                     taken
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      ? "border-border-brand bg-success-light text-success"
                       : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50",
                   ].join(" ")}
                 >
@@ -1021,7 +1021,7 @@ function HabitStatus({ label, done, detail }: { label: string; done: boolean; de
       <span
         className={[
           "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-golden-xs font-bold",
-          done ? "bg-emerald-500 text-white" : "bg-zinc-200 text-zinc-400",
+          done ? "bg-success text-white" : "bg-zinc-200 text-zinc-400",
         ].join(" ")}
       >
         {done ? "✓" : ""}

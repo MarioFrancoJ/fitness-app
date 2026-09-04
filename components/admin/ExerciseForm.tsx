@@ -99,8 +99,8 @@ export default function ExerciseForm({ initialData, mode, exerciseId }: Exercise
 
   if (saved) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50">
-        <p className="text-sm font-medium text-emerald-700">✓ Exercise {mode === "edit" ? "updated" : "created"} successfully!</p>
+      <div className="flex h-32 items-center justify-center rounded-xl border border-border-brand bg-success-light">
+        <p className="text-sm font-medium text-success">✓ Exercise {mode === "edit" ? "updated" : "created"} successfully!</p>
       </div>
     );
   }

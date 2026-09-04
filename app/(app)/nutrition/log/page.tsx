@@ -179,7 +179,7 @@ export default function FoodLogPage() {
           <p className="text-xs text-zinc-400">Eaten</p>
         </div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <p className={`text-lg font-bold ${remaining >= 0 ? "text-emerald-600" : "text-red-600"}`}>{remaining}</p>
+          <p className={`text-lg font-bold ${remaining >= 0 ? "text-success" : "text-red-600"}`}>{remaining}</p>
           <p className="text-xs text-zinc-400">Remaining</p>
         </div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
@@ -191,7 +191,7 @@ export default function FoodLogPage() {
           <p className="text-xs text-zinc-400">Carbs</p>
         </div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <p className="text-lg font-bold text-emerald-600">{totals.fat}g</p>
+          <p className="text-lg font-bold text-success">{totals.fat}g</p>
           <p className="text-xs text-zinc-400">Fat</p>
         </div>
       </div>
@@ -203,7 +203,7 @@ export default function FoodLogPage() {
           <span className="font-medium text-zinc-700">{Math.min(Math.round((totals.calories / goals.calories) * 100), 100)}%</span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
-          <div className={`h-full rounded-full transition-all ${totals.calories > goals.calories ? "bg-red-500" : "bg-zinc-900"}`} style={{ width: `${Math.min((totals.calories / goals.calories) * 100, 100)}%` }} />
+          <div className={`h-full rounded-full transition-all ${totals.calories > goals.calories ? "bg-red-500" : "bg-primary"}`} style={{ width: `${Math.min((totals.calories / goals.calories) * 100, 100)}%` }} />
         </div>
       </div>
 

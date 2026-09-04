@@ -52,7 +52,7 @@ function getDateCutoff(filter: FilterPeriod): string | null {
 function statusBadge(status: SessionStatus, statusDict: StatusDict) {
   switch (status) {
     case "Completed":
-      return { bg: "bg-emerald-50 text-emerald-700", label: statusDict.completed };
+      return { bg: "bg-success-light text-success", label: statusDict.completed };
     case "Cancelled":
       return { bg: "bg-red-50 text-red-700", label: statusDict.cancelled };
     case "Abandoned":
@@ -162,7 +162,7 @@ export default function TrainingHistoryPage() {
             {t.sessionCount.replace("{n}", String(filtered.length))}
           </p>
         </div>
-        <Link href="/training/start" className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700">
+        <Link href="/training/start" className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover">
           {dict.training.startWorkout}
         </Link>
       </div>
@@ -177,7 +177,7 @@ export default function TrainingHistoryPage() {
             className={[
               "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
-              filter === f.value ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900",
+              filter === f.value ? "bg-primary text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900",
             ].join(" ")}
           >
             {f.label}
@@ -273,7 +273,7 @@ export default function TrainingHistoryPage() {
                                     className={[
                                       "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs",
                                       set.completed
-                                        ? "bg-emerald-50 text-emerald-800"
+                                        ? "bg-success-light text-success"
                                         : "bg-zinc-50 text-zinc-500",
                                     ].join(" ")}
                                   >
@@ -287,7 +287,7 @@ export default function TrainingHistoryPage() {
                                       </>
                                     )}
                                     {set.completed && (
-                                      <svg className="ml-auto h-3.5 w-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                      <svg className="ml-auto h-3.5 w-3.5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                                       </svg>
                                     )}

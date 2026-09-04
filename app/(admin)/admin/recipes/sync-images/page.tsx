@@ -196,7 +196,7 @@ export default function SyncRecipeImagesPage() {
         </div>
       )}
       {applied !== null && !error && (
-        <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+        <div role="status" className="rounded-lg border border-border-brand bg-success-light px-4 py-3 text-sm font-medium text-success">
           ✓ Applied {applied} image{applied !== 1 ? "s" : ""} to recipes.
         </div>
       )}
@@ -256,7 +256,7 @@ export default function SyncRecipeImagesPage() {
 // ── Report section table ──────────────────────────────────────────────────────
 
 const toneClasses: Record<string, string> = {
-  emerald: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  emerald: "border-border-brand bg-success-light text-success",
   amber: "border-amber-200 bg-amber-50 text-amber-700",
   zinc: "border-zinc-200 bg-zinc-50 text-zinc-600",
 };

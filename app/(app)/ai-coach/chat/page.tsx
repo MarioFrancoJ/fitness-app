@@ -170,7 +170,7 @@ export default function AiCoachChatPage() {
               <div className={[
                 "max-w-[80%] rounded-2xl px-4 py-3",
                 msg.role === "user"
-                  ? "bg-zinc-900 text-white"
+                  ? "bg-primary text-white"
                   : "border border-zinc-200 bg-white text-zinc-800 shadow-sm",
               ].join(" ")}>
                 {msg.role === "coach" && (
@@ -205,7 +205,7 @@ export default function AiCoachChatPage() {
             type="button"
             onClick={handleSend}
             disabled={!input.trim()}
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             {dict.ai.chat.sendButton}
           </button>

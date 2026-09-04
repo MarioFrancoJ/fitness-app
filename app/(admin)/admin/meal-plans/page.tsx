@@ -99,7 +99,7 @@ export default function AdminLaunchPage() {
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Launch Dashboard</h1>
           <p className="mt-1 text-sm text-zinc-500">v1.0.0 — Production readiness overview</p>
         </div>
-        <span className={`rounded-full px-4 py-1.5 text-sm font-bold ${score >= 80 ? "bg-emerald-100 text-emerald-800" : score >= 60 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}`}>
+        <span className={`rounded-full px-4 py-1.5 text-sm font-bold ${score >= 80 ? "bg-success-light text-success" : score >= 60 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}`}>
           {score}% Ready
         </span>
       </div>
@@ -107,14 +107,14 @@ export default function AdminLaunchPage() {
       {/* Readiness score */}
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
         <div className="mb-2 flex items-center justify-between"><p className="text-sm font-semibold text-zinc-900">Launch Readiness Score</p><p className="text-sm font-bold text-zinc-900">{completed}/{total}</p></div>
-        <div className="h-3 w-full overflow-hidden rounded-full bg-zinc-100"><div className={`h-full rounded-full transition-all ${score >= 80 ? "bg-emerald-500" : score >= 60 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${score}%` }} /></div>
-        <div className="mt-3 flex gap-4 text-xs"><span className="text-emerald-600"><strong>{completed}</strong> complete</span><span className="text-amber-600"><strong>{CHECKLIST.filter((i) => i.status === "partial").length}</strong> partial</span><span className="text-red-500"><strong>{CHECKLIST.filter((i) => i.status === "pending").length}</strong> pending</span></div>
+        <div className="h-3 w-full overflow-hidden rounded-full bg-zinc-100"><div className={`h-full rounded-full transition-all ${score >= 80 ? "bg-success" : score >= 60 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${score}%` }} /></div>
+        <div className="mt-3 flex gap-4 text-xs"><span className="text-success"><strong>{completed}</strong> complete</span><span className="text-amber-600"><strong>{CHECKLIST.filter((i) => i.status === "partial").length}</strong> partial</span><span className="text-red-500"><strong>{CHECKLIST.filter((i) => i.status === "pending").length}</strong> pending</span></div>
       </div>
 
       {/* KPIs from Supabase */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-zinc-900">{stats.totalUsers}</p><p className="text-xs text-zinc-400">Users</p></div>
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-emerald-600">{stats.totalWorkouts}</p><p className="text-xs text-zinc-400">Workouts</p></div>
+        <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-success">{stats.totalWorkouts}</p><p className="text-xs text-zinc-400">Workouts</p></div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-blue-600">{stats.totalRecipes}</p><p className="text-xs text-zinc-400">Recipes</p></div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-zinc-900">{stats.totalExercises}</p><p className="text-xs text-zinc-400">Exercises</p></div>
         <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"><p className="text-xl font-bold text-violet-600">{stats.betaCount}</p><p className="text-xs text-zinc-400">Beta Signups</p></div>
@@ -134,7 +134,7 @@ export default function AdminLaunchPage() {
                 <div className="flex flex-col gap-1.5">
                   {items.map((item) => (
                     <div key={item.id} className="flex items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full shrink-0 ${item.status === "complete" ? "bg-emerald-500" : item.status === "partial" ? "bg-amber-400" : "bg-zinc-300"}`} />
+                      <span className={`h-2 w-2 rounded-full shrink-0 ${item.status === "complete" ? "bg-success" : item.status === "partial" ? "bg-amber-400" : "bg-zinc-300"}`} />
                       <span className={`text-xs ${item.status === "complete" ? "text-zinc-600" : "text-zinc-400"}`}>{item.task}</span>
                     </div>
                   ))}

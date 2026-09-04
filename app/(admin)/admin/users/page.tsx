@@ -25,7 +25,7 @@ const STATUSES: ("All" | UserStatus)[] = ["All", "Active", "Suspended", "Deleted
 
 function statusBadge(s: UserStatus): string {
   switch (s) {
-    case "Active": return "bg-emerald-50 text-emerald-700";
+    case "Active": return "bg-success-light text-success";
     case "Suspended": return "bg-amber-50 text-amber-700";
     case "Deleted": return "bg-red-50 text-red-700";
   }
@@ -133,12 +133,12 @@ export default function AdminUsersPage() {
                       <td className="px-5 py-3">
                         <div className="flex flex-wrap gap-1">
                           {editingId === user.id ? (
-                            <><button type="button" onClick={handleEditSave} className="text-xs font-medium text-emerald-600 hover:text-emerald-800">Save</button><button type="button" onClick={() => setEditingId(null)} className="text-xs font-medium text-zinc-400 hover:text-zinc-700">Cancel</button></>
+                            <><button type="button" onClick={handleEditSave} className="text-xs font-medium text-success hover:text-success">Save</button><button type="button" onClick={() => setEditingId(null)} className="text-xs font-medium text-zinc-400 hover:text-zinc-700">Cancel</button></>
                           ) : (
                             <>
                               <button type="button" onClick={() => handleEditStart(user)} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">Edit</button>
                               {user.status === "Active" && <button type="button" onClick={() => handleStatusChange(user.id, "Suspended")} className="text-xs font-medium text-amber-600 hover:text-amber-800">Suspend</button>}
-                              {user.status === "Suspended" && <button type="button" onClick={() => handleStatusChange(user.id, "Active")} className="text-xs font-medium text-emerald-600 hover:text-emerald-800">Activate</button>}
+                              {user.status === "Suspended" && <button type="button" onClick={() => handleStatusChange(user.id, "Active")} className="text-xs font-medium text-success hover:text-success">Activate</button>}
                               {user.status !== "Deleted" && <button type="button" onClick={() => handleStatusChange(user.id, "Deleted")} className="text-xs font-medium text-red-500 hover:text-red-700">Delete</button>}
                             </>
                           )}

@@ -105,7 +105,7 @@ export default function UploadProgressPhotoPage() {
         </div>
 
         <div className="flex gap-3">
-          <button type="submit" disabled={saving} className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900">{saving ? dict.common.saving : t.save}</button>
+          <button type="submit" disabled={saving} className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{saving ? dict.common.saving : t.save}</button>
           <Link href="/progress/photos" className="inline-flex items-center px-4 py-2.5 text-sm font-medium text-zinc-500 hover:text-zinc-900">{dict.common.cancel}</Link>
         </div>
       </form>

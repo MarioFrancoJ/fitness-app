@@ -79,7 +79,7 @@ export default function ExportPage() {
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm font-semibold text-zinc-900">{t.quickExportHeading}</p>
-            <button type="button" onClick={handleExportAll} className="rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700">
+            <button type="button" onClick={handleExportAll} className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover">
               {t.exportAllButton}
             </button>
           </div>
@@ -103,7 +103,7 @@ export default function ExportPage() {
               {ALL_CATEGORIES.map((cat) => (
                 <button key={cat} type="button" onClick={() => toggleCategory(cat)}
                   className={["rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
-                    selectedCategories.has(cat) ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400",
+                    selectedCategories.has(cat) ? "border-primary bg-primary text-white" : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400",
                   ].join(" ")}>
                   {t.categoryLabels[cat] ?? CATEGORY_LABELS[cat]}
                 </button>
@@ -124,7 +124,7 @@ export default function ExportPage() {
           </div>
 
           <button type="button" onClick={handleExport}
-            className="mt-4 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900">
+            className="mt-4 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
             {t.exportSelected}
           </button>
         </div>

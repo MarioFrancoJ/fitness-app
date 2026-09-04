@@ -257,7 +257,7 @@ export default function AdminRecipesPage() {
             <div className="mb-3 flex flex-wrap items-end gap-2">
               <div className="flex flex-col gap-1 flex-1 min-w-[180px]"><label htmlFor="add-ing" className="text-xs text-zinc-500">Ingredient</label><select id="add-ing" value={addIngId} onChange={(e) => setAddIngId(e.target.value)} className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"><option value="">Select…</option>{ingredientOptions.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>)}</select></div>
               <div className="flex flex-col gap-1 w-24"><label htmlFor="add-qty" className="text-xs text-zinc-500">Qty</label><input id="add-qty" type="number" value={addIngQty} onChange={(e) => setAddIngQty(e.target.value)} placeholder="100" min={0} className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200" /></div>
-              <button type="button" onClick={handleAddIngredient} className="h-9 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white hover:bg-zinc-700">Add</button>
+              <button type="button" onClick={handleAddIngredient} className="h-9 rounded-lg bg-primary px-3 text-xs font-semibold text-white hover:bg-primary-hover">Add</button>
             </div>
             {recipeIngredients.length === 0 ? (
               <p className="text-xs text-zinc-400">No ingredients added yet.</p>
@@ -276,7 +276,7 @@ export default function AdminRecipesPage() {
                 <span className="text-zinc-600"><strong className="text-zinc-900">{previewNutrition.calories}</strong> kcal</span>
                 <span className="text-zinc-600"><strong className="text-blue-600">{previewNutrition.protein}g</strong> protein</span>
                 <span className="text-zinc-600"><strong className="text-amber-600">{previewNutrition.carbs}g</strong> carbs</span>
-                <span className="text-zinc-600"><strong className="text-emerald-600">{previewNutrition.fat}g</strong> fat</span>
+                <span className="text-zinc-600"><strong className="text-success">{previewNutrition.fat}g</strong> fat</span>
               </div>
             )}
           </div>

@@ -28,7 +28,7 @@ interface Exercise {
 
 function difficultyColor(d: Difficulty): string {
   switch (d) {
-    case "Beginner":     return "bg-emerald-50 text-emerald-700";
+    case "Beginner":     return "bg-success-light text-success";
     case "Intermediate": return "bg-amber-50 text-amber-700";
     case "Advanced":     return "bg-red-50 text-red-700";
   }
@@ -129,7 +129,7 @@ export default function ExerciseDetailPage() {
             <ol className="flex flex-col gap-3">
               {exercise.instructions.map((step, i) => (
                 <li key={i} className="flex gap-3 text-sm text-zinc-700">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">{i + 1}</span>
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">{i + 1}</span>
                   <span className="pt-0.5">{step}</span>
                 </li>
               ))}
@@ -146,7 +146,7 @@ export default function ExerciseDetailPage() {
             <ul className="flex flex-col gap-2.5">
               {exercise.tips.map((tip, i) => (
                 <li key={i} className="flex items-start gap-2.5 text-sm text-zinc-700">
-                  <span className="mt-0.5 text-emerald-500">✓</span>
+                  <span className="mt-0.5 text-success">✓</span>
                   {tip}
                 </li>
               ))}
@@ -193,7 +193,7 @@ export default function ExerciseDetailPage() {
       {/* Add to Workout */}
       <div>
         <Link href="/training/workout-builder"
-          className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2">
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
           {t.addToWorkout}
         </Link>
       </div>
